@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONTROLE DE ALMOXARIFADO - SEMCAS</title>
+    
+    <!-- Scripts e Links -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+    <!-- Icones (Lucide) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Estilos Simplificados -->
+    <style>
+        :root {
+            --primary-blue: #1e40af; /* Azul SEMCAS principal */
+            --secondary-blue: #3b82f6; /* Azul SEMCAS secundário */
+            --light-blue: #60a5fa; /* Azul SEMCAS claro */
+            --success: #10b981; /* Verde sucesso */
+            --warning: #f59e0b; /* Amarelo aviso */
+            --error: #ef4444; /* Vermelho erro */
+            --info: #3b82f6; /* Azul info */
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; /* bg-slate-100 */ }
+        .header-banner { background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 50%, var(--light-blue) 100%); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); color: white; }
+        .logo-container { display: flex; align-items: center; gap: 1rem; padding: 1rem; }
+        .logo-img { height: 60px; width: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); background: white; padding: 4px; }
+        .main-title { font-size: 1.5rem; font-weight: bold; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); line-height: 1.2; margin: 0; }
+        .sub-title { font-size: 0.9rem; opacity: 0.9; }
+        .nav-btn { padding: 0.75rem 1rem; border: none; background: none; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.2s ease; font-weight: 600; color: #475569; white-space: nowrap; }
+        .nav-btn:hover { background-color: #f8fafc; }
+        .nav-btn.active { color: var(--secondary-blue); border-bottom-color: var(--secondary-blue); }
+        .card { background: white; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.5rem; transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .form-label { display: block; font-size: 0.875rem; /* text-sm */ font-medium: 600; color: #475569; margin-bottom: 0.25rem; }
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; background: white; transition: all 0.2s ease; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--secondary-blue); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); }
+        .form-textarea { min-height: 80px; } /* Reduzido */
+        .btn-primary { padding: 0.75rem 1.5rem; background-color: var(--primary-blue); color: white; font-weight: 600; border-radius: 0.5rem; transition: all 0.2s ease; cursor: pointer; border: none; }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-primary:disabled { background-color: #94a3b8; cursor: not-allowed; }
+        .btn-secondary { padding: 0.5rem 1rem; background-color: #e2e8f0; color: #334155; font-weight: 500; border-radius: 0.5rem; transition: all 0.2s ease; cursor: pointer; border: none; }
+        .btn-secondary:hover { background-color: #cbd5e1; }
+        .btn-success { padding: 0.5rem 1rem; background-color: var(--success); color: white; font-weight: 600; border-radius: 0.5rem; transition: all 0.2s ease; cursor: pointer; border: none; }
+        .btn-success:hover { background-color: #059669; }
+        .btn-danger { padding: 0.25rem 0.5rem; background-color: transparent; color: var(--error); font-size: 0.75rem; border-radius: 0.25rem; transition: all 0.2s ease; cursor: pointer; border: none; }
+        .btn-danger:hover { background-color: #fee2e2; }
+        .alert { padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border: 1px solid; display: none; }
+        .alert-error { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+        .alert-success { background: #d1fae5; color: #166534; border-color: #a7f3d0; }
+        .alert-warning { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+        .alert-info { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #e5e7eb; vertical-align: middle; } /* Alinhamento vertical */
+        .table th { background: #f9fafb; font-weight: 600; color: #374151; font-size: 0.75rem; text-transform: uppercase; }
+        .table tbody tr:hover { background: #f9fafb; }
+        .table .form-toggle { height: 1.5rem; width: 1.5rem; cursor: pointer; accent-color: var(--primary-blue); }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
+        .badge-green { background: #d1fae5; color: #059669; }
+        .badge-yellow { background: #fef3c7; color: #d97706; }
+        .loading-spinner { border: 5px solid #e5e7eb; border-top: 5px solid var(--secondary-blue); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: auto; }
+        .loading-spinner-small { border: 3px solid #e5e7eb; border-top: 3px solid var(--secondary-blue); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 768px) {
+            .logo-container { flex-direction: column; text-align: center; gap: 0.75rem; }
+            .main-title { font-size: 1.25rem; text-align: center; }
+            .logo-img { height: 50px; }
+            .sub-header-controls { flex-direction: column; gap: 0.5rem; align-items: stretch; }
+            .sub-header-info { text-align: center; }
+            .nav-btn { font-size: 0.875rem; padding: 0.75rem 0.5rem; }
+            .main-nav-container { overflow-x: auto; white-space: nowrap; }
+        }
+        .dashboard-list { max-height: 300px; overflow-y: auto; }
+        .chart-container { position: relative; width: 100%; height: 350px; }
+        /* Estilo para Modal */
+        .modal { display: none; /* Hidden by default */ position: fixed; /* Stay in place */ z-index: 100; /* Sit on top */ left: 0; top: 0; width: 100%; height: 100%; overflow: auto; /* Enable scroll if needed */ background-color: rgba(0,0,0,0.6); /* Black w/ opacity */ animation: fadeInModal 0.3s ease-out; }
+        .modal-content { background-color: #fefefe; margin: 5% auto; /* 5% from the top and centered */ padding: 25px; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 0.75rem; box-shadow: 0 5px 15px rgba(0,0,0,0.2); animation: slideInModal 0.3s ease-out; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 1rem; }
+        .modal-title { font-size: 1.25rem; font-weight: 600; color: #1e293b; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; line-height: 1; padding: 0.5rem; }
+        .modal-close:hover { color: #1e293b; }
+        .modal-body { max-height: 60vh; overflow-y: auto; padding-right: 10px; /* Space for scrollbar */ }
+        .modal-footer { border-top: 1px solid #e2e8f0; padding-top: 1rem; margin-top: 1rem; text-align: right; }
+        @keyframes fadeInModal { from { background-color: rgba(0,0,0,0); } to { background-color: rgba(0,0,0,0.6); } }
+        @keyframes slideInModal { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        /* Tabela dentro do Modal */
+        .modal-table { font-size: 0.875rem; }
+        .modal-table th, .modal-table td { padding: 0.5rem 0.75rem; }
+        /* Ícone de lixeira */
+        .lucide-trash-2 { width: 1em; height: 1em; vertical-align: middle; }
+    </style>
+</head>
+<body class="text-slate-700 antialiased">
+
+    <!-- 1. Header Institucional -->
+    <header class="header-banner sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="logo-container">
+                <img src="https://www.saoluis.ma.gov.br/img/logo_mobile.png" alt="Logo Prefeitura de São Luís" class="logo-img" onerror="this.style.display='none'">
+                <div class="title-container">
+                    <h1 class="main-title">CONTROLE DE ALMOXARIFADO</h1>
+                    <p class="sub-title">SEMCAS - Secretaria Municipal da Criança e Assistência Social</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. Sub-Header de Controles -->
+    <div class="bg-white shadow-sm border-b border-slate-200">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center flex-wrap sub-header-controls">
+                <div class="flex items-center space-x-4 sub-header-info">
+                    <div class="bg-blue-500 text-white p-3 rounded-lg hidden sm:block">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M19 16h-3m0 0 3-3 3 3m-3 7v-7"/><path d="M18 5V3"/><path d="M7 5V3"/><path d="M12 5V3"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-lg text-slate-800">Sistema de Almoxarifado</h2>
+                        <p class="text-sm text-slate-500">v.5.0 (Firebase)</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4 text-sm">
+                    <div id="connectionStatus" class="flex items-center gap-2"></div>
+                    <p id="last-update-time" class="text-slate-500"></p> 
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Sistema de Navegação -->
+    <nav class="bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky z-40 top-[92px] md:top-[88px]">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-1 overflow-x-auto main-nav-container">
+                <button class="nav-btn active" data-tab="dashboard">📊 Dashboard</button>
+                <button class="nav-btn" data-tab="agua">💧 Controle de Água</button>
+                <button class="nav-btn" data-tab="gas">🔥 Controle de Gás</button>
+                <button class="nav-btn" data-tab="materiais">🚚 Entrega de Materiais</button>
+                <button class="nav-btn" data-tab="gestao">⚙️ Gestão de Unidades</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 4. Conteúdo Principal -->
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <!-- Conteúdo do Dashboard -->
+        <div id="content-dashboard" class="fade-in">
+            <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
+                 <h3 class="text-2xl font-bold text-slate-800">Visão Geral do Almoxarifado</h3>
+                 <button id="btn-ver-relatorios" class="btn-secondary">Ver Relatórios Detalhados</button>
+            </div>
+            <p class="text-sm text-slate-500 mb-6 -mt-4">Gráficos mostram dados dos últimos 30 dias. A página atualiza automaticamente a cada 2 minutos.</p>
+           
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                <!-- Gráfico de Água -->
+                <div class="card">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4">Controle de Água</h3>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="dashboardAguaChart"></canvas>
+                    </div>
+                     <p class="text-xs text-slate-400 mt-2 text-center">Entregues vs Recebidos</p>
+                </div>
+                <!-- Gráfico de Gás -->
+                <div class="card">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4">Controle de Gás</h3>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="dashboardGasChart"></canvas>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-2 text-center">Entregues vs Recebidos</p>
+                </div>
+                <!-- Lista de Materiais -->
+                <div class="card">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4">Materiais em Separação</h3>
+                    <div id="dashboard-materiais-list" class="space-y-3 dashboard-list">
+                         <div class="text-center p-10" id="loading-materiais-dashboard">
+                            <div class="loading-spinner-small mx-auto mb-2"></div>
+                            <p class="text-sm text-slate-500">Carregando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conteúdo Controle de Água -->
+        <div id="content-agua" class="hidden fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Coluna de Lançamento -->
+                <div class="lg:col-span-1 card">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4">Lançar Movimentação (Água)</h2>
+                    <form id="form-agua">
+                        <div class="mb-4">
+                            <label for="select-unidade-agua" class="form-label">Unidade (Apenas habilitadas)</label>
+                            <select id="select-unidade-agua" class="form-select" required></select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="select-tipo-agua" class="form-label">Tipo de Movimentação</label>
+                            <select id="select-tipo-agua" class="form-select" required>
+                                <option value="entrega">Entrega de Galão (Cheio)</option>
+                                <option value="retorno">Recebimento de Galão (Vazio)</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="input-qtd-agua" class="form-label">Quantidade</label>
+                            <input type="number" id="input-qtd-agua" class="form-input" min="1" value="1" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="input-data-agua" class="form-label">Data</label>
+                            <input type="date" id="input-data-agua" class="form-input" required>
+                        </div>
+                        <div class="mb-4">
+                             <label for="input-responsavel-agua" class="form-label">Responsável</label>
+                             <input type="text" id="input-responsavel-agua" class="form-input" placeholder="Nome de quem recebeu/entregou" required>
+                        </div>
+                        <button type="submit" id="btn-submit-agua" class="btn-primary w-full">Salvar Lançamento</button>
+                    </form>
+                    <div id="alert-agua" class="alert mt-4"></div>
+                </div>
+                
+                <!-- Coluna de Status -->
+                <div class="lg:col-span-2 card">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4">Status de Galões (Pendentes)</h2>
+                    <p class="text-sm text-slate-500 mb-4">Lista de unidades e saldo de galões. Passe o mouse na linha para ver o último responsável.</p>
+                     <div id="alert-agua-lista" class="alert mb-4"></div>
+                    <div class="overflow-x-auto">
+                        <table class="table w-full text-sm">
+                            <thead>
+                                <tr>
+                                    <th>Unidade</th>
+                                    <th>Tipo</th>
+                                    <th>Entregues</th>
+                                    <th>Recebidos</th>
+                                    <th>Pendentes</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-status-agua">
+                                <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conteúdo Controle de Gás -->
+        <div id="content-gas" class="hidden fade-in">
+             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Coluna de Lançamento -->
+                <div class="lg:col-span-1 card">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4">Lançar Movimentação (Gás)</h2>
+                    <form id="form-gas">
+                        <div class="mb-4">
+                            <label for="select-unidade-gas" class="form-label">Unidade (Apenas habilitadas)</label>
+                            <select id="select-unidade-gas" class="form-select" required></select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="select-tipo-gas" class="form-label">Tipo de Movimentação</label>
+                            <select id="select-tipo-gas" class="form-select" required>
+                                <option value="entrega">Entrega de Botijão (Cheio)</option>
+                                <option value="retorno">Recebimento de Botijão (Vazio)</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="input-qtd-gas" class="form-label">Quantidade</label>
+                            <input type="number" id="input-qtd-gas" class="form-input" min="1" value="1" required>
+                        </div>
+                         <div class="mb-4">
+                            <label for="input-data-gas" class="form-label">Data</label>
+                            <input type="date" id="input-data-gas" class="form-input" required>
+                        </div>
+                         <div class="mb-4">
+                             <label for="input-responsavel-gas" class="form-label">Responsável</label>
+                             <input type="text" id="input-responsavel-gas" class="form-input" placeholder="Nome de quem recebeu/entregou" required>
+                        </div>
+                        <button type="submit" id="btn-submit-gas" class="btn-primary w-full">Salvar Lançamento</button>
+                    </form>
+                    <div id="alert-gas" class="alert mt-4"></div>
+                </div>
+                
+                <!-- Coluna de Status -->
+                <div class="lg:col-span-2 card">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4">Status de Botijões (Pendentes)</h2>
+                    <p class="text-sm text-slate-500 mb-4">Lista de unidades e saldo de botijões. Passe o mouse na linha para ver o último responsável.</p>
+                     <div id="alert-gas-lista" class="alert mb-4"></div>
+                    <div class="overflow-x-auto">
+                        <table class="table w-full text-sm">
+                            <thead>
+                                <tr>
+                                    <th>Unidade</th>
+                                    <th>Tipo</th>
+                                    <th>Entregues</th>
+                                    <th>Recebidos</th>
+                                    <th>Pendentes</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-status-gas">
+                                <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conteúdo Entrega de Materiais -->
+        <div id="content-materiais" class="hidden fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Coluna de Lançamento -->
+                <div class="lg:col-span-1 card">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4">Registrar Separação de Material</h2>
+                    <form id="form-materiais">
+                        <div class="mb-4">
+                            <label for="select-unidade-materiais" class="form-label">Unidade (Apenas habilitadas)</label>
+                            <select id="select-unidade-materiais" class="form-select" required></select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="select-tipo-materiais" class="form-label">Tipo de Material</label>
+                            <select id="select-tipo-materiais" class="form-select" required>
+                                <option value="alimento">Alimento</option>
+                                <option value="expediente">Expediente</option>
+                                <option value="limpeza">Limpeza</option> <!-- Adicionado Limpeza -->
+                                <option value="outros">Outros</option> <!-- Adicionado Outros -->
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="input-data-separacao" class="form-label">Data da Separação</label>
+                            <input type="date" id="input-data-separacao" class="form-input" required>
+                        </div>
+                        <div class="mb-4">
+                             <label for="textarea-itens-materiais" class="form-label">Itens Separados (Opcional)</label>
+                             <textarea id="textarea-itens-materiais" class="form-textarea" placeholder="Ex: 10x Arroz 5kg, 5x Resma A4, 2x Água Sanitária 1L..."></textarea>
+                        </div>
+                         <div class="mb-4">
+                             <label for="input-responsavel-materiais" class="form-label">Responsável (Separação)</label>
+                             <input type="text" id="input-responsavel-materiais" class="form-input" placeholder="Nome de quem separou" required>
+                        </div>
+                        <button type="submit" id="btn-submit-materiais" class="btn-primary w-full">Registrar Separação</button>
+                    </form>
+                    <div id="alert-materiais" class="alert mt-4"></div>
+                </div>
+                
+                <!-- Coluna de Status -->
+                <div class="lg:col-span-2 card">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4">Materiais em Separação / Entregues</h2>
+                    <p class="text-sm text-slate-500 mb-4">Lista de materiais separados. Clique em "Entregue" para confirmar a entrega.</p>
+                    <div id="alert-materiais-lista" class="alert mb-4"></div>
+                    <div class="overflow-x-auto">
+                        <table class="table w-full text-sm">
+                            <thead>
+                                <tr>
+                                    <th>Unidade</th>
+                                    <th>Tipo</th>
+                                    <th>Data Separação</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Ações</th> <!-- Coluna Ações -->
+                                </tr>
+                            </thead>
+                            <tbody id="table-status-materiais">
+                               <tr><td colspan="5" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conteúdo Gestão de Unidades -->
+        <div id="content-gestao" class="hidden fade-in">
+            <div class="card max-w-4xl mx-auto">
+                <h2 class="text-xl font-bold text-slate-800 mb-4">Gestão de Unidades de Atendimento</h2>
+                <div id="alert-gestao" class="alert mb-4"></div>
+
+                <!-- Seção de Adicionar Novas Unidades -->
+                <div class="mb-8 p-4 border border-slate-200 rounded-lg bg-slate-50">
+                     <h3 class="font-semibold text-slate-700 mb-2">Adicionar Novas Unidades</h3>
+                     <p class="text-sm text-slate-500 mb-3">Cole aqui a lista de unidades (uma por linha) no formato: <strong>Tipo [TAB] Nome da Unidade</strong>. Exemplo:</p>
+                     <pre class="text-xs bg-white p-2 rounded border border-slate-300 mb-3">CRAS	Anjo da Guarda<br>CREAS	Centro</pre>
+                     <textarea id="textarea-bulk-unidades" class="form-textarea mb-3" rows="5" placeholder="Cole os dados aqui..."></textarea>
+                     <button id="btn-bulk-add-unidades" class="btn-primary">Adicionar Unidades</button>
+                </div>
+
+                <!-- Tabela de Gestão Existente -->
+                <h3 class="font-semibold text-slate-700 mb-2">Habilitar Serviços por Unidade</h3>
+                <p class="text-sm text-slate-500 mb-4">Marque as caixas para habilitar o recebimento de Água, Gás ou Materiais. As alterações são salvas automaticamente.</p>
+                <div class="overflow-x-auto">
+                    <table class="table w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th>Unidade</th>
+                                <th>Tipo</th>
+                                <th class="text-center">💧 Água</th>
+                                <th class="text-center">🔥 Gás</th>
+                                <th class="text-center">🚚 Materiais</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-gestao-unidades">
+                             <tr><td colspan="5" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 5. Rodapé -->
+    <footer class="text-center mt-12 mb-6 text-sm text-slate-500">
+        <p>Painel de Controle de Almoxarifado - SEMCAS (v.5.0)</p>
+    </footer>
+
+    <!-- Modal de Relatórios Detalhados -->
+    <div id="relatorios-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Relatórios Detalhados por Unidade</h2>
+          <button class="modal-close" onclick="document.getElementById('relatorios-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body space-y-6">
+          <!-- Relatório de Água -->
+          <div>
+            <h3 class="text-lg font-semibold text-slate-700 mb-2">💧 Consumo de Água (Agrupado por Unidade)</h3>
+            <div class="overflow-x-auto border rounded-lg max-h-60">
+                <table class="table modal-table w-full">
+                    <thead><tr><th>Unidade</th><th>Entregues</th><th>Recebidos</th><th>Saldo</th></tr></thead>
+                    <tbody id="relatorio-agua-tbody"><tr><td colspan="4" class="text-center p-4">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+          </div>
+          <!-- Relatório de Gás -->
+           <div>
+            <h3 class="text-lg font-semibold text-slate-700 mb-2">🔥 Consumo de Gás (Agrupado por Unidade)</h3>
+            <div class="overflow-x-auto border rounded-lg max-h-60">
+                <table class="table modal-table w-full">
+                    <thead><tr><th>Unidade</th><th>Entregues</th><th>Recebidos</th><th>Saldo</th></tr></thead>
+                    <tbody id="relatorio-gas-tbody"><tr><td colspan="4" class="text-center p-4">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+          </div>
+          <!-- Relatório de Materiais -->
+           <div>
+            <h3 class="text-lg font-semibold text-slate-700 mb-2">🚚 Materiais Entregues (Agrupado por Unidade e Tipo)</h3>
+            <div class="overflow-x-auto border rounded-lg max-h-60">
+                <table class="table modal-table w-full">
+                     <thead><tr><th>Unidade</th><th>Tipo Material</th><th>Qtd. Entregas</th><th>Última Entrega</th></tr></thead>
+                    <tbody id="relatorio-materiais-tbody"><tr><td colspan="4" class="text-center p-4">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="document.getElementById('relatorios-modal').style.display='none'">Fechar</button>
+        </div>
+      </div>
+    </div>
+
+     <!-- Modal de Confirmação de Exclusão -->
+    <div id="confirm-delete-modal" class="modal">
+      <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+          <h2 class="modal-title text-red-600">Confirmar Exclusão</h2>
+          <button class="modal-close" onclick="document.getElementById('confirm-delete-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Tem certeza que deseja remover este lançamento? Esta ação não pode ser desfeita.</p>
+            <p id="delete-details" class="text-sm text-slate-600 mt-2"></p>
+        </div>
+        <div class="modal-footer space-x-2">
+          <button id="btn-cancel-delete" class="btn-secondary">Cancelar</button>
+          <button id="btn-confirm-delete" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">Confirmar Exclusão</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Script Principal -->
+    <script type="module">
+        // --- IMPORTS DO FIREBASE ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Importar Lucide (se precisar usar via JS, senão o script no head basta)
+        // import lucide from "https://unpkg.com/lucide@latest";
+
+        // --- CONFIGURAÇÃO E VARIÁVEIS GLOBAIS ---
+        const userFallbackConfig = { apiKey: "AIzaSyD7VCxaHo8veaHnM8RwY60EX_DEh3hOVHk", authDomain: "controle-almoxarifado-semcas.firebaseapp.com", projectId: "controle-almoxarifado-semcas", storageBucket: "controle-almoxarifado-semcas.firebasestorage.app", messagingSenderId: "916615427315", appId: "1:916615427315:web:6823897ed065c50d413386" };
+        const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : JSON.stringify(userFallbackConfig);
+        const firebaseConfig = JSON.parse(firebaseConfigString);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let app, auth, db, userId;
+        let isAuthReady = false;
+        let unidadesCollection, aguaCollection, gasCollection, materiaisCollection;
+        let fb_unidades = [], fb_agua_movimentacoes = [], fb_gas_movimentacoes = [], fb_materiais = [];
+        let visaoAtiva = 'dashboard'; 
+        let dashboardAguaChartInstance, dashboardGasChartInstance;
+        let dashboardRefreshInterval = null; // Para o auto-refresh
+        let deleteInfo = { id: null, type: null, collectionRef: null }; // Para modal de exclusão
+
+        // --- Referências de Elementos (DOM) ---
+        let navButtons, contentPanes, connectionStatusEl, lastUpdateTimeEl;
+        let formAgua, selectUnidadeAgua, selectTipoAgua, inputQtdAgua, inputDataAgua, inputResponsavelAgua, btnSubmitAgua, alertAgua, tableStatusAgua, alertAguaLista;
+        let formGas, selectUnidadeGas, selectTipoGas, inputQtdGas, inputDataGas, inputResponsavelGas, btnSubmitGas, alertGas, tableStatusGas, alertGasLista;
+        let formMateriais, selectUnidadeMateriais, selectTipoMateriais, inputDataSeparacao, textareaItensMateriais, inputResponsavelMateriais, btnSubmitMateriais, alertMateriais, tableStatusMateriais, alertMateriaisLista;
+        let tableGestaoUnidades, alertGestao, textareaBulkUnidades, btnBulkAddUnidades;
+        let btnVerRelatorios, relatoriosModal, relatorioAguaTbody, relatorioGasTbody, relatorioMateriaisTbody;
+        let confirmDeleteModal, btnCancelDelete, btnConfirmDelete, deleteDetailsEl;
+
+
+        // --- FUNÇÕES DE UTILIDADE ---
+        function showAlert(elementId, message, type = 'info', duration = 5000) { /* ... (mantida) ... */ 
+            const el = document.getElementById(elementId);
+            if (!el) { console.warn(`Elemento de alerta não encontrado: ${elementId}`); return; }
+            el.className = `alert alert-${type}`; 
+            el.textContent = message;
+            el.style.display = 'block';
+            // Clear previous timeout if exists
+            if (el.timeoutId) clearTimeout(el.timeoutId);
+            el.timeoutId = setTimeout(() => {
+                el.style.display = 'none';
+                el.timeoutId = null; // Clear the stored timeout ID
+            }, duration);
+        }
+        function getTodayDateString() { /* ... (mantida) ... */ 
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+        function dateToTimestamp(dateString) { /* ... (mantida) ... */ 
+             if (!dateString) return null;
+            try {
+                const date = new Date(dateString + 'T12:00:00Z'); 
+                if (isNaN(date.getTime())) return null; 
+                return Timestamp.fromDate(date);
+            } catch (e) { console.error("Erro ao converter data:", dateString, e); return null; }
+        }
+        function formatTimestamp(timestamp) { /* ... (mantida) ... */ 
+            if (!timestamp || typeof timestamp.toDate !== 'function') return 'N/A';
+            try {
+                const date = timestamp.toDate();
+                const yyyy = date.getFullYear();
+                const mm = String(date.getMonth() + 1).padStart(2, '0');
+                const dd = String(date.getDate()).padStart(2, '0');
+                if (yyyy < 2000) return 'Data Inválida'; 
+                return `${dd}/${mm}/${yyyy}`;
+            } catch (e) { console.error("Erro ao formatar timestamp:", timestamp, e); return 'Erro Data'; }
+        }
+        function debounce(func, delay) { /* ... (mantida) ... */ 
+            let timeout;
+            return function(...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), delay);
+            };
+        }
+        function normalizeString(str) { /* ... (mantida) ... */ 
+            if (!str) return '';
+            return String(str).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
+
+        // --- INICIALIZAÇÃO E AUTENTICAÇÃO FIREBASE ---
+        async function initFirebase() { /* ... (mantida, ajustada p/ coleções) ... */ 
+             try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-yellow-400 rounded-full animate-pulse"></span> <span>Autenticando...</span>`;
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        isAuthReady = true;
+                        userId = user.uid;
+                        connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-green-500 rounded-full"></span> <span class="text-green-700">Conectado</span>`;
+                        
+                        // Define os caminhos das coleções
+                        unidadesCollection = collection(db, `artifacts/${appId}/public/data/unidades`);
+                        aguaCollection = collection(db, `artifacts/${appId}/public/data/controleAgua`);
+                        gasCollection = collection(db, `artifacts/${appId}/public/data/controleGas`);
+                        materiaisCollection = collection(db, `artifacts/${appId}/public/data/controleMateriais`);
+                        
+                        initFirestoreListeners(); // Chama os listeners após definir coleções
+                        
+                    } else {
+                        isAuthReady = false;
+                        userId = null; 
+                        connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-red-500 rounded-full"></span> <span class="text-red-700">Desconectado</span>`;
+                        clearAlmoxarifadoData(); 
+                    }
+                    updateLastUpdateTime(); 
+                });
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+            } catch (error) {
+                console.error("Erro ao inicializar Firebase:", error);
+                connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-red-500 rounded-full"></span> <span class="text-red-700">Erro Firebase</span>`;
+                showAlert('alert-agua', `Erro crítico na conexão com Firebase: ${error.message}. Recarregue a página.`, 'error', 60000);
+            }
+        }
+
+        // --- LÓGICA DO FIRESTORE ---
+        function initFirestoreListeners() { /* ... (mantida) ... */ 
+            if (!isAuthReady || !unidadesCollection) { console.warn("Firestore listeners não iniciados: Auth não pronto ou coleção inválida."); return; }
+            console.log("Iniciando listeners do Firestore...");
+
+            // Listener para Unidades
+            onSnapshot(query(unidadesCollection), (snapshot) => { 
+                fb_unidades = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+                populateUnidadeSelects(selectUnidadeAgua, 'atendeAgua');
+                populateUnidadeSelects(selectUnidadeGas, 'atendeGas');
+                populateUnidadeSelects(selectUnidadeMateriais, 'atendeMateriais');
+                renderGestaoUnidades();
+                renderAguaStatus(); renderGasStatus(); // Recalcula status
+                console.log("Unidades atualizadas:", fb_unidades.length);
+            }, (error) => { console.error("Erro no listener de unidades:", error); showAlert('alert-gestao', `Erro ao carregar unidades: ${error.message}`, 'error'); });
+
+            // Listener para Água
+            onSnapshot(query(aguaCollection), (snapshot) => {
+                fb_agua_movimentacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAguaStatus(); renderDashboardAguaChart(); 
+                console.log("Mov. Água atualizadas:", fb_agua_movimentacoes.length);
+            }, (error) => { console.error("Erro no listener de água:", error); showAlert('alert-agua-lista', `Erro ao carregar dados de água: ${error.message}`, 'error'); });
+
+            // Listener para Gás
+            onSnapshot(query(gasCollection), (snapshot) => {
+                fb_gas_movimentacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderGasStatus(); renderDashboardGasChart(); 
+                console.log("Mov. Gás atualizadas:", fb_gas_movimentacoes.length);
+            }, (error) => { console.error("Erro no listener de gás:", error); showAlert('alert-gas-lista', `Erro ao carregar dados de gás: ${error.message}`, 'error'); });
+
+            // Listener para Materiais
+            onSnapshot(query(materiaisCollection), (snapshot) => {
+                fb_materiais = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderMateriaisStatus(); renderDashboardMateriaisList();
+                console.log("Materiais atualizados:", fb_materiais.length);
+            }, (error) => { console.error("Erro no listener de materiais:", error); showAlert('alert-materiais-lista', `Erro ao carregar materiais: ${error.message}`, 'error'); });
+        }
+        function clearAlmoxarifadoData() { /* ... (mantida) ... */ 
+            fb_unidades = []; fb_agua_movimentacoes = []; fb_gas_movimentacoes = []; fb_materiais = [];
+            [selectUnidadeAgua, selectUnidadeGas, selectUnidadeMateriais].forEach(sel => { if(sel) sel.innerHTML = '<option value="">Desconectado</option>'; });
+            [tableStatusAgua, tableStatusGas, tableStatusMateriais, tableGestaoUnidades].forEach(tbody => { if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">Desconectado do Firebase</td></tr>'; }); // Colspan 6 agora
+            const dashboardList = document.getElementById('dashboard-materiais-list'); if(dashboardList) dashboardList.innerHTML = '<p class="text-center py-4 text-red-500">Desconectado</p>';
+            [dashboardAguaChartInstance, dashboardGasChartInstance].forEach(chartInstance => { if (chartInstance) { chartInstance.data.datasets.forEach(ds => ds.data = []); chartInstance.update(); } });
+            console.log("Dados do Almoxarifado limpos devido à desconexão.");
+        }
+        function updateLastUpdateTime() { /* ... (mantida) ... */ 
+             if (!lastUpdateTimeEl) return;
+            const now = new Date();
+            const formattedDate = now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', /*year: 'numeric',*/ hour: '2-digit', minute: '2-digit' });
+            lastUpdateTimeEl.textContent = `Atualizado: ${formattedDate}`;
+        }
+        function populateUnidadeSelects(selectEl, serviceField) { /* ... (mantida) ... */ 
+            if (!selectEl) return;
+            const unidadesHabilitadas = fb_unidades.filter(u => u[serviceField] ?? true);
+            if (unidadesHabilitadas.length === 0) { selectEl.innerHTML = '<option value="">Nenhuma unidade habilitada</option>'; return; }
+            const grupos = unidadesHabilitadas.reduce((acc, unidade) => { const tipo = unidade.tipo || 'Sem Tipo'; if (!acc[tipo]) acc[tipo] = []; acc[tipo].push(unidade); return acc; }, {});
+            const tiposOrdenados = Object.keys(grupos).sort();
+            let html = '<option value="">Selecione uma unidade...</option>';
+            tiposOrdenados.forEach(tipo => {
+                html += `<optgroup label="${tipo.toUpperCase()}">`;
+                grupos[tipo].sort((a,b) => a.nome.localeCompare(b.nome)).forEach(unidade => { const optionValue = `${unidade.id}|${unidade.nome}|${unidade.tipo}`; html += `<option value="${optionValue}">${unidade.nome}</option>`; });
+                html += `</optgroup>`;
+            });
+            selectEl.innerHTML = html;
+        }
+
+        // --- LÓGICA DE CONTROLE DE ÁGUA ---
+        async function handleAguaSubmit(e) { /* ... (adaptada p/ responsável) ... */ 
+             e.preventDefault();
+            if (!isAuthReady) { showAlert('alert-agua', 'Erro: Não autenticado.', 'error'); return; }
+            const selectValue = selectUnidadeAgua.value; if (!selectValue) { showAlert('alert-agua', 'Selecione uma unidade.', 'warning'); return; }
+            const [unidadeId, unidadeNome, tipoUnidade] = selectValue.split('|');
+            const tipo = selectTipoAgua.value;
+            const quantidade = parseInt(inputQtdAgua.value, 10);
+            const data = dateToTimestamp(inputDataAgua.value);
+            const responsavel = inputResponsavelAgua.value.trim(); // Pega o responsável
+
+            if (!unidadeId || !tipo || !quantidade || quantidade <= 0 || !data || !responsavel) { // Responsável obrigatório
+                showAlert('alert-agua', 'Dados inválidos. Verifique todos os campos (incluindo Responsável).', 'warning'); return;
+            }
+
+            btnSubmitAgua.disabled = true; btnSubmitAgua.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+            try {
+                await addDoc(aguaCollection, { unidadeId, unidadeNome, tipoUnidade, tipo, quantidade, data, responsavel, registradoEm: serverTimestamp() }); // Salva responsável
+                showAlert('alert-agua', 'Lançamento de água salvo!', 'success');
+                formAgua.reset(); inputDataAgua.value = getTodayDateString(); 
+            } catch (error) { console.error("Erro salvar água:", error); showAlert('alert-agua', `Erro: ${error.message}`, 'error');
+            } finally { btnSubmitAgua.disabled = false; btnSubmitAgua.textContent = 'Salvar Lançamento'; }
+        }
+        function renderAguaStatus() { /* ... (adaptada p/ tooltip e botão delete) ... */ 
+             if (!tableStatusAgua) return;
+             const statusMap = new Map();
+             fb_unidades.forEach(u => { statusMap.set(u.id, { id: u.id, nome: u.nome, tipo: u.tipo, entregues: 0, recebidos: 0, ultimosLancamentos: [] }); });
+
+             // Ordena movimentações por data DESC para pegar os últimos
+             const movsOrdenadas = [...fb_agua_movimentacoes].sort((a, b) => (b.registradoEm?.toMillis() || 0) - (a.registradoEm?.toMillis() || 0));
+
+             movsOrdenadas.forEach(m => {
+                 if (statusMap.has(m.unidadeId)) {
+                     const unidadeStatus = statusMap.get(m.unidadeId);
+                     if (m.tipo === 'entrega') unidadeStatus.entregues += m.quantidade;
+                     else if (m.tipo === 'retorno') unidadeStatus.recebidos += m.quantidade;
+                     // Guarda os últimos N lançamentos (ex: 2) para tooltip
+                     if (unidadeStatus.ultimosLancamentos.length < 2) { 
+                         unidadeStatus.ultimosLancamentos.push({id: m.id, resp: m.responsavel, data: formatTimestamp(m.data), tipo: m.tipo});
+                     }
+                 }
+             });
+
+             const statusArray = Array.from(statusMap.values())
+                 .map(s => ({ ...s, pendentes: s.entregues - s.recebidos }))
+                 .filter(s => s.entregues > 0 || s.pendentes !== 0) 
+                 .sort((a, b) => b.pendentes - a.pendentes || a.nome.localeCompare(b.nome)); 
+
+            if (statusArray.length === 0) { tableStatusAgua.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma movimentação registrada.</td></tr>'; return; }
+                
+            tableStatusAgua.innerHTML = statusArray.map(s => {
+                const tooltipText = s.ultimosLancamentos.map(l => `${l.tipo === 'entrega' ? 'E': 'R'}: ${l.resp} (${l.data})`).join(' | ');
+                const ultimoId = s.ultimosLancamentos[0]?.id; // Pega o ID do último lançamento
+                return `
+                <tr title="${tooltipText || 'Sem detalhes de responsável'}">
+                    <td class="font-medium">${s.nome}</td>
+                    <td>${s.tipo || 'N/A'}</td>
+                    <td class="text-center">${s.entregues}</td>
+                    <td class="text-center">${s.recebidos}</td>
+                    <td class="text-center font-bold ${s.pendentes > 0 ? 'text-red-600' : (s.pendentes < 0 ? 'text-blue-600' : 'text-green-600')}">${s.pendentes}</td>
+                    <td class="text-center">
+                        ${ultimoId ? `<button class="btn-danger btn-remove" data-id="${ultimoId}" data-type="agua" title="Remover último lançamento desta unidade"><i data-lucide="trash-2"></i></button>` : '-'}
+                    </td>
+                </tr>
+            `}).join('');
+             lucide.createIcons(); // Recria ícones
+        }
+
+        // --- LÓGICA DE CONTROLE DE GÁS ---
+        async function handleGasSubmit(e) { /* ... (adaptada p/ responsável) ... */ 
+            e.preventDefault();
+            if (!isAuthReady) { showAlert('alert-gas', 'Erro: Não autenticado.', 'error'); return; }
+            const selectValue = selectUnidadeGas.value; if (!selectValue) { showAlert('alert-gas', 'Selecione uma unidade.', 'warning'); return; }
+            const [unidadeId, unidadeNome, tipoUnidade] = selectValue.split('|');
+            const tipo = selectTipoGas.value;
+            const quantidade = parseInt(inputQtdGas.value, 10);
+            const data = dateToTimestamp(inputDataGas.value);
+            const responsavel = inputResponsavelGas.value.trim();
+
+             if (!unidadeId || !tipo || !quantidade || quantidade <= 0 || !data || !responsavel) { 
+                showAlert('alert-gas', 'Dados inválidos. Verifique todos os campos (incluindo Responsável).', 'warning'); return;
+            }
+
+            btnSubmitGas.disabled = true; btnSubmitGas.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+            try {
+                await addDoc(gasCollection, { unidadeId, unidadeNome, tipoUnidade, tipo, quantidade, data, responsavel, registradoEm: serverTimestamp() });
+                showAlert('alert-gas', 'Lançamento de gás salvo!', 'success');
+                formGas.reset(); inputDataGas.value = getTodayDateString(); 
+            } catch (error) { console.error("Erro salvar gás:", error); showAlert('alert-gas', `Erro: ${error.message}`, 'error');
+            } finally { btnSubmitGas.disabled = false; btnSubmitGas.textContent = 'Salvar Lançamento'; }
+        }
+        function renderGasStatus() { /* ... (adaptada p/ tooltip e botão delete) ... */ 
+            if (!tableStatusGas) return;
+             const statusMap = new Map();
+             fb_unidades.forEach(u => { statusMap.set(u.id, { id: u.id, nome: u.nome, tipo: u.tipo, entregues: 0, recebidos: 0, ultimosLancamentos: [] }); });
+
+             const movsOrdenadas = [...fb_gas_movimentacoes].sort((a, b) => (b.registradoEm?.toMillis() || 0) - (a.registradoEm?.toMillis() || 0));
+
+             movsOrdenadas.forEach(m => {
+                 if (statusMap.has(m.unidadeId)) {
+                     const unidadeStatus = statusMap.get(m.unidadeId);
+                     if (m.tipo === 'entrega') unidadeStatus.entregues += m.quantidade;
+                     else if (m.tipo === 'retorno') unidadeStatus.recebidos += m.quantidade;
+                     if (unidadeStatus.ultimosLancamentos.length < 2) { 
+                         unidadeStatus.ultimosLancamentos.push({id: m.id, resp: m.responsavel, data: formatTimestamp(m.data), tipo: m.tipo});
+                     }
+                 }
+             });
+
+             const statusArray = Array.from(statusMap.values())
+                 .map(s => ({ ...s, pendentes: s.entregues - s.recebidos }))
+                 .filter(s => s.entregues > 0 || s.pendentes !== 0) 
+                 .sort((a, b) => b.pendentes - a.pendentes || a.nome.localeCompare(b.nome));
+
+            if (statusArray.length === 0) { tableStatusGas.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma movimentação registrada.</td></tr>'; return; }
+                
+             tableStatusGas.innerHTML = statusArray.map(s => {
+                const tooltipText = s.ultimosLancamentos.map(l => `${l.tipo === 'entrega' ? 'E': 'R'}: ${l.resp} (${l.data})`).join(' | ');
+                const ultimoId = s.ultimosLancamentos[0]?.id;
+                return `
+                <tr title="${tooltipText || 'Sem detalhes de responsável'}">
+                    <td class="font-medium">${s.nome}</td>
+                    <td>${s.tipo || 'N/A'}</td>
+                    <td class="text-center">${s.entregues}</td>
+                    <td class="text-center">${s.recebidos}</td>
+                    <td class="text-center font-bold ${s.pendentes > 0 ? 'text-red-600' : (s.pendentes < 0 ? 'text-blue-600' : 'text-green-600')}">${s.pendentes}</td>
+                     <td class="text-center">
+                        ${ultimoId ? `<button class="btn-danger btn-remove" data-id="${ultimoId}" data-type="gas" title="Remover último lançamento"><i data-lucide="trash-2"></i></button>` : '-'}
+                    </td>
+                </tr>
+            `}).join('');
+             lucide.createIcons();
+        }
+        
+        // --- LÓGICA DE CONTROLE DE MATERIAIS ---
+        async function handleMateriaisSubmit(e) { /* ... (adaptada p/ responsável) ... */ 
+            e.preventDefault();
+            if (!isAuthReady) { showAlert('alert-materiais', 'Erro: Não autenticado.', 'error'); return; }
+            const selectValue = selectUnidadeMateriais.value; if (!selectValue) { showAlert('alert-materiais', 'Selecione uma unidade.', 'warning'); return; }
+            const [unidadeId, unidadeNome, tipoUnidade] = selectValue.split('|');
+            const tipoMaterial = selectTipoMateriais.value;
+            const dataSeparacao = dateToTimestamp(inputDataSeparacao.value);
+            const itens = textareaItensMateriais.value.trim(); 
+            const responsavelSeparacao = inputResponsavelMateriais.value.trim(); // Responsável pela separação
+
+             if (!unidadeId || !tipoMaterial || !dataSeparacao || !responsavelSeparacao) { // Responsável separação obrigatório
+                showAlert('alert-materiais', 'Dados inválidos. Verifique unidade, tipo, data e Responsável (Separação).', 'warning'); return;
+            }
+
+            btnSubmitMateriais.disabled = true; btnSubmitMateriais.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+            try {
+                await addDoc(materiaisCollection, { unidadeId, unidadeNome, tipoUnidade, tipoMaterial, dataSeparacao, itens, status: 'separacao', dataEntrega: null, responsavelSeparacao, responsavelEntrega: null, registradoEm: serverTimestamp() }); // Salva resp. separação
+                showAlert('alert-materiais', 'Separação registrada!', 'success');
+                formMateriais.reset(); inputDataSeparacao.value = getTodayDateString();
+            } catch (error) { console.error("Erro salvar separação:", error); showAlert('alert-materiais', `Erro: ${error.message}`, 'error');
+            } finally { btnSubmitMateriais.disabled = false; btnSubmitMateriais.textContent = 'Registrar Separação'; }
+        }
+        function renderMateriaisStatus() { /* ... (adaptada p/ delete e tooltip) ... */ 
+             if (!tableStatusMateriais) return;
+            
+            const materiaisOrdenados = [...fb_materiais].sort((a,b) => { 
+                const statusOrder = { 'separacao': 1, 'entregue': 2 }; 
+                const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
+                if (statusCompare !== 0) return statusCompare;
+                const dateA = a.dataSeparacao?.toMillis() || 0; const dateB = b.dataSeparacao?.toMillis() || 0; return dateB - dateA;
+            });
+
+            if (materiaisOrdenados.length === 0) { tableStatusMateriais.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-500">Nenhuma separação registrada.</td></tr>'; return; }
+            
+            tableStatusMateriais.innerHTML = materiaisOrdenados.map(m => {
+                const isPendente = m.status === 'separacao';
+                const statusClass = isPendente ? 'badge-yellow' : 'badge-green';
+                const statusText = isPendente ? 'Em Separação' : 'Entregue';
+                const dataEntregaText = m.dataEntrega ? ` (${formatTimestamp(m.dataEntrega)})` : '';
+                const tooltipText = `Separado por: ${m.responsavelSeparacao || 'N/A'}${m.responsavelEntrega ? ' | Entregue por: '+m.responsavelEntrega : ''}`;
+
+                return `
+                    <tr class="align-top ${isPendente ? '' : 'opacity-70'}" title="${tooltipText}">
+                        <td class="font-medium">${m.unidadeNome || 'Unidade Desc.'}</td>
+                        <td class="capitalize">${m.tipoMaterial || 'N/D'}</td>
+                        <td>${formatTimestamp(m.dataSeparacao)}</td>
+                        <td><span class="badge ${statusClass}">${statusText}${dataEntregaText}</span></td>
+                        <td class="text-right space-x-1"> <!-- Ações à direita -->
+                            ${isPendente ? `<button class="btn-success btn-entregue text-xs py-1 px-2" data-id="${m.id}">Entregue</button>` : ''}
+                            <button class="btn-danger btn-remove" data-id="${m.id}" data-type="materiais" title="Remover este registro"><i data-lucide="trash-2"></i></button>
+                        </td>
+                    </tr>
+                    ${m.itens ? `
+                    <tr class="${isPendente ? 'bg-slate-50' : 'bg-gray-50'} border-b-2 border-slate-200 ${isPendente ? '' : 'opacity-70'}">
+                        <td colspan="5" class="py-2 px-6 text-sm text-slate-600 whitespace-pre-wrap"><strong>Itens:</strong> ${m.itens}</td>
+                    </tr>
+                    ` : ''}
+                `;
+            }).join('');
+            lucide.createIcons(); // Recria ícones
+        }
+        async function handleMarcarEntregue(e) { /* ... (adaptada p/ pegar responsável entrega) ... */ 
+            const button = e.target.closest('button.btn-entregue[data-id]');
+            if (!button) return;
+            const materialId = button.dataset.id;
+            if (!isAuthReady || !materialId) return;
+
+            // Pede o nome do responsável pela entrega
+            const responsavelEntrega = prompt("Nome do responsável pela entrega:");
+            if (!responsavelEntrega) { // Se cancelar ou deixar em branco
+                 showAlert('alert-materiais-lista', 'Nome do responsável é obrigatório para marcar como entregue.', 'warning');
+                 return; 
+            }
+
+            button.disabled = true; button.innerHTML = '<div class="loading-spinner-small mx-auto" style="width: 16px; height: 16px; border-width: 2px;"></div>';
+            try {
+                const docRef = doc(materiaisCollection, materialId);
+                await updateDoc(docRef, { status: 'entregue', dataEntrega: serverTimestamp(), responsavelEntrega }); // Salva resp. entrega
+                showAlert('alert-materiais-lista', 'Material marcado como entregue!', 'success', 3000);
+            } catch (error) { console.error("Erro marcar entregue:", error); showAlert('alert-materiais-lista', `Erro: ${error.message}`, 'error'); button.disabled = false; button.textContent = 'Entregue'; 
+            } 
+        }
+        
+        // --- LÓGICA DE GESTÃO DE UNIDADES ---
+        function renderGestaoUnidades() { /* ... (mantida) ... */ 
+            if (!tableGestaoUnidades) return;
+            if (fb_unidades.length === 0) { tableGestaoUnidades.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-500">Nenhuma unidade cadastrada. Adicione abaixo.</td></tr>'; return; }
+            tableGestaoUnidades.innerHTML = fb_unidades.map(unidade => `
+                <tr>
+                    <td class="font-medium">${unidade.nome}</td><td>${unidade.tipo || 'N/A'}</td>
+                    <td class="text-center"><input type="checkbox" class="form-toggle gestao-toggle" data-id="${unidade.id}" data-field="atendeAgua" ${(unidade.atendeAgua ?? true) ? 'checked' : ''}></td>
+                    <td class="text-center"><input type="checkbox" class="form-toggle gestao-toggle" data-id="${unidade.id}" data-field="atendeGas" ${(unidade.atendeGas ?? true) ? 'checked' : ''}></td>
+                    <td class="text-center"><input type="checkbox" class="form-toggle gestao-toggle" data-id="${unidade.id}" data-field="atendeMateriais" ${(unidade.atendeMateriais ?? true) ? 'checked' : ''}></td>
+                </tr>`).join('');
+        }
+        async function handleGestaoToggle(e) { /* ... (mantida) ... */ 
+            if (!e.target.classList.contains('gestao-toggle')) return;
+            const checkbox = e.target; const id = checkbox.dataset.id; const field = checkbox.dataset.field; const value = checkbox.checked;
+            if (!isAuthReady || !id || !field) return; checkbox.disabled = true;
+            try {
+                const docRef = doc(unidadesCollection, id); await updateDoc(docRef, { [field]: value });
+                const localUnidade = fb_unidades.find(u => u.id === id); if (localUnidade) localUnidade[field] = value;
+                showAlert('alert-gestao', 'Status atualizado!', 'success', 2000);
+            } catch (error) { console.error("Erro atualizar unidade:", error); showAlert('alert-gestao', `Erro: ${error.message}`, 'error'); checkbox.checked = !value; 
+            } finally { checkbox.disabled = false; }
+        }
+        async function handleBulkAddUnidades() { /* ... (NOVA função) ... */ 
+             if (!isAuthReady || !textareaBulkUnidades) return;
+             const text = textareaBulkUnidades.value.trim();
+             if (!text) { showAlert('alert-gestao', 'A área de texto está vazia.', 'warning'); return; }
+
+             const lines = text.split('\n');
+             const unidadesParaAdd = [];
+             const erros = [];
+
+             lines.forEach((line, index) => {
+                 const parts = line.split('\t'); // Assume separador TAB
+                 if (parts.length === 2) {
+                     const tipo = parts[0].trim();
+                     const nome = parts[1].trim();
+                     if (tipo && nome) {
+                         // Verifica se já existe (case-insensitive)
+                         const existe = fb_unidades.some(u => normalizeString(u.nome) === normalizeString(nome) && normalizeString(u.tipo) === normalizeString(tipo));
+                         if (!existe) {
+                             unidadesParaAdd.push({ nome, tipo, atendeAgua: true, atendeGas: true, atendeMateriais: true }); // Default habilitado
+                         } else {
+                             console.log(`Unidade já existe (ignorada): ${tipo} - ${nome}`);
+                         }
+                     } else { erros.push(`Linha ${index + 1}: Tipo ou Nome vazio.`); }
+                 } else if (line.trim()) { // Ignora linhas vazias, mas avisa sobre formato inválido
+                     erros.push(`Linha ${index + 1}: Formato inválido (use TIPO [TAB] NOME).`);
+                 }
+             });
+
+             if (unidadesParaAdd.length === 0) {
+                 showAlert('alert-gestao', 'Nenhuma unidade nova para adicionar (ou todas já existem/formato inválido).', 'info');
+                 if(erros.length > 0) console.warn("Erros na importação:", erros);
+                 return;
+             }
+
+             btnBulkAddUnidades.disabled = true; btnBulkAddUnidades.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+             let adicionadasCount = 0;
+             try {
+                 // Adiciona um por um para melhor feedback em caso de erro parcial
+                 for (const unidade of unidadesParaAdd) {
+                     await addDoc(unidadesCollection, unidade);
+                     adicionadasCount++;
+                 }
+                 showAlert('alert-gestao', `${adicionadasCount} unidade(s) adicionada(s) com sucesso!`, 'success');
+                 textareaBulkUnidades.value = ''; // Limpa textarea
+                 if(erros.length > 0) {
+                      showAlert('alert-gestao', `Algumas linhas foram ignoradas por erros de formato ou por já existirem. Verifique o console (F12) para detalhes.`, 'warning', 8000);
+                      console.warn("Erros/Avisos na importação:", erros);
+                 }
+             } catch (error) {
+                 console.error("Erro ao adicionar unidades em lote:", error);
+                 showAlert('alert-gestao', `Erro ao adicionar unidades: ${error.message}. ${adicionadasCount} foram adicionadas antes do erro.`, 'error');
+             } finally {
+                 btnBulkAddUnidades.disabled = false; btnBulkAddUnidades.textContent = 'Adicionar Unidades';
+             }
+        }
+
+        // --- LÓGICA DO DASHBOARD ---
+        function getChartDataLast30Days(movimentacoes) { /* ... (mantida) ... */ 
+            const labels = []; const entregasData = []; const retornosData = []; const dataMap = new Map(); 
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            for (let i = 29; i >= 0; i--) { const d = new Date(today); d.setDate(d.getDate() - i); const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; const dateLabel = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); labels.push(dateLabel); dataMap.set(dateKey, { entregas: 0, retornos: 0 }); }
+            const thirtyDaysAgoTimestamp = new Date(today); thirtyDaysAgoTimestamp.setDate(thirtyDaysAgoTimestamp.getDate() - 29);
+            movimentacoes.forEach(m => { if (!m.data || typeof m.data.toDate !== 'function') return; const mDate = m.data.toDate(); mDate.setHours(0,0,0,0); if (mDate >= thirtyDaysAgoTimestamp && mDate <= today) { const dateKey = `${mDate.getFullYear()}-${String(mDate.getMonth() + 1).padStart(2, '0')}-${String(mDate.getDate()).padStart(2, '0')}`; if (dataMap.has(dateKey)) { const dayData = dataMap.get(dateKey); if (m.tipo === 'entrega') dayData.entregas += m.quantidade; else if (m.tipo === 'retorno') dayData.retornos += m.quantidade; } } });
+            dataMap.forEach(value => { entregasData.push(value.entregas); retornosData.push(value.retornos); }); // Ordem correta
+            return { labels, datasets: [ { label: 'Entregues', data: entregasData, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, tension: 0.1 }, { label: 'Recebidos', data: retornosData, backgroundColor: 'rgba(239, 68, 68, 0.7)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1, tension: 0.1 } ] };
+        }
+        function renderDashboardAguaChart() { /* ... (mantida) ... */ 
+            const ctx = document.getElementById('dashboardAguaChart')?.getContext('2d'); if (!ctx) return; const data = getChartDataLast30Days(fb_agua_movimentacoes); if (dashboardAguaChartInstance) { dashboardAguaChartInstance.data = data; dashboardAguaChartInstance.update(); } else { dashboardAguaChartInstance = new Chart(ctx, { type: 'line', data: data, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } }); }
+        }
+        function renderDashboardGasChart() { /* ... (mantida) ... */ 
+            const ctx = document.getElementById('dashboardGasChart')?.getContext('2d'); if (!ctx) return; const data = getChartDataLast30Days(fb_gas_movimentacoes); if (dashboardGasChartInstance) { dashboardGasChartInstance.data = data; dashboardGasChartInstance.update(); } else { dashboardGasChartInstance = new Chart(ctx, { type: 'line', data: data, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } }); }
+        }
+        function renderDashboardMateriaisList() { /* ... (mantida) ... */ 
+             const container = document.getElementById('dashboard-materiais-list'); const loadingIndicator = document.getElementById('loading-materiais-dashboard'); if (!container || !loadingIndicator) return; loadingIndicator.style.display = 'none'; 
+            const pendentes = fb_materiais.filter(m => m.status === 'separacao').sort((a,b) => (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0)); 
+            if (pendentes.length === 0) { container.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Nenhum material em separação.</p>'; return; }
+            container.innerHTML = pendentes.map(m => ` <div class="p-3 bg-slate-50 rounded-lg border border-slate-200"> <div class="flex justify-between items-center gap-2"> <span class="font-medium text-slate-700 text-sm truncate" title="${m.unidadeNome || ''}">${m.unidadeNome || 'Unidade Desc.'}</span> <span class="badge badge-yellow flex-shrink-0">${formatTimestamp(m.dataSeparacao)}</span> </div> <p class="text-xs text-slate-600 capitalize mt-1">${m.tipoMaterial || 'N/D'}</p> ${m.itens ? `<p class="text-xs text-gray-500 mt-1 truncate" title="${m.itens}">Itens: ${m.itens}</p>` : ''} </div> `).join('');
+        }
+        function startDashboardRefresh() { // NOVA função
+            stopDashboardRefresh(); // Garante que não haja múltiplos timers
+            console.log("Iniciando auto-refresh do Dashboard (2 min)");
+            dashboardRefreshInterval = setInterval(() => {
+                console.log("Atualizando dados do Dashboard (auto-refresh)...");
+                // Os listeners do Firebase já devem ter atualizado os dados.
+                // Apenas forçamos o re-render dos componentes visuais.
+                renderDashboardAguaChart();
+                renderDashboardGasChart();
+                renderDashboardMateriaisList();
+                updateLastUpdateTime(); // Atualiza a hora exibida
+            }, 120000); // 120000 ms = 2 minutos
+        }
+        function stopDashboardRefresh() { // NOVA função
+            if (dashboardRefreshInterval) {
+                console.log("Parando auto-refresh do Dashboard");
+                clearInterval(dashboardRefreshInterval);
+                dashboardRefreshInterval = null;
+            }
+        }
+
+        // --- LÓGICA DOS RELATÓRIOS (MODAL) ---
+        function renderRelatoriosDetalhados() { // NOVA função
+             if (!isAuthReady) return; // Precisa estar conectado
+             
+             // Limpa tabelas anteriores
+             relatorioAguaTbody.innerHTML = '<tr><td colspan="4" class="text-center p-4"><div class="loading-spinner-small mx-auto"></div></td></tr>';
+             relatorioGasTbody.innerHTML = '<tr><td colspan="4" class="text-center p-4"><div class="loading-spinner-small mx-auto"></div></td></tr>';
+             relatorioMateriaisTbody.innerHTML = '<tr><td colspan="4" class="text-center p-4"><div class="loading-spinner-small mx-auto"></div></td></tr>';
+
+             // Agrega dados de Água
+             const aguaReport = fb_unidades.map(u => {
+                 const movs = fb_agua_movimentacoes.filter(m => m.unidadeId === u.id);
+                 const entregues = movs.filter(m => m.tipo === 'entrega').reduce((sum, m) => sum + m.quantidade, 0);
+                 const recebidos = movs.filter(m => m.tipo === 'retorno').reduce((sum, m) => sum + m.quantidade, 0);
+                 return { nome: u.nome, entregues, recebidos, saldo: entregues - recebidos };
+             }).filter(r => r.entregues > 0 || r.recebidos > 0) // Só mostra unidades com movimento
+               .sort((a,b) => a.nome.localeCompare(b.nome));
+            
+             if (aguaReport.length > 0) {
+                 relatorioAguaTbody.innerHTML = aguaReport.map(r => `<tr><td>${r.nome}</td><td class="text-center">${r.entregues}</td><td class="text-center">${r.recebidos}</td><td class="text-center font-bold ${r.saldo > 0 ? 'text-red-600' : 'text-green-600'}">${r.saldo}</td></tr>`).join('');
+             } else {
+                 relatorioAguaTbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-slate-500">Nenhum dado de água registrado.</td></tr>';
+             }
+
+              // Agrega dados de Gás
+             const gasReport = fb_unidades.map(u => {
+                 const movs = fb_gas_movimentacoes.filter(m => m.unidadeId === u.id);
+                 const entregues = movs.filter(m => m.tipo === 'entrega').reduce((sum, m) => sum + m.quantidade, 0);
+                 const recebidos = movs.filter(m => m.tipo === 'retorno').reduce((sum, m) => sum + m.quantidade, 0);
+                 return { nome: u.nome, entregues, recebidos, saldo: entregues - recebidos };
+             }).filter(r => r.entregues > 0 || r.recebidos > 0)
+               .sort((a,b) => a.nome.localeCompare(b.nome));
+            
+             if (gasReport.length > 0) {
+                 relatorioGasTbody.innerHTML = gasReport.map(r => `<tr><td>${r.nome}</td><td class="text-center">${r.entregues}</td><td class="text-center">${r.recebidos}</td><td class="text-center font-bold ${r.saldo > 0 ? 'text-red-600' : 'text-green-600'}">${r.saldo}</td></tr>`).join('');
+             } else {
+                 relatorioGasTbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-slate-500">Nenhum dado de gás registrado.</td></tr>';
+             }
+
+             // Agrega dados de Materiais (Entregues)
+             const materiaisEntregues = fb_materiais.filter(m => m.status === 'entregue');
+             const materiaisReportMap = new Map();
+             materiaisEntregues.forEach(m => {
+                 const key = `${m.unidadeId}|${m.tipoMaterial}`;
+                 if (!materiaisReportMap.has(key)) {
+                     materiaisReportMap.set(key, { nome: m.unidadeNome, tipo: m.tipoMaterial, count: 0, ultimaData: 0 });
+                 }
+                 const entry = materiaisReportMap.get(key);
+                 entry.count++;
+                 const dataMillis = m.dataEntrega?.toMillis() || 0;
+                 if (dataMillis > entry.ultimaData) {
+                     entry.ultimaData = dataMillis;
+                 }
+             });
+             const materiaisReport = Array.from(materiaisReportMap.values())
+                 .sort((a, b) => a.nome.localeCompare(b.nome) || a.tipo.localeCompare(b.tipo));
+
+             if (materiaisReport.length > 0) {
+                  relatorioMateriaisTbody.innerHTML = materiaisReport.map(r => `<tr><td>${r.nome}</td><td class="capitalize">${r.tipo}</td><td class="text-center">${r.count}</td><td>${r.ultimaData ? formatTimestamp(Timestamp.fromMillis(r.ultimaData)) : 'N/A'}</td></tr>`).join('');
+             } else {
+                  relatorioMateriaisTbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-slate-500">Nenhum material entregue registrado.</td></tr>';
+             }
+
+             // Abre o modal
+             relatoriosModal.style.display = 'block';
+        }
+
+        // --- LÓGICA DE EXCLUSÃO ---
+        function openConfirmDeleteModal(id, type) { // NOVA função
+            if (!id || !type) return;
+            
+            let collectionRef = null;
+            let detailsText = `ID: ${id}`; // Texto padrão
+            
+            if (type === 'agua') { collectionRef = aguaCollection; detailsText = `Lançamento de Água (ID: ${id.substring(0,6)}...)`; }
+            else if (type === 'gas') { collectionRef = gasCollection; detailsText = `Lançamento de Gás (ID: ${id.substring(0,6)}...)`; }
+            else if (type === 'materiais') { collectionRef = materiaisCollection; detailsText = `Registro de Material (ID: ${id.substring(0,6)}...)`; }
+            else { console.error("Tipo inválido para exclusão:", type); return; }
+
+            deleteInfo = { id, type, collectionRef };
+            deleteDetailsEl.textContent = `Detalhes: ${detailsText}`;
+            confirmDeleteModal.style.display = 'block';
+        }
+        
+        async function executeDelete() { // NOVA função
+            if (!isAuthReady || !deleteInfo.id || !deleteInfo.collectionRef) {
+                 showAlert(`alert-${deleteInfo.type}-lista` || 'alert-gestao', 'Erro: Não autenticado ou informação de exclusão inválida.', 'error');
+                 return;
+            }
+
+            btnConfirmDelete.disabled = true; btnConfirmDelete.innerHTML = '<div class="loading-spinner-small mx-auto" style="width:18px; height:18px;"></div>';
+            btnCancelDelete.disabled = true;
+
+            try {
+                const docRef = doc(deleteInfo.collectionRef, deleteInfo.id);
+                await deleteDoc(docRef);
+                showAlert(`alert-${deleteInfo.type}-lista` || 'alert-gestao', 'Lançamento removido com sucesso!', 'success');
+            } catch (error) {
+                console.error(`Erro ao remover ${deleteInfo.type}:`, error);
+                showAlert(`alert-${deleteInfo.type}-lista` || 'alert-gestao', `Erro ao remover: ${error.message}`, 'error');
+            } finally {
+                confirmDeleteModal.style.display = 'none';
+                btnConfirmDelete.disabled = false; btnConfirmDelete.textContent = 'Confirmar Exclusão';
+                btnCancelDelete.disabled = false;
+                deleteInfo = { id: null, type: null, collectionRef: null }; // Limpa info
+            }
+        }
+
+        // --- CONTROLE DE ABAS E INICIALIZAÇÃO ---
+        function switchTab(tabName) { /* ... (adaptada p/ refresh) ... */ 
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            contentPanes.forEach(pane => pane.classList.add('hidden'));
+            const activePane = document.getElementById(`content-${tabName}`);
+            if(activePane) activePane.classList.remove('hidden');
+            
+            visaoAtiva = tabName; 
+
+            // Gerencia o auto-refresh do Dashboard
+            if (tabName === 'dashboard') {
+                startDashboardRefresh(); 
+                renderDashboardAguaChart(); renderDashboardGasChart(); renderDashboardMateriaisList(); // Renderiza ao entrar
+            } else {
+                stopDashboardRefresh(); 
+            }
+            
+            if (tabName === 'gestao') { renderGestaoUnidades(); }
+             // Garante que os ícones sejam renderizados ao trocar de aba
+            setTimeout(() => lucide.createIcons(), 50); 
+        }
+
+        function initApp() { /* ... (atualizada com novos elementos e listeners) ... */ 
+            // Referências
+            navButtons = document.querySelectorAll('.nav-btn'); contentPanes = document.querySelectorAll('main > div[id^="content-"]'); connectionStatusEl = document.getElementById('connectionStatus'); lastUpdateTimeEl = document.getElementById('last-update-time');
+            formAgua = document.getElementById('form-agua'); selectUnidadeAgua = document.getElementById('select-unidade-agua'); selectTipoAgua = document.getElementById('select-tipo-agua'); inputQtdAgua = document.getElementById('input-qtd-agua'); inputDataAgua = document.getElementById('input-data-agua'); inputResponsavelAgua = document.getElementById('input-responsavel-agua'); btnSubmitAgua = document.getElementById('btn-submit-agua'); alertAgua = document.getElementById('alert-agua'); tableStatusAgua = document.getElementById('table-status-agua'); alertAguaLista = document.getElementById('alert-agua-lista');
+            formGas = document.getElementById('form-gas'); selectUnidadeGas = document.getElementById('select-unidade-gas'); selectTipoGas = document.getElementById('select-tipo-gas'); inputQtdGas = document.getElementById('input-qtd-gas'); inputDataGas = document.getElementById('input-data-gas'); inputResponsavelGas = document.getElementById('input-responsavel-gas'); btnSubmitGas = document.getElementById('btn-submit-gas'); alertGas = document.getElementById('alert-gas'); tableStatusGas = document.getElementById('table-status-gas'); alertGasLista = document.getElementById('alert-gas-lista');
+            formMateriais = document.getElementById('form-materiais'); selectUnidadeMateriais = document.getElementById('select-unidade-materiais'); selectTipoMateriais = document.getElementById('select-tipo-materiais'); inputDataSeparacao = document.getElementById('input-data-separacao'); textareaItensMateriais = document.getElementById('textarea-itens-materiais'); inputResponsavelMateriais = document.getElementById('input-responsavel-materiais'); btnSubmitMateriais = document.getElementById('btn-submit-materiais'); alertMateriais = document.getElementById('alert-materiais'); tableStatusMateriais = document.getElementById('table-status-materiais'); alertMateriaisLista = document.getElementById('alert-materiais-lista');
+            tableGestaoUnidades = document.getElementById('table-gestao-unidades'); alertGestao = document.getElementById('alert-gestao'); textareaBulkUnidades = document.getElementById('textarea-bulk-unidades'); btnBulkAddUnidades = document.getElementById('btn-bulk-add-unidades');
+            btnVerRelatorios = document.getElementById('btn-ver-relatorios'); relatoriosModal = document.getElementById('relatorios-modal'); relatorioAguaTbody = document.getElementById('relatorio-agua-tbody'); relatorioGasTbody = document.getElementById('relatorio-gas-tbody'); relatorioMateriaisTbody = document.getElementById('relatorio-materiais-tbody');
+            confirmDeleteModal = document.getElementById('confirm-delete-modal'); btnCancelDelete = document.getElementById('btn-cancel-delete'); btnConfirmDelete = document.getElementById('btn-confirm-delete'); deleteDetailsEl = document.getElementById('delete-details');
+
+            // Valores iniciais
+            if(inputDataAgua) inputDataAgua.value = getTodayDateString(); if(inputDataGas) inputDataGas.value = getTodayDateString(); if(inputDataSeparacao) inputDataSeparacao.value = getTodayDateString();
+
+            // Listeners
+            navButtons.forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
+            if (formAgua) formAgua.addEventListener('submit', handleAguaSubmit); if (formGas) formGas.addEventListener('submit', handleGasSubmit); if (formMateriais) formMateriais.addEventListener('submit', handleMateriaisSubmit); 
+            
+            // Listener unificado para botões de ação nas tabelas (Remover/Entregue)
+            document.querySelector('main').addEventListener('click', (e) => {
+                 const removeButton = e.target.closest('button.btn-remove[data-id]');
+                 const entregueButton = e.target.closest('button.btn-entregue[data-id]');
+                 if (removeButton) {
+                     openConfirmDeleteModal(removeButton.dataset.id, removeButton.dataset.type);
+                 } else if (entregueButton) {
+                      handleMarcarEntregue(e); // Passa o evento original
+                 }
+            });
+            
+            if (document.getElementById('content-gestao')) document.getElementById('content-gestao').addEventListener('change', handleGestaoToggle); // Listener Gestão
+            if (btnBulkAddUnidades) btnBulkAddUnidades.addEventListener('click', handleBulkAddUnidades); // Listener Bulk Add
+            if (btnVerRelatorios) btnVerRelatorios.addEventListener('click', renderRelatoriosDetalhados); // Listener Modal Relatórios
+            if (btnCancelDelete) btnCancelDelete.addEventListener('click', () => confirmDeleteModal.style.display = 'none'); // Listener Cancelar Exclusão
+            if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', executeDelete); // Listener Confirmar Exclusão
+
+            lucide.createIcons(); // Renderiza ícones iniciais
+        }
+
+        // --- INICIALIZAÇÃO GERAL ---
+        document.addEventListener('DOMContentLoaded', () => { initApp(); initFirebase(); switchTab('dashboard'); });
+    </script>
+</body>
+</html>
+
