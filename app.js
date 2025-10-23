@@ -1519,25 +1519,21 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     const container = document.getElementById('dashboard-materiais-prontos');
     const titleEl = document.getElementById('dashboard-materiais-title');
     const clearButton = document.getElementById('btn-clear-dashboard-filter');
-    const loader = document.getElementById('loading-materiais-prontos'); // Loader original
+    const loaderOriginal = document.getElementById('loading-materiais-prontos'); // Loader original
 
-    // Verifica se os elementos essenciais existem
+    // *** CORREÇÃO: Adicionada verificação robusta no início ***
     if (!container || !titleEl || !clearButton) {
-        console.warn("Elementos do DOM para renderizar materiais do dashboard não encontrados ao executar a função.");
-        // Se o container não existe, não há onde colocar o loader ou a mensagem.
-        // Se ele existe mas os outros não, podemos limpar e mostrar erro no container.
-        if (container) {
-             container.innerHTML = '<p class="text-sm text-red-500 text-center py-4 col-span-full">Erro: Elementos da interface não encontrados.</p>';
-        }
-        return;
+        // Se a função for chamada antes do DOM estar pronto, apenas saia.
+        // Os listeners do Firebase/interações do usuário chamarão novamente mais tarde.
+        console.warn("renderDashboardMateriaisProntos chamada antes do DOM estar pronto. Aguardando...");
+        return; 
     }
     
-    // Mostra o loader interno (se existir) enquanto processa, ou limpa o container
-    if (loader) {
-         // Se o loader original ainda está lá (primeira carga talvez), remove-o
-         loader.style.display = 'none';
+    // Esconde o loader original (se ainda existir)
+    if (loaderOriginal) {
+         loaderOriginal.style.display = 'none'; 
     }
-    // Garante que o container esteja limpo antes de adicionar novo conteúdo
+    // Mostra um loader temporário dentro do container principal enquanto processa
     container.innerHTML = '<div class="text-center p-10 col-span-full"><div class="loading-spinner-small mx-auto mb-2"></div><p class="text-sm text-slate-500">Atualizando...</p></div>';
 
     // Filtra os materiais ANTES de agrupar
@@ -1610,12 +1606,17 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     }
     
     // Atualiza o conteúdo do container principal DEPOIS de montar o HTML
-    container.innerHTML = contentHtml;
-    
-    // Recria ícones se necessário (após a atualização do innerHTML)
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons(); 
-    }
+    // Usar setTimeout 0 para garantir que o DOM seja atualizado após o processamento atual
+    setTimeout(() => {
+        const currentContainer = document.getElementById('dashboard-materiais-prontos');
+        if(currentContainer) { // Verifica se o container ainda existe
+             currentContainer.innerHTML = contentHtml;
+             // Recria ícones se necessário (após a atualização do innerHTML)
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons(); 
+            }
+        }
+    }, 0);
 }
 
 
