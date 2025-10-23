@@ -1527,6 +1527,8 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
 
      if (!container || !titleEl || !clearButton) {
         console.error("Elementos essenciais do Dashboard Materiais Prontos não encontrados!");
+        // Mostra o loader original se o container principal não for achado
+        if (loaderOriginal) loaderOriginal.style.display = 'block'; 
         return; 
     }
     
@@ -1603,12 +1605,17 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
         contentHtml = colunasRenderizadas > 0 ? colunasHtml : `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterStatus ? `com status "${filterStatus}"` : 'pendente'} encontrado.</p>`;
     }
     
+    // Usar setTimeout 0 para garantir que a renderização ocorra após o fluxo atual
     setTimeout(() => {
-        if(container) { 
-             container.innerHTML = contentHtml;
+        // Re-verificar container no caso de alguma remoção inesperada
+        const currentContainer = document.getElementById('dashboard-materiais-prontos');
+        if(currentContainer) { 
+             currentContainer.innerHTML = contentHtml;
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons(); 
             }
+        } else {
+            console.error("Container 'dashboard-materiais-prontos' desapareceu antes da renderização final.");
         }
     }, 0);
 }
@@ -2223,15 +2230,20 @@ document.addEventListener('DOMContentLoaded', () => {
     formInicialGasContainer = document.getElementById('form-inicial-gas-container'); formInicialGas = document.getElementById('form-inicial-gas'); inputInicialQtdGas = document.getElementById('input-inicial-qtd-gas'); inputInicialResponsavelGas = document.getElementById('input-inicial-responsavel-gas'); btnSubmitInicialGas = document.getElementById('btn-submit-inicial-gas'); alertInicialGas = document.getElementById('alert-inicial-gas'); btnAbrirInicialGas = document.getElementById('btn-abrir-inicial-gas');
     tableHistoricoGas = document.getElementById('table-historico-gas'); alertHistoricoGas = document.getElementById('alert-historico-gas');
     
-    // Confirmação de que os elementos críticos foram (ou não) encontrados
-    if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos || !btnClearDashboardFilter || !dashboardMateriaisTitle) {
-        console.error("ERRO CRÍTICO: Elementos essenciais do dashboard NÃO encontrados após DOMContentLoaded!");
-        // Pode ser útil adicionar um alerta aqui para o usuário saber que algo falhou
-        if(alertAgua) showAlert('alert-agua', 'Erro crítico ao carregar a interface. Recarregue a página.', 'error', 60000);
-        domReady = false; // Garante que nada mais tente rodar
-        return; // Interrompe a inicialização
+    // <<< VERIFICAÇÃO CRÍTICA >>>
+    if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos /* || !btnClearDashboardFilter || !dashboardMateriaisTitle */) {
+        // Removi a checagem de btnClear e title, pois não são estritamente *essenciais* para a renderização inicial
+        console.error("ERRO CRÍTICO: Elementos essenciais do dashboard (container ou loader) NÃO encontrados após DOMContentLoaded!");
+        if(alertAgua) showAlert('alert-agua', 'Erro crítico ao carregar a interface (elementos não encontrados). Recarregue a página.', 'error', 60000);
+        domReady = false; 
+        return; 
     } else {
-        console.log("Elementos essenciais encontrados no DOMContentLoaded.");
+        console.log("Elementos essenciais do dashboard encontrados no DOMContentLoaded.");
+        // Log extra para verificar se os elementos foram encontrados corretamente
+        console.log("dashboardMateriaisProntosContainer:", dashboardMateriaisProntosContainer);
+        console.log("loadingMateriaisProntos:", loadingMateriaisProntos);
+        // console.log("btnClearDashboardFilter:", btnClearDashboardFilter);
+        // console.log("dashboardMateriaisTitle:", dashboardMateriaisTitle);
     }
     
     const todayStr = getTodayDateString();
@@ -2316,8 +2328,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Chama a primeira renderização dos materiais, caso o listener já tenha dados
     renderDashboardMateriaisProntos(currentDashboardMaterialFilter); 
     
-    // <<< CHAMA switchTab por último >>>
-    console.log("Chamando switchTab('dashboard') após domReady...");
-    switchTab('dashboard'); 
+    // <<< CHAMA switchTab por último, com um pequeno delay >>>
+    console.log("Agendando switchTab('dashboard') após domReady...");
+    setTimeout(() => {
+        console.log("Executando switchTab('dashboard') agendado.");
+        switchTab('dashboard'); 
+    }, 10); // Pequeno delay (10ms) para garantir que tudo esteja pronto
 });
 
