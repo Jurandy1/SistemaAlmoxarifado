@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.6.1 - Estoque)</title>
+    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.6.2 - Estoque v2)</title>
     
     <!-- Scripts e Links -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -59,7 +59,7 @@
         .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--secondary-blue); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); }
         .form-textarea { min-height: 80px; }
         
-        /* Abas dos Formulários de Entrada/Saída (NOVO) */
+        /* Abas dos Formulários de Entrada/Saída */
         .form-tab-btn { flex: 1; padding: 0.75rem 0.5rem; border: none; background: none; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.2s ease; font-weight: 600; color: #64748b; font-size: 0.875rem; text-align: center; }
         .form-tab-btn.active { color: var(--primary-blue); border-bottom-color: var(--primary-blue); }
 
@@ -74,6 +74,7 @@
         .btn-success:hover { background-color: #059669; }
         .btn-danger { background-color: transparent; color: var(--error); padding: 0.25rem 0.5rem; font-size: 0.75rem; }
         .btn-danger:hover { background-color: #fee2e2; }
+        .btn-sm { padding: 0.3rem 0.8rem; font-size: 0.8rem; } /* Botão pequeno */
         
         /* Alertas */
         .alert { padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border: 1px solid; display: none; }
@@ -93,6 +94,7 @@
         .badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
         .badge-green { background: #d1fae5; color: #059669; }
         .badge-yellow { background: #fef3c7; color: #d97706; }
+        .badge-blue { background: #dbeafe; color: #1e40af; } /* Badge Azul para tipo 'inicial' */
         
         /* Loaders */
         .loading-spinner { border: 5px solid #e5e7eb; border-top: 5px solid var(--secondary-blue); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: auto; }
@@ -167,7 +169,7 @@
                     </div>
                     <div>
                         <h2 class="font-bold text-lg text-slate-800">Sistema de Almoxarifado</h2>
-                        <p class="text-sm text-slate-500">v.6.1 (Firebase + Estoque)</p> <!-- Versão Atualizada -->
+                        <p class="text-sm text-slate-500">v.6.2 (Firebase + Estoque v2)</p> <!-- Versão Atualizada -->
                     </div>
                 </div>
                 <div class="flex items-center space-x-4 text-sm">
@@ -307,13 +309,36 @@
 
         <!-- Conteúdo Controle de Água -->
         <div id="content-agua" class="hidden fade-in">
-            <!-- NOVO LAYOUT: 4 Colunas -->
+            <!-- LAYOUT AJUSTADO: 4 Colunas -->
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 
-                <!-- NOVO Card: Resumo do Estoque -->
+                <!-- Card: Resumo do Estoque -->
                 <div class="lg:col-span-1 card bg-blue-50">
                     <h2 class="text-xl font-bold text-blue-800 mb-4">Estoque de Água</h2>
-                    <ul class="space-y-3 text-sm">
+                    
+                    <!-- Form Estoque Inicial (Condicional) -->
+                    <div id="form-inicial-agua-container" class="hidden bg-white p-4 rounded-md border border-blue-200 mb-4">
+                        <h3 class="text-sm font-semibold mb-2 text-blue-700">Ponta-pé Inicial</h3>
+                        <p class="text-xs text-slate-500 mb-3">Informe a quantidade inicial para começar.</p>
+                        <form id="form-inicial-agua">
+                            <div class="mb-2">
+                                <label for="input-inicial-qtd-agua" class="form-label text-xs">Qtd. Inicial</label>
+                                <input type="number" id="input-inicial-qtd-agua" class="form-input form-input-sm py-1 px-2 text-sm" min="0" value="0" required>
+                            </div>
+                            <div class="mb-3">
+                                 <label for="input-inicial-responsavel-agua" class="form-label text-xs">Responsável</label>
+                                 <input type="text" id="input-inicial-responsavel-agua" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Seu nome" required>
+                            </div>
+                            <button type="submit" id="btn-submit-inicial-agua" class="btn btn-primary btn-sm w-full">Salvar Inicial</button>
+                        </form>
+                        <div id="alert-inicial-agua" class="alert mt-3 text-xs p-2"></div>
+                    </div>
+
+                    <!-- Botão para abrir form inicial (Condicional) -->
+                    <button id="btn-abrir-inicial-agua" class="btn btn-secondary btn-sm w-full mb-4 hidden">Definir Estoque Inicial</button>
+
+                    <!-- Resumo Normal -->
+                    <ul id="resumo-estoque-agua" class="space-y-3 text-sm hidden">
                         <li class="flex justify-between items-center">
                             <span class="text-slate-600">Estoque Inicial:</span>
                             <strong id="estoque-agua-inicial" class="text-lg">0</strong>
@@ -344,7 +369,7 @@
                         <button class="form-tab-btn" data-form="entrada-agua">📥 Entrada (Estoque)</button>
                     </div>
 
-                    <!-- Form 1: Saída (Existente) -->
+                    <!-- Form 1: Saída -->
                     <form id="form-agua" class="">
                         <h2 class="text-xl font-bold text-slate-800 mb-4">Lançar Saída (Água)</h2>
                         <div class="mb-4">
@@ -373,7 +398,7 @@
                         <button type="submit" id="btn-submit-agua" class="btn btn-primary w-full">Salvar Saída</button>
                     </form>
 
-                    <!-- Form 2: Entrada (NOVO) -->
+                    <!-- Form 2: Entrada -->
                     <form id="form-entrada-agua" class="hidden">
                         <h2 class="text-xl font-bold text-slate-800 mb-4">Dar Entrada no Estoque (Água)</h2>
                         <div class="mb-4">
@@ -424,7 +449,7 @@
                         </div>
                     </div>
 
-                    <!-- Card Previsão (Existente) -->
+                    <!-- Card Previsão -->
                     <div class="card">
                         <h2 class="text-xl font-bold text-slate-800 mb-4">Previsão de Consumo (Água)</h2>
                         <p class="text-sm text-slate-500 mb-4">Calcule a média de entregas para prever a necessidade de estoque.</p>
@@ -445,6 +470,30 @@
                             <p id="previsao-agua-erro" class="text-sm text-red-600 mt-2"></p>
                         </div>
                     </div>
+
+                    <!-- NOVO Card: Histórico de Entradas -->
+                     <div class="card">
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">Histórico de Entradas no Estoque (Água)</h2>
+                        <div id="alert-historico-agua" class="alert mb-4"></div>
+                        <div class="overflow-x-auto max-h-96">
+                            <table class="table w-full text-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Tipo</th>
+                                        <th>Qtd.</th>
+                                        <th>Responsável</th>
+                                        <th>NF</th>
+                                        <th>Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-historico-agua">
+                                    <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -453,10 +502,33 @@
         <div id="content-gas" class="hidden fade-in">
              <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 
-                <!-- NOVO Card: Resumo do Estoque Gás -->
+                <!-- Card: Resumo do Estoque Gás -->
                 <div class="lg:col-span-1 card bg-orange-50">
                     <h2 class="text-xl font-bold text-orange-800 mb-4">Estoque de Gás</h2>
-                    <ul class="space-y-3 text-sm">
+                     
+                    <!-- Form Estoque Inicial (Condicional) -->
+                    <div id="form-inicial-gas-container" class="hidden bg-white p-4 rounded-md border border-orange-200 mb-4">
+                        <h3 class="text-sm font-semibold mb-2 text-orange-700">Ponta-pé Inicial</h3>
+                        <p class="text-xs text-slate-500 mb-3">Informe a quantidade inicial para começar.</p>
+                        <form id="form-inicial-gas">
+                            <div class="mb-2">
+                                <label for="input-inicial-qtd-gas" class="form-label text-xs">Qtd. Inicial</label>
+                                <input type="number" id="input-inicial-qtd-gas" class="form-input form-input-sm py-1 px-2 text-sm" min="0" value="0" required>
+                            </div>
+                            <div class="mb-3">
+                                 <label for="input-inicial-responsavel-gas" class="form-label text-xs">Responsável</label>
+                                 <input type="text" id="input-inicial-responsavel-gas" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Seu nome" required>
+                            </div>
+                            <button type="submit" id="btn-submit-inicial-gas" class="btn btn-primary btn-sm w-full">Salvar Inicial</button>
+                        </form>
+                         <div id="alert-inicial-gas" class="alert mt-3 text-xs p-2"></div>
+                    </div>
+
+                    <!-- Botão para abrir form inicial (Condicional) -->
+                    <button id="btn-abrir-inicial-gas" class="btn btn-secondary btn-sm w-full mb-4 hidden">Definir Estoque Inicial</button>
+                     
+                    <!-- Resumo Normal -->
+                    <ul id="resumo-estoque-gas" class="space-y-3 text-sm hidden">
                         <li class="flex justify-between items-center">
                             <span class="text-slate-600">Estoque Inicial:</span>
                             <strong id="estoque-gas-inicial" class="text-lg">0</strong>
@@ -487,7 +559,7 @@
                         <button class="form-tab-btn" data-form="entrada-gas">📥 Entrada (Estoque)</button>
                     </div>
 
-                    <!-- Form 1: Saída (Existente) -->
+                    <!-- Form 1: Saída -->
                     <form id="form-gas" class="">
                         <h2 class="text-xl font-bold text-slate-800 mb-4">Lançar Saída (Gás)</h2>
                         <div class="mb-4">
@@ -516,7 +588,7 @@
                         <button type="submit" id="btn-submit-gas" class="btn btn-primary w-full">Salvar Saída</button>
                     </form>
 
-                    <!-- Form 2: Entrada (NOVO) -->
+                    <!-- Form 2: Entrada -->
                     <form id="form-entrada-gas" class="hidden">
                         <h2 class="text-xl font-bold text-slate-800 mb-4">Dar Entrada no Estoque (Gás)</h2>
                         <div class="mb-4">
@@ -567,7 +639,7 @@
                         </div>
                     </div>
 
-                    <!-- Card Previsão Gás (Existente) -->
+                    <!-- Card Previsão Gás -->
                     <div class="card">
                         <h2 class="text-xl font-bold text-slate-800 mb-4">Previsão de Consumo (Gás)</h2>
                         <p class="text-sm text-slate-500 mb-4">Calcule a média de entregas para prever a necessidade de estoque.</p>
@@ -588,6 +660,30 @@
                             <p id="previsao-gas-erro" class="text-sm text-red-600 mt-2"></p>
                         </div>
                     </div>
+
+                    <!-- NOVO Card: Histórico de Entradas Gás -->
+                     <div class="card">
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">Histórico de Entradas no Estoque (Gás)</h2>
+                        <div id="alert-historico-gas" class="alert mb-4"></div>
+                        <div class="overflow-x-auto max-h-96">
+                            <table class="table w-full text-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Tipo</th>
+                                        <th>Qtd.</th>
+                                        <th>Responsável</th>
+                                        <th>NF</th>
+                                        <th>Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-historico-gas">
+                                    <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -726,7 +822,7 @@
 
     <!-- 5. Rodapé -->
     <footer class="text-center mt-12 mb-6 text-sm text-slate-500">
-        <p>Painel de Controle de Almoxarifado - SEMCAS (v.6.1)</p>
+        <p>Painel de Controle de Almoxarifado - SEMCAS (v.6.2)</p>
     </footer>
     
 
@@ -748,44 +844,14 @@
       </div>
     </div>
 
-    <!-- NOVO: Modal de Configuração Inicial de Estoque -->
-    <div id="config-inicial-modal" class="modal">
-      <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header">
-          <h2 class="modal-title text-blue-800">Configuração Inicial do Estoque</h2>
-          <!-- Sem botão de fechar, é obrigatório -->
-        </div>
-        <div class="modal-body">
-            <p class="text-sm mb-4">Detectamos que esta é a primeira vez que você usa o controle de estoque. Por favor, informe a quantidade <strong>atual</strong> de itens que você tem em seu almoxarifado (Estoque Físico) para iniciar o sistema.</p>
-            
-            <div id="config-inicial-form-container">
-                <form id="form-config-inicial">
-                    <h3 id="config-inicial-titulo" class="text-lg font-semibold mb-3"></h3>
-                    <div class="mb-4">
-                        <label for="input-config-inicial-qtd" class="form-label">Quantidade Inicial Disponível</label>
-                        <input type="number" id="input-config-inicial-qtd" class="form-input" min="0" value="0" required>
-                    </div>
-                    <div class="mb-4">
-                         <label for="input-config-inicial-responsavel" class="form-label">Responsável pelo Lançamento</label>
-                         <input type="text" id="input-config-inicial-responsavel" class="form-input" placeholder="Seu nome" required>
-                    </div>
-                    <input type="hidden" id="config-inicial-tipo" value="">
-                </form>
-            </div>
-        </div>
-        <div class="modal-footer">
-          <button id="btn-submit-config-inicial" class="btn btn-primary">Salvar e Iniciar</button>
-        </div>
-      </div>
-    </div>
-
+    <!-- Modal de Configuração Inicial REMOVIDO -->
 
     <!-- Script Principal -->
     <script type="module">
         // --- IMPORTS DO FIREBASE ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, Timestamp, serverTimestamp, setLogLevel, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, Timestamp, serverTimestamp, setLogLevel, setDoc, getDocs, where, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- CONFIGURAÇÃO E VARIÁVEIS GLOBAIS ---
         const userFallbackConfig = { apiKey: "AIzaSyD7VCxaHo8veaHnM8RwY60EX_DEh3hOVHk", authDomain: "controle-almoxarifado-semcas.firebaseapp.com", projectId: "controle-almoxarifado-semcas", storageBucket: "controle-almoxarifado-semcas.firebasestorage.app", messagingSenderId: "916615427315", appId: "1:916615427315:web:6823897ed065c50d413386" };
@@ -802,13 +868,13 @@
         
         // Coleções de Saída (Movimentação)
         let unidadesCollection, aguaCollection, gasCollection, materiaisCollection;
-        // NOVAS Coleções de Entrada (Estoque)
-        let estoqueAguaCollection, estoqueGasCollection, configEstoqueDocRef;
+        // Coleções de Entrada (Estoque)
+        let estoqueAguaCollection, estoqueGasCollection;
 
         // Arrays de dados
         let fb_unidades = [], fb_agua_movimentacoes = [], fb_gas_movimentacoes = [], fb_materiais = [];
         let fb_estoque_agua = [], fb_estoque_gas = [];
-        let fb_config_estoque = null; // Inicia como null
+        let estoqueInicialDefinido = { agua: false, gas: false }; // Controla se o inicial já foi carregado/definido
         
         let visaoAtiva = 'dashboard'; 
         let dashboardAguaChartInstance, dashboardGasChartInstance;
@@ -838,16 +904,17 @@
         // Modal Delete
         let confirmDeleteModal, btnCancelDelete, btnConfirmDelete, deleteDetailsEl;
         
-        // NOVOS Elementos de Estoque (Água)
-        let estoqueAguaInicialEl, estoqueAguaEntradasEl, estoqueAguaSaidasEl, estoqueAguaAtualEl, loadingEstoqueAguaEl;
+        // Elementos de Estoque (Água)
+        let estoqueAguaInicialEl, estoqueAguaEntradasEl, estoqueAguaSaidasEl, estoqueAguaAtualEl, loadingEstoqueAguaEl, resumoEstoqueAguaEl;
         let formEntradaAgua, inputQtdEntradaAgua, inputDataEntradaAgua, inputResponsavelEntradaAgua, inputNfEntradaAgua, btnSubmitEntradaAgua;
+        let formInicialAguaContainer, formInicialAgua, inputInicialQtdAgua, inputInicialResponsavelAgua, btnSubmitInicialAgua, alertInicialAgua, btnAbrirInicialAgua; // Novo form inicial
+        let tableHistoricoAgua, alertHistoricoAgua; // Novo histórico
         
-        // NOVOS Elementos de Estoque (Gás)
-        let estoqueGasInicialEl, estoqueGasEntradasEl, estoqueGasSaidasEl, estoqueGasAtualEl, loadingEstoqueGasEl;
+        // Elementos de Estoque (Gás)
+        let estoqueGasInicialEl, estoqueGasEntradasEl, estoqueGasSaidasEl, estoqueGasAtualEl, loadingEstoqueGasEl, resumoEstoqueGasEl;
         let formEntradaGas, inputQtdEntradaGas, inputDataEntradaGas, inputResponsavelEntradaGas, inputNfEntradaGas, btnSubmitEntradaGas;
-
-        // NOVO Modal Config Inicial
-        let configInicialModal, formConfigInicial, configInicialTitulo, inputConfigInicialQtd, inputConfigInicialResponsavel, configInicialTipo, btnSubmitConfigInicial;
+        let formInicialGasContainer, formInicialGas, inputInicialQtdGas, inputInicialResponsavelGas, btnSubmitInicialGas, alertInicialGas, btnAbrirInicialGas; // Novo form inicial
+        let tableHistoricoGas, alertHistoricoGas; // Novo histórico
 
 
         // --- FUNÇÕES DE UTILIDADE ---
@@ -918,14 +985,12 @@
                         // Define os caminhos das coleções
                         const basePath = `artifacts/${appId}/public/data`;
                         unidadesCollection = collection(db, `${basePath}/unidades`);
-                        // Coleções de Saída (Movimentação)
                         aguaCollection = collection(db, `${basePath}/controleAgua`);
                         gasCollection = collection(db, `${basePath}/controleGas`);
                         materiaisCollection = collection(db, `${basePath}/controleMateriais`);
-                        // NOVAS Coleções de Entrada (Estoque)
                         estoqueAguaCollection = collection(db, `${basePath}/estoqueAgua`);
                         estoqueGasCollection = collection(db, `${basePath}/estoqueGas`);
-                        configEstoqueDocRef = doc(db, `${basePath}/config/estoque`); // Documento único
+                        // configEstoqueDocRef removido
                         
                         console.log("Caminho base das coleções:", basePath);
                         
@@ -1003,50 +1068,45 @@
                 console.log("Materiais atualizados:", fb_materiais.length);
             }, (error) => { console.error("Erro no listener de materiais:", error); showAlert('alert-materiais-lista', `Erro ao carregar materiais: ${error.message}`, 'error'); });
         
-            // --- NOVOS LISTENERS DE ESTOQUE ---
+            // --- LISTENERS DE ESTOQUE ---
             
-            // Listener para Configuração de Estoque
-            onSnapshot(configEstoqueDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    fb_config_estoque = docSnap.data();
-                } else {
-                    // Se não existe, é a primeira vez.
-                    fb_config_estoque = { aguaInicialDefinido: false, gasInicialDefinido: false };
-                }
-                console.log("Config de estoque:", fb_config_estoque);
-                checkConfigEstoque(); // Função que abre o modal
-                renderEstoqueAgua(); // Re-renderiza, pois a config pode ter mudado
-                renderEstoqueGas();
-            }, (error) => { console.error("Erro no listener de config:", error); });
-
             // Listener para Entradas de Estoque de Água
             onSnapshot(query(estoqueAguaCollection), (snapshot) => {
                 fb_estoque_agua = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderEstoqueAgua(); // Recalcula estoque
-                console.log("Estoque Água (Entradas) atualizado:", fb_estoque_agua.length);
+                // Verifica se existe alguma entrada do tipo 'inicial'
+                estoqueInicialDefinido.agua = fb_estoque_agua.some(e => e.tipo === 'inicial');
+                renderEstoqueAgua(); // Recalcula e atualiza UI
+                renderHistoricoAgua(); // Atualiza histórico
+                console.log("Estoque Água (Entradas) atualizado:", fb_estoque_agua.length, "Inicial definido:", estoqueInicialDefinido.agua);
             }, (error) => { console.error("Erro no listener de estoque água:", error); });
 
             // Listener para Entradas de Estoque de Gás
             onSnapshot(query(estoqueGasCollection), (snapshot) => {
                 fb_estoque_gas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderEstoqueGas(); // Recalcula estoque
-                console.log("Estoque Gás (Entradas) atualizado:", fb_estoque_gas.length);
+                // Verifica se existe alguma entrada do tipo 'inicial'
+                estoqueInicialDefinido.gas = fb_estoque_gas.some(e => e.tipo === 'inicial');
+                renderEstoqueGas(); // Recalcula e atualiza UI
+                renderHistoricoGas(); // Atualiza histórico
+                console.log("Estoque Gás (Entradas) atualizado:", fb_estoque_gas.length, "Inicial definido:", estoqueInicialDefinido.gas);
             }, (error) => { console.error("Erro no listener de estoque gás:", error); });
         }
         
         function clearAlmoxarifadoData() {
             fb_unidades = []; fb_agua_movimentacoes = []; fb_gas_movimentacoes = []; fb_materiais = [];
-            fb_estoque_agua = []; fb_estoque_gas = []; fb_config_estoque = null;
+            fb_estoque_agua = []; fb_estoque_gas = []; 
+            estoqueInicialDefinido = { agua: false, gas: false };
 
             [selectUnidadeAgua, selectUnidadeGas, selectUnidadeMateriais, selectPrevisaoUnidadeAgua, selectPrevisaoUnidadeGas].forEach(sel => { if(sel) sel.innerHTML = '<option value="">Desconectado</option>'; });
-            [tableStatusAgua, tableStatusGas, tableStatusMateriais, tableGestaoUnidades].forEach(tbody => { if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">Desconectado do Firebase</td></tr>'; });
+            [tableStatusAgua, tableStatusGas, tableStatusMateriais, tableGestaoUnidades, tableHistoricoAgua, tableHistoricoGas].forEach(tbody => { if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">Desconectado do Firebase</td></tr>'; });
             [dashboardMateriaisListContainer, dashboardMateriaisProntosContainer].forEach(el => { if(el) el.innerHTML = '<p class="text-center py-4 text-red-500">Desconectado</p>'; });
             [dashboardAguaChartInstance, dashboardGasChartInstance].forEach(chartInstance => { if (chartInstance) { chartInstance.data.datasets.forEach(ds => ds.data = []); chartInstance.update(); } });
             
-            // Limpa novos cards de estoque
+            // Limpa cards de estoque
             [estoqueAguaInicialEl, estoqueAguaEntradasEl, estoqueAguaSaidasEl, estoqueAguaAtualEl, estoqueGasInicialEl, estoqueGasEntradasEl, estoqueGasSaidasEl, estoqueGasAtualEl].forEach(el => { if(el) el.textContent = '0'; });
-            if(loadingEstoqueAguaEl) loadingEstoqueAguaEl.style.display = 'block';
-            if(loadingEstoqueGasEl) loadingEstoqueGasEl.style.display = 'block';
+            [resumoEstoqueAguaEl, resumoEstoqueGasEl].forEach(el => { if(el) el.classList.add('hidden'); });
+            [loadingEstoqueAguaEl, loadingEstoqueGasEl].forEach(el => { if(el) el.style.display = 'block'; });
+            [btnAbrirInicialAgua, btnAbrirInicialGas].forEach(btn => { if(btn) btn.classList.remove('hidden'); }); // Mostra botão inicial
+            [formInicialAguaContainer, formInicialGasContainer].forEach(form => { if(form) form.classList.add('hidden'); }); // Esconde form inicial
             
             console.log("Dados do Almoxarifado limpos devido à desconexão.");
         }
@@ -1092,9 +1152,13 @@
                 showAlert('alert-agua', 'Dados inválidos. Verifique todos os campos (incluindo Responsável).', 'warning'); return;
             }
 
-            // NOVO: Verificar se tem estoque
+            // Verificar se o estoque inicial foi definido
+            if (!estoqueInicialDefinido.agua) {
+                 showAlert('alert-agua', 'Defina o Estoque Inicial de Água antes de lançar saídas.', 'warning'); return;
+            }
+
             if (tipo === 'entrega') {
-                const estoqueAtual = (estoqueAguaInicialEl.textContent === 'Aguardando Config.' ? 0 : parseInt(estoqueAguaAtualEl.textContent) || 0);
+                const estoqueAtual = parseInt(estoqueAguaAtualEl.textContent) || 0;
                 if (quantidade > estoqueAtual) {
                     showAlert('alert-agua', `Erro: Estoque insuficiente. Disponível: ${estoqueAtual}`, 'error'); return;
                 }
@@ -1166,9 +1230,13 @@
                 showAlert('alert-gas', 'Dados inválidos. Verifique todos os campos (incluindo Responsável).', 'warning'); return;
             }
 
-            // NOVO: Verificar se tem estoque
+             // Verificar se o estoque inicial foi definido
+            if (!estoqueInicialDefinido.gas) {
+                 showAlert('alert-gas', 'Defina o Estoque Inicial de Gás antes de lançar saídas.', 'warning'); return;
+            }
+
             if (tipo === 'entrega') {
-                const estoqueAtual = (estoqueGasAtualEl.textContent === 'Aguardando Config.' ? 0 : parseInt(estoqueGasAtualEl.textContent) || 0);
+                const estoqueAtual = parseInt(estoqueGasAtualEl.textContent) || 0;
                 if (quantidade > estoqueAtual) {
                     showAlert('alert-gas', `Erro: Estoque insuficiente. Disponível: ${estoqueAtual}`, 'error'); return;
                 }
@@ -1779,25 +1847,41 @@
             if (!id || !type) return;
             
             let collectionRef = null;
-            let detailsText = `ID: ${id}`;
+            let detailsText = `ID: ${id.substring(0,6)}...`;
+            let alertElementId = 'alert-gestao'; // Padrão
             
-            // Ajusta para permitir exclusão de entradas de estoque
-            if (type === 'agua') { collectionRef = aguaCollection; detailsText = `Saída de Água (ID: ${id.substring(0,6)}...)`; }
-            else if (type === 'gas') { collectionRef = gasCollection; detailsText = `Saída de Gás (ID: ${id.substring(0,6)}...)`; }
-            else if (type === 'materiais') { collectionRef = materiaisCollection; detailsText = `Registro de Material (ID: ${id.substring(0,6)}...)`; }
-            // Adicionar tipos de entrada (embora não haja botão para isso ainda)
-            else if (type === 'entrada-agua') { collectionRef = estoqueAguaCollection; detailsText = `Entrada de Água (ID: ${id.substring(0,6)}...)`; }
-            else if (type === 'entrada-gas') { collectionRef = estoqueGasCollection; detailsText = `Entrada de Gás (ID: ${id.substring(0,6)}...)`; }
-            else { console.error("Tipo inválido para exclusão:", type); return; }
+            if (type === 'agua') { 
+                collectionRef = aguaCollection; 
+                detailsText = `Saída de Água ${detailsText}`; 
+                alertElementId = 'alert-agua-lista';
+            } else if (type === 'gas') { 
+                collectionRef = gasCollection; 
+                detailsText = `Saída de Gás ${detailsText}`; 
+                alertElementId = 'alert-gas-lista';
+            } else if (type === 'materiais') { 
+                collectionRef = materiaisCollection; 
+                detailsText = `Registro de Material ${detailsText}`; 
+                alertElementId = 'alert-materiais-lista';
+            } else if (type === 'entrada-agua') { 
+                collectionRef = estoqueAguaCollection; 
+                detailsText = `Entrada de Estoque (Água) ${detailsText}`; 
+                alertElementId = 'alert-historico-agua'; // Usa o alerta do histórico
+            } else if (type === 'entrada-gas') { 
+                collectionRef = estoqueGasCollection; 
+                detailsText = `Entrada de Estoque (Gás) ${detailsText}`; 
+                alertElementId = 'alert-historico-gas'; // Usa o alerta do histórico
+            } else { 
+                console.error("Tipo inválido para exclusão:", type); return; 
+            }
 
-            deleteInfo = { id, type, collectionRef };
+            deleteInfo = { id, type, collectionRef, alertElementId };
             deleteDetailsEl.textContent = `Detalhes: ${detailsText}`;
             confirmDeleteModal.style.display = 'block';
         }
         
         async function executeDelete() {
             if (!isAuthReady || !deleteInfo.id || !deleteInfo.collectionRef) {
-                 showAlert(`alert-${deleteInfo.type}-lista` || 'alert-gestao', 'Erro: Não autenticado ou informação de exclusão inválida.', 'error');
+                 showAlert(deleteInfo.alertElementId || 'alert-gestao', 'Erro: Não autenticado ou informação de exclusão inválida.', 'error');
                  return;
             }
 
@@ -1805,83 +1889,81 @@
             btnCancelDelete.disabled = true;
 
             try {
+                // Se for exclusão de entrada inicial, precisa resetar a flag 'estoqueInicialDefinido'
+                // Esta parte foi removida, a exclusão da entrada inicial não é permitida diretamente pelo botão
+                // A lógica para tratar isso seria mais complexa (perguntar se quer resetar tudo, etc.)
+
                 const docRef = doc(deleteInfo.collectionRef, deleteInfo.id);
                 await deleteDoc(docRef);
-                showAlert(`alert-${deleteInfo.type}-lista` || 'alert-gestao', 'Lançamento removido com sucesso!', 'success');
+                showAlert(deleteInfo.alertElementId || 'alert-gestao', 'Lançamento removido com sucesso!', 'success');
             } catch (error) {
                 console.error(`Erro ao remover ${deleteInfo.type}:`, error);
-                showAlert(`alert-${deleteInfo.type}-lista` || 'alert-gestao', `Erro ao remover: ${error.message}`, 'error');
+                showAlert(deleteInfo.alertElementId || 'alert-gestao', `Erro ao remover: ${error.message}`, 'error');
             } finally {
                 confirmDeleteModal.style.display = 'none';
                 btnConfirmDelete.disabled = false; btnConfirmDelete.textContent = 'Confirmar Exclusão';
                 btnCancelDelete.disabled = false;
-                deleteInfo = { id: null, type: null, collectionRef: null };
+                deleteInfo = { id: null, type: null, collectionRef: null, alertElementId: null };
             }
         }
 
-        // --- LÓGICA DE CONTROLE DE ESTOQUE (NOVO) ---
-
-        // Checa se a configuração inicial já foi feita e abre o modal se necessário
-        function checkConfigEstoque() {
-            if (!fb_config_estoque || !configInicialModal) return;
-
-            if (fb_config_estoque.aguaInicialDefinido === false) {
-                configInicialTitulo.textContent = '1. Estoque Inicial de Água (Galões)';
-                configInicialTipo.value = 'agua';
-                formConfigInicial.reset();
-                configInicialModal.style.display = 'block';
-                btnSubmitConfigInicial.disabled = false;
-            } else if (fb_config_estoque.gasInicialDefinido === false) {
-                configInicialTitulo.textContent = '2. Estoque Inicial de Gás (Botijões)';
-                configInicialTipo.value = 'gas';
-                formConfigInicial.reset();
-                configInicialModal.style.display = 'block';
-                btnSubmitConfigInicial.disabled = false;
-            } else {
-                // Ambos estão definidos, fecha o modal
-                configInicialModal.style.display = 'none';
-            }
-        }
+        // --- LÓGICA DE CONTROLE DE ESTOQUE ---
 
         // Salva a configuração inicial
-        async function handleConfigInicialSubmit(e) {
+        async function handleInicialEstoqueSubmit(e) {
             e.preventDefault();
-            const tipo = configInicialTipo.value;
-            const quantidade = parseInt(inputConfigInicialQtd.value, 10);
-            const responsavel = capitalizeString(inputConfigInicialResponsavel.value.trim());
+            const tipoEstoque = e.target.id.includes('agua') ? 'agua' : 'gas';
             
-            if (!tipo || isNaN(quantidade) || quantidade < 0 || !responsavel) {
-                alert("Por favor, preencha a quantidade e o responsável."); // Usando alert() aqui pois é um modal
+            const inputQtd = document.getElementById(`input-inicial-qtd-${tipoEstoque}`).value;
+            const inputResp = document.getElementById(`input-inicial-responsavel-${tipoEstoque}`).value;
+            const btnSubmit = document.getElementById(`btn-submit-inicial-${tipoEstoque}`);
+            const alertElId = `alert-inicial-${tipoEstoque}`;
+            
+            const quantidade = parseInt(inputQtd, 10);
+            const responsavel = capitalizeString(inputResp.trim());
+            
+            if (isNaN(quantidade) || quantidade < 0 || !responsavel) {
+                showAlert(alertElId, "Preencha a quantidade e o responsável.", 'warning'); 
                 return;
             }
 
-            btnSubmitConfigInicial.disabled = true;
-            btnSubmitConfigInicial.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+            // Checa novamente se já não existe uma entrada inicial (evita duplicidade)
+            const estoqueAtual = (tipoEstoque === 'agua') ? fb_estoque_agua : fb_estoque_gas;
+            if (estoqueAtual.some(e => e.tipo === 'inicial')) {
+                 showAlert(alertElId, "O estoque inicial já foi definido.", 'info'); 
+                 // Esconde o form caso ele ainda esteja visível por algum motivo
+                 document.getElementById(`form-inicial-${tipoEstoque}-container`).classList.add('hidden');
+                 document.getElementById(`btn-abrir-inicial-${tipoEstoque}`).classList.add('hidden');
+                 document.getElementById(`resumo-estoque-${tipoEstoque}`).classList.remove('hidden');
+                 return;
+            }
+
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
             
-            const collectionRef = (tipo === 'agua') ? estoqueAguaCollection : estoqueGasCollection;
-            const configField = (tipo === 'agua') ? 'aguaInicialDefinido' : 'gasInicialDefinido';
+            const collectionRef = (tipoEstoque === 'agua') ? estoqueAguaCollection : estoqueGasCollection;
             
             try {
-                // 1. Adiciona o lançamento inicial no estoque
                 await addDoc(collectionRef, {
-                    tipo: 'inicial', // Tipo especial
+                    tipo: 'inicial', 
                     quantidade: quantidade,
-                    data: serverTimestamp(), // Usa a data atual
+                    data: serverTimestamp(), 
                     responsavel: responsavel,
                     notaFiscal: 'INICIAL',
                     registradoEm: serverTimestamp()
                 });
                 
-                // 2. Atualiza (ou cria) o documento de configuração
-                await setDoc(configEstoqueDocRef, { [configField]: true }, { merge: true });
-                
-                // O onSnapshot vai pegar a mudança e chamar checkConfigEstoque() novamente.
-                
+                showAlert(alertElId, "Estoque inicial salvo!", 'success', 2000);
+                 // Esconde o form e o botão, mostra o resumo (onSnapshot fará o cálculo)
+                 document.getElementById(`form-inicial-${tipoEstoque}-container`).classList.add('hidden');
+                 document.getElementById(`btn-abrir-inicial-${tipoEstoque}`).classList.add('hidden');
+                 document.getElementById(`resumo-estoque-${tipoEstoque}`).classList.remove('hidden');
+
             } catch (error) {
-                console.error("Erro ao salvar config inicial:", error);
-                alert(`Erro ao salvar: ${error.message}`);
-                btnSubmitConfigInicial.disabled = false;
-                btnSubmitConfigInicial.textContent = 'Salvar e Iniciar';
+                console.error("Erro ao salvar estoque inicial:", error);
+                showAlert(alertElId, `Erro ao salvar: ${error.message}`, 'error');
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = 'Salvar Inicial';
             }
         }
 
@@ -1916,6 +1998,7 @@
             if (!isAuthReady) { showAlert('alert-agua', 'Erro: Não autenticado.', 'error'); return; }
 
             const tipoEstoque = e.target.id.includes('agua') ? 'agua' : 'gas';
+            const alertElementId = `alert-${tipoEstoque}`; // Reutiliza o alerta principal da aba
             
             const inputQtd = document.getElementById(`input-qtd-entrada-${tipoEstoque}`).value;
             const inputData = document.getElementById(`input-data-entrada-${tipoEstoque}`).value;
@@ -1930,7 +2013,12 @@
             const notaFiscal = inputNf.trim() || 'N/A';
 
             if (!quantidade || quantidade <= 0 || !data || !responsavel) {
-                showAlert('alert-agua', 'Dados inválidos. Verifique quantidade, data e responsável.', 'warning'); return;
+                showAlert(alertElementId, 'Dados inválidos. Verifique quantidade, data e responsável.', 'warning'); return;
+            }
+
+             // Verificar se o estoque inicial foi definido
+            if (!estoqueInicialDefinido[tipoEstoque]) {
+                 showAlert(alertElementId, `Defina o Estoque Inicial de ${tipoEstoque === 'agua' ? 'Água' : 'Gás'} antes de lançar entradas.`, 'warning'); return;
             }
 
             btnSubmit.disabled = true; btnSubmit.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
@@ -1946,12 +2034,12 @@
                     notaFiscal: notaFiscal,
                     registradoEm: serverTimestamp()
                 });
-                showAlert('alert-agua', 'Entrada no estoque salva!', 'success');
+                showAlert(alertElementId, 'Entrada no estoque salva!', 'success');
                 form.reset();
                 document.getElementById(`input-data-entrada-${tipoEstoque}`).value = getTodayDateString();
             } catch (error) {
                 console.error("Erro salvar entrada estoque:", error);
-                showAlert('alert-agua', `Erro: ${error.message}`, 'error');
+                showAlert(alertElementId, `Erro: ${error.message}`, 'error');
             } finally {
                 btnSubmit.disabled = false;
                 btnSubmit.textContent = 'Salvar Entrada';
@@ -1960,16 +2048,19 @@
 
         // Renderiza o card de Resumo de Estoque de Água
         function renderEstoqueAgua() {
-            if (!estoqueAguaAtualEl || !fb_config_estoque) return;
-
+            if (!estoqueAguaAtualEl) return;
+            
             if (loadingEstoqueAguaEl) loadingEstoqueAguaEl.style.display = 'none';
 
-            if (fb_config_estoque.aguaInicialDefinido === false) {
-                estoqueAguaInicialEl.textContent = '...';
-                estoqueAguaEntradasEl.textContent = '...';
-                estoqueAguaSaidasEl.textContent = '...';
-                estoqueAguaAtualEl.textContent = 'Aguardando Config.';
-                return;
+            // Controla visibilidade do botão/form inicial
+            if (estoqueInicialDefinido.agua) {
+                btnAbrirInicialAgua.classList.add('hidden');
+                formInicialAguaContainer.classList.add('hidden');
+                resumoEstoqueAguaEl.classList.remove('hidden');
+            } else {
+                btnAbrirInicialAgua.classList.remove('hidden');
+                resumoEstoqueAguaEl.classList.add('hidden');
+                // Não esconde o form se ele já estiver aberto
             }
             
             const estoqueInicial = fb_estoque_agua
@@ -1994,16 +2085,18 @@
 
         // Renderiza o card de Resumo de Estoque de Gás
         function renderEstoqueGas() {
-             if (!estoqueGasAtualEl || !fb_config_estoque) return;
+             if (!estoqueGasAtualEl) return;
 
             if (loadingEstoqueGasEl) loadingEstoqueGasEl.style.display = 'none';
 
-            if (fb_config_estoque.gasInicialDefinido === false) {
-                estoqueGasInicialEl.textContent = '...';
-                estoqueGasEntradasEl.textContent = '...';
-                estoqueGasSaidasEl.textContent = '...';
-                estoqueGasAtualEl.textContent = 'Aguardando Config.';
-                return;
+             // Controla visibilidade do botão/form inicial
+            if (estoqueInicialDefinido.gas) {
+                btnAbrirInicialGas.classList.add('hidden');
+                formInicialGasContainer.classList.add('hidden');
+                resumoEstoqueGasEl.classList.remove('hidden');
+            } else {
+                btnAbrirInicialGas.classList.remove('hidden');
+                resumoEstoqueGasEl.classList.add('hidden');
             }
             
             const estoqueInicial = fb_estoque_gas
@@ -2024,6 +2117,63 @@
             estoqueGasEntradasEl.textContent = `+${totalEntradas}`;
             estoqueGasSaidasEl.textContent = `-${totalSaidas}`;
             estoqueGasAtualEl.textContent = estoqueAtual;
+        }
+
+        // --- NOVO: Renderiza Histórico de Entradas ---
+        function renderHistoricoAgua() {
+            if (!tableHistoricoAgua) return;
+
+            const historicoOrdenado = [...fb_estoque_agua].sort((a, b) => (b.data?.toMillis() || 0) - (a.data?.toMillis() || 0));
+
+             if (historicoOrdenado.length === 0) { 
+                tableHistoricoAgua.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma entrada registrada.</td></tr>'; 
+                return; 
+             }
+            
+            tableHistoricoAgua.innerHTML = historicoOrdenado.map(e => {
+                const tipoClass = e.tipo === 'inicial' ? 'badge-blue' : 'badge-green';
+                const tipoText = e.tipo === 'inicial' ? 'Inicial' : 'Entrada';
+                return `
+                <tr>
+                    <td>${formatTimestamp(e.data)}</td>
+                    <td><span class="badge ${tipoClass}">${tipoText}</span></td>
+                    <td class="text-center font-medium">${e.quantidade}</td>
+                    <td>${e.responsavel || 'N/A'}</td>
+                    <td>${e.notaFiscal || 'N/A'}</td>
+                    <td class="text-center">
+                        <button class="btn-danger btn-remove" data-id="${e.id}" data-type="entrada-agua" title="Remover esta entrada"><i data-lucide="trash-2"></i></button>
+                    </td>
+                </tr>
+            `}).join('');
+            lucide.createIcons();
+        }
+
+        function renderHistoricoGas() {
+             if (!tableHistoricoGas) return;
+
+            const historicoOrdenado = [...fb_estoque_gas].sort((a, b) => (b.data?.toMillis() || 0) - (a.data?.toMillis() || 0));
+
+             if (historicoOrdenado.length === 0) { 
+                tableHistoricoGas.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma entrada registrada.</td></tr>'; 
+                return; 
+             }
+            
+            tableHistoricoGas.innerHTML = historicoOrdenado.map(e => {
+                const tipoClass = e.tipo === 'inicial' ? 'badge-blue' : 'badge-green';
+                const tipoText = e.tipo === 'inicial' ? 'Inicial' : 'Entrada';
+                return `
+                <tr>
+                    <td>${formatTimestamp(e.data)}</td>
+                    <td><span class="badge ${tipoClass}">${tipoText}</span></td>
+                    <td class="text-center font-medium">${e.quantidade}</td>
+                    <td>${e.responsavel || 'N/A'}</td>
+                    <td>${e.notaFiscal || 'N/A'}</td>
+                    <td class="text-center">
+                        <button class="btn-danger btn-remove" data-id="${e.id}" data-type="entrada-gas" title="Remover esta entrada"><i data-lucide="trash-2"></i></button>
+                    </td>
+                </tr>
+            `}).join('');
+            lucide.createIcons();
         }
 
 
@@ -2047,10 +2197,8 @@
             }
             
             if (tabName === 'gestao') { renderGestaoUnidades(); }
-            
-            // Ao trocar de aba, reseta os formulários de entrada/saída para "Saída"
-            if (tabName === 'agua') { switchEstoqueForm('saida-agua'); }
-            if (tabName === 'gas') { switchEstoqueForm('saida-gas'); }
+            if (tabName === 'agua') { switchEstoqueForm('saida-agua'); renderEstoqueAgua(); renderHistoricoAgua(); }
+            if (tabName === 'gas') { switchEstoqueForm('saida-gas'); renderEstoqueGas(); renderHistoricoGas(); }
 
             setTimeout(() => {
                 if(typeof lucide !== 'undefined') lucide.createIcons();
@@ -2097,34 +2245,45 @@
             // Modal Delete
             confirmDeleteModal = document.getElementById('confirm-delete-modal'); btnCancelDelete = document.getElementById('btn-cancel-delete'); btnConfirmDelete = document.getElementById('btn-confirm-delete'); deleteDetailsEl = document.getElementById('delete-details');
             
-            // NOVOS: Estoque Água
+            // Estoque Água
             estoqueAguaInicialEl = document.getElementById('estoque-agua-inicial');
             estoqueAguaEntradasEl = document.getElementById('estoque-agua-entradas');
             estoqueAguaSaidasEl = document.getElementById('estoque-agua-saidas');
             estoqueAguaAtualEl = document.getElementById('estoque-agua-atual');
             loadingEstoqueAguaEl = document.getElementById('loading-estoque-agua');
+            resumoEstoqueAguaEl = document.getElementById('resumo-estoque-agua');
             formEntradaAgua = document.getElementById('form-entrada-agua');
             inputDataEntradaAgua = document.getElementById('input-data-entrada-agua');
             btnSubmitEntradaAgua = document.getElementById('btn-submit-entrada-agua');
+            formInicialAguaContainer = document.getElementById('form-inicial-agua-container');
+            formInicialAgua = document.getElementById('form-inicial-agua');
+            inputInicialQtdAgua = document.getElementById('input-inicial-qtd-agua');
+            inputInicialResponsavelAgua = document.getElementById('input-inicial-responsavel-agua');
+            btnSubmitInicialAgua = document.getElementById('btn-submit-inicial-agua');
+            alertInicialAgua = document.getElementById('alert-inicial-agua');
+            btnAbrirInicialAgua = document.getElementById('btn-abrir-inicial-agua');
+            tableHistoricoAgua = document.getElementById('table-historico-agua');
+            alertHistoricoAgua = document.getElementById('alert-historico-agua');
             
-            // NOVOS: Estoque Gás
+            // Estoque Gás
             estoqueGasInicialEl = document.getElementById('estoque-gas-inicial');
             estoqueGasEntradasEl = document.getElementById('estoque-gas-entradas');
             estoqueGasSaidasEl = document.getElementById('estoque-gas-saidas');
             estoqueGasAtualEl = document.getElementById('estoque-gas-atual');
             loadingEstoqueGasEl = document.getElementById('loading-estoque-gas');
+            resumoEstoqueGasEl = document.getElementById('resumo-estoque-gas');
             formEntradaGas = document.getElementById('form-entrada-gas');
             inputDataEntradaGas = document.getElementById('input-data-entrada-gas');
             btnSubmitEntradaGas = document.getElementById('btn-submit-entrada-gas');
-
-            // NOVO: Modal Config
-            configInicialModal = document.getElementById('config-inicial-modal');
-            formConfigInicial = document.getElementById('form-config-inicial');
-            configInicialTitulo = document.getElementById('config-inicial-titulo');
-            inputConfigInicialQtd = document.getElementById('input-config-inicial-qtd');
-            inputConfigInicialResponsavel = document.getElementById('input-config-inicial-responsavel');
-            configInicialTipo = document.getElementById('config-inicial-tipo');
-            btnSubmitConfigInicial = document.getElementById('btn-submit-config-inicial');
+            formInicialGasContainer = document.getElementById('form-inicial-gas-container');
+            formInicialGas = document.getElementById('form-inicial-gas');
+            inputInicialQtdGas = document.getElementById('input-inicial-qtd-gas');
+            inputInicialResponsavelGas = document.getElementById('input-inicial-responsavel-gas');
+            btnSubmitInicialGas = document.getElementById('btn-submit-inicial-gas');
+            alertInicialGas = document.getElementById('alert-inicial-gas');
+            btnAbrirInicialGas = document.getElementById('btn-abrir-inicial-gas');
+            tableHistoricoGas = document.getElementById('table-historico-gas');
+            alertHistoricoGas = document.getElementById('alert-historico-gas');
 
 
             // Valores iniciais
@@ -2134,8 +2293,8 @@
             if(inputDataSeparacao) inputDataSeparacao.value = todayStr;
             if(relatorioDataInicio) relatorioDataInicio.value = todayStr;
             if(relatorioDataFim) relatorioDataFim.value = todayStr;
-            if(inputDataEntradaAgua) inputDataEntradaAgua.value = todayStr; // NOVO
-            if(inputDataEntradaGas) inputDataEntradaGas.value = todayStr; // NOVO
+            if(inputDataEntradaAgua) inputDataEntradaAgua.value = todayStr; 
+            if(inputDataEntradaGas) inputDataEntradaGas.value = todayStr; 
 
 
             // Listeners
@@ -2150,7 +2309,7 @@
             if (formGas) formGas.addEventListener('submit', handleGasSubmit); 
             if (formMateriais) formMateriais.addEventListener('submit', handleMateriaisSubmit); 
             
-            // Listener unificado para botões de ação nas tabelas (Remover/Entregue)
+            // Listener unificado para botões de ação nas tabelas (Remover Saída/Entrada, Entregue)
             document.querySelector('main').addEventListener('click', (e) => {
                  const removeButton = e.target.closest('button.btn-remove[data-id]');
                  const entregueButton = e.target.closest('button.btn-entregue[data-id]');
@@ -2175,7 +2334,7 @@
             if (btnCancelDelete) btnCancelDelete.addEventListener('click', () => confirmDeleteModal.style.display = 'none');
             if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', executeDelete);
 
-            // --- NOVOS LISTENERS DE ESTOQUE ---
+            // Listeners de Estoque
             document.querySelectorAll('.form-tab-btn[data-form="saida-agua"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('saida-agua')));
             document.querySelectorAll('.form-tab-btn[data-form="entrada-agua"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('entrada-agua')));
             document.querySelectorAll('.form-tab-btn[data-form="saida-gas"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('saida-gas')));
@@ -2183,7 +2342,12 @@
 
             if (formEntradaAgua) formEntradaAgua.addEventListener('submit', handleEntradaEstoqueSubmit);
             if (formEntradaGas) formEntradaGas.addEventListener('submit', handleEntradaEstoqueSubmit);
-            if (btnSubmitConfigInicial) btnSubmitConfigInicial.addEventListener('click', handleConfigInicialSubmit);
+            
+            // Listeners Forms Iniciais
+            if (btnAbrirInicialAgua) btnAbrirInicialAgua.addEventListener('click', () => { formInicialAguaContainer.classList.remove('hidden'); btnAbrirInicialAgua.classList.add('hidden'); });
+            if (btnAbrirInicialGas) btnAbrirInicialGas.addEventListener('click', () => { formInicialGasContainer.classList.remove('hidden'); btnAbrirInicialGas.classList.add('hidden'); });
+            if (formInicialAgua) formInicialAgua.addEventListener('submit', handleInicialEstoqueSubmit);
+            if (formInicialGas) formInicialGas.addEventListener('submit', handleInicialEstoqueSubmit);
 
 
             if(typeof lucide !== 'undefined') lucide.createIcons();
