@@ -5,7 +5,6 @@ import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection
 
 // --- CONFIGURAÇÃO E VARIÁVEIS GLOBAIS ---
 
-// Configuração fallback do Firebase
 const userFallbackConfig = { 
     apiKey: "AIzaSyD7VCxaHo8veaHnM8RwY60EX_DEh3hOVHk", 
     authDomain: "controle-almoxarifado-semcas.firebaseapp.com", 
@@ -15,24 +14,20 @@ const userFallbackConfig = {
     appId: "1:916615427315:web:6823897ed065c50d413386" 
 };
 
-// Tenta usar as variáveis injetadas pelo ambiente ou usa o fallback
 const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : JSON.stringify(userFallbackConfig);
 const firebaseConfig = JSON.parse(firebaseConfigString);
 
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const appId = rawAppId.replace(/[\/.]/g, '-'); // Normaliza o App ID
+const appId = rawAppId.replace(/[\/.]/g, '-');
 
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-// Variáveis globais do Firebase
 let app, auth, db, userId;
 let isAuthReady = false;
 
-// Referências das coleções do Firestore
 let unidadesCollection, aguaCollection, gasCollection, materiaisCollection;
 let estoqueAguaCollection, estoqueGasCollection;
 
-// Arrays para armazenar dados locais (cache)
 let fb_unidades = [], fb_agua_movimentacoes = [], fb_gas_movimentacoes = [], fb_materiais = [];
 let fb_estoque_agua = [], fb_estoque_gas = [];
 let estoqueInicialDefinido = { agua: false, gas: false }; 
@@ -42,78 +37,54 @@ let visaoAtiva = 'dashboard';
 let dashboardAguaChartInstance, dashboardGasChartInstance;
 let dashboardRefreshInterval = null;
 let deleteInfo = { id: null, type: null, collectionRef: null, details: null, isInicial: false }; 
+let initialMaterialFilter = null; // (REQ 2.1) Variável para filtro inicial
 
 // --- Referências de Elementos (DOM) ---
-// (Serão preenchidas na função initApp)
 let navButtons, contentPanes, connectionStatusEl, lastUpdateTimeEl;
-// Dashboard
 let dashboardNavControls;
 let summaryAguaPendente, summaryAguaEntregue, summaryAguaRecebido;
 let summaryGasPendente, summaryGasEntregue, summaryGasRecebido;
 let dashboardMateriaisProntosContainer, loadingMateriaisProntos;
 let dashboardMateriaisListContainer, loadingMateriaisDashboard;
 let dashboardEstoqueAguaEl, dashboardEstoqueGasEl, dashboardMateriaisSeparacaoCountEl;
-let dashboardMateriaisRetiradaCountEl; // (REQ 6.4)
-// Água
+let dashboardMateriaisRetiradaCountEl;
 let formAgua, selectUnidadeAgua, selectTipoAgua, inputDataAgua, inputResponsavelAgua, btnSubmitAgua, alertAgua, tableStatusAgua, alertAguaLista;
 let inputQtdEntregueAgua, inputQtdRetornoAgua, formGroupQtdEntregueAgua, formGroupQtdRetornoAgua; 
-// Gás
 let formGas, selectUnidadeGas, selectTipoGas, inputDataGas, inputResponsavelGas, btnSubmitGas, alertGas, tableStatusGas, alertGasLista;
 let inputQtdEntregueGas, inputQtdRetornoGas, formGroupQtdEntregueGas, formGroupQtdRetornoGas; 
-// Materiais
 let formMateriais, selectUnidadeMateriais, selectTipoMateriais, inputDataSeparacao, textareaItensMateriais, inputResponsavelMateriais, btnSubmitMateriais, alertMateriais, tableStatusMateriais, alertMateriaisLista;
-// Gestão
 let tableGestaoUnidades, alertGestao, textareaBulkUnidades, btnBulkAddUnidades;
 let filtroUnidadeNome, filtroUnidadeTipo; 
-// Relatório PDF
 let relatorioTipo, relatorioDataInicio, relatorioDataFim, btnGerarPdf, alertRelatorio;
-// Modal Delete
 let confirmDeleteModal, btnCancelDelete, btnConfirmDelete, deleteDetailsEl, deleteWarningUnidadeEl, deleteWarningInicialEl; 
-
-// Estoque Água
 let estoqueAguaInicialEl, estoqueAguaEntradasEl, estoqueAguaSaidasEl, estoqueAguaAtualEl, loadingEstoqueAguaEl, resumoEstoqueAguaEl;
 let formEntradaAgua, inputDataEntradaAgua, btnSubmitEntradaAgua; 
 let formInicialAguaContainer, formInicialAgua, inputInicialQtdAgua, inputInicialResponsavelAgua, btnSubmitInicialAgua, alertInicialAgua, btnAbrirInicialAgua; 
 let tableHistoricoAgua, alertHistoricoAgua; 
-
-// Estoque Gás
 let estoqueGasInicialEl, estoqueGasEntradasEl, estoqueGasSaidasEl, estoqueGasAtualEl, loadingEstoqueGasEl, resumoEstoqueGasEl;
 let formEntradaGas, inputDataEntradaGas, btnSubmitEntradaGas; 
 let formInicialGasContainer, formInicialGas, inputInicialQtdGas, inputInicialResponsavelGas, btnSubmitInicialGas, alertInicialGas, btnAbrirInicialGas; 
 let tableHistoricoGas, alertHistoricoGas; 
-
-// Previsão Inteligente
 let listaExclusoes = { agua: [], gas: [] };
 let modoPrevisao = { agua: null, gas: null };
 let graficoPrevisao = { agua: null, gas: null };
-let tipoSelecionadoPrevisao = { agua: null, gas: null }; // (REQ 5.2) Armazena tipo selecionado
+let tipoSelecionadoPrevisao = { agua: null, gas: null };
 
 
 // --- FUNÇÕES DE UTILIDADE ---
-
-/**
- * Exibe um alerta na tela.
- * @param {string} elementId - ID do elemento de alerta.
- * @param {string} message - Mensagem a ser exibida.
- * @param {string} type - Tipo (info, success, warning, error).
- * @param {number} duration - Duração em milissegundos.
- */
 function showAlert(elementId, message, type = 'info', duration = 5000) {
     const el = document.getElementById(elementId);
     if (!el) { console.warn(`Elemento de alerta não encontrado: ${elementId}`); return; }
     el.className = `alert alert-${type}`; 
     el.textContent = message;
     el.style.display = 'block';
-    if (el.timeoutId) clearTimeout(el.timeoutId); // Limpa timeout anterior se houver
+    if (el.timeoutId) clearTimeout(el.timeoutId);
     el.timeoutId = setTimeout(() => {
         el.style.display = 'none';
         el.timeoutId = null;
     }, duration);
 }
 
-/**
- * Retorna a data de hoje no formato YYYY-MM-DD.
- */
 function getTodayDateString() {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -122,22 +93,15 @@ function getTodayDateString() {
     return `${yyyy}-${mm}-${dd}`;
 }
 
-/**
- * Converte uma string de data (YYYY-MM-DD) para um Timestamp do Firebase.
- */
 function dateToTimestamp(dateString) {
      if (!dateString) return null;
     try {
-        // Adiciona T00:00:00 para evitar problemas de fuso horário na conversão
         const date = new Date(dateString + 'T00:00:00'); 
         if (isNaN(date.getTime())) return null; 
         return Timestamp.fromDate(date);
     } catch (e) { console.error("Erro ao converter data:", dateString, e); return null; }
 }
 
-/**
- * Formata um Timestamp do Firebase para DD/MM/YYYY.
- */
 function formatTimestamp(timestamp) {
     if (!timestamp || typeof timestamp.toDate !== 'function') return 'N/A';
     try {
@@ -145,75 +109,56 @@ function formatTimestamp(timestamp) {
         const yyyy = date.getFullYear();
         const mm = String(date.getMonth() + 1).padStart(2, '0');
         const dd = String(date.getDate()).padStart(2, '0');
-        if (yyyy < 2000) return 'Data Inválida'; // Verificação simples
+        if (yyyy < 2000) return 'Data Inválida';
         return `${dd}/${mm}/${yyyy}`;
     } catch (e) { console.error("Erro ao formatar timestamp:", timestamp, e); return 'Erro Data'; }
 }
 
-/**
- * Normaliza uma string (minúsculas, sem acentos).
- */
 function normalizeString(str) {
     if (!str) return '';
     return String(str).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-/**
- * Capitaliza a primeira letra de cada palavra.
- */
 function capitalizeString(str) {
     if (!str) return '';
     return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
 }
 
-/**
- * Filtra linhas de uma tabela com base no texto de um input.
- */
 function filterTable(inputEl, tableBodyId) {
     const searchTerm = normalizeString(inputEl.value);
     const tableBody = document.getElementById(tableBodyId);
     if (!tableBody) return;
     const rows = tableBody.querySelectorAll('tr');
     
-    // Não faz nada se a tabela está vazia ou carregando
     if (rows.length === 1 && (rows[0].querySelector('.loading-spinner-small') || rows[0].textContent.includes('Nenhum'))) {
         return;
     }
     
     rows.forEach(row => {
-        // Não filtra linhas que estão em modo de edição ou linhas de observação
         if (row.querySelectorAll('td').length > 1 && !row.classList.contains('editing-row') && !row.classList.contains('obs-row')) { 
             const rowText = normalizeString(row.textContent);
             const isMatch = rowText.includes(searchTerm);
             row.style.display = isMatch ? '' : 'none';
             
-            // (REQ 6.2) Mostra/esconde a linha de observação correspondente
             const obsRow = row.nextElementSibling;
             if(obsRow && obsRow.classList.contains('obs-row')) {
                 obsRow.style.display = isMatch ? '' : 'none';
             }
         } else if (!row.classList.contains('obs-row')) { 
-            // Mantém linhas de edição visíveis, etc.
         }
     });
 }
 
 
 // --- INICIALIZAÇÃO E AUTENTICAÇÃO FIREBASE ---
-
-/**
- * Inicializa a conexão com o Firebase e configura a autenticação.
- */
 async function initFirebase() {
      try {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-        // setLogLevel('Debug'); // Descomente para logs detalhados do Firebase
         
         connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-yellow-400 rounded-full animate-pulse"></span> <span>Autenticando...</span>`;
 
-        // Observador do estado de autenticação
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 isAuthReady = true;
@@ -221,7 +166,6 @@ async function initFirebase() {
                 console.log("Autenticado com UID:", userId, "Anônimo:", user.isAnonymous);
                 connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-green-500 rounded-full"></span> <span class="text-green-700">Conectado</span>`;
                 
-                // Define caminhos das coleções (usando /public/data para dados compartilhados)
                 const basePath = `artifacts/${appId}/public/data`;
                 unidadesCollection = collection(db, `${basePath}/unidades`);
                 aguaCollection = collection(db, `${basePath}/controleAgua`);
@@ -231,19 +175,18 @@ async function initFirebase() {
                 estoqueGasCollection = collection(db, `${basePath}/estoqueGas`);
                 
                 console.log("Caminho base das coleções:", basePath);
-                initFirestoreListeners(); // Inicia os listeners DEPOIS de definir as coleções
+                initFirestoreListeners();
                 
             } else {
                 isAuthReady = false;
                 userId = null; 
                 console.log("Usuário deslogado.");
                 connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-red-500 rounded-full"></span> <span class="text-red-700">Desconectado</span>`;
-                clearAlmoxarifadoData(); // Limpa dados da UI
+                clearAlmoxarifadoData();
             }
-            updateLastUpdateTime(); // Atualiza hora na UI
+            updateLastUpdateTime();
         });
 
-        // Tenta autenticar com token customizado (se fornecido pelo ambiente) ou anonimamente
         if (initialAuthToken) {
             console.log("Tentando login com Custom Token...");
             await signInWithCustomToken(auth, initialAuthToken);
@@ -260,10 +203,6 @@ async function initFirebase() {
 }
 
 // --- LÓGICA DO FIRESTORE (LISTENERS) ---
-
-/**
- * Inicia os listeners (onSnapshot) para todas as coleções.
- */
 function initFirestoreListeners() {
     if (!isAuthReady || !unidadesCollection) { 
         console.warn("Firestore listeners não iniciados: Auth não pronto ou coleção inválida."); 
@@ -271,90 +210,76 @@ function initFirestoreListeners() {
     }
     console.log("Iniciando listeners do Firestore...");
 
-    // Listener para Unidades
     onSnapshot(query(unidadesCollection), (snapshot) => { 
         fb_unidades = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         
-        // Popula todos os selects de unidade
         populateUnidadeSelects(selectUnidadeAgua, 'atendeAgua');
         populateUnidadeSelects(selectUnidadeGas, 'atendeGas');
         populateUnidadeSelects(selectUnidadeMateriais, 'atendeMateriais');
         populateUnidadeSelects(document.getElementById('select-previsao-unidade-agua-v2'), 'atendeAgua', false); 
         populateUnidadeSelects(document.getElementById('select-previsao-unidade-gas-v2'), 'atendeGas', false); 
         
-        // (REQ 5.1) Popula os selects de TIPO da previsão
         populateTipoSelects('agua');
         populateTipoSelects('gas');
 
-        // Popula selects de exclusão (inicialmente com todas as unidades)
         populateUnidadeSelects(document.getElementById('select-exclusao-agua'), 'atendeAgua', false, true, null); 
         populateUnidadeSelects(document.getElementById('select-exclusao-gas'), 'atendeGas', false, true, null); 
         
-        // Renderiza tabelas e status
         renderGestaoUnidades(); 
         renderAguaStatus(); 
         renderGasStatus(); 
         console.log("Unidades atualizadas:", fb_unidades.length);
     }, (error) => { console.error("Erro no listener de unidades:", error); showAlert('alert-gestao', `Erro ao carregar unidades: ${error.message}`, 'error'); });
 
-    // Listener para Saídas de Água
     onSnapshot(query(aguaCollection), (snapshot) => {
         fb_agua_movimentacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderAguaStatus(); 
         renderDashboardAguaChart(); 
         renderDashboardAguaSummary();
-        renderEstoqueAgua(); // Recalcula estoque
+        renderEstoqueAgua();
         console.log("Mov. Água (Saídas) atualizadas:", fb_agua_movimentacoes.length);
     }, (error) => { console.error("Erro no listener de água:", error); showAlert('alert-agua-lista', `Erro ao carregar dados de água: ${error.message}`, 'error'); });
 
-    // Listener para Saídas de Gás
     onSnapshot(query(gasCollection), (snapshot) => {
         fb_gas_movimentacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderGasStatus(); 
         renderDashboardGasChart(); 
         renderDashboardGasSummary();
-        renderEstoqueGas(); // Recalcula estoque
+        renderEstoqueGas();
         console.log("Mov. Gás (Saídas) atualizadas:", fb_gas_movimentacoes.length);
     }, (error) => { console.error("Erro no listener de gás:", error); showAlert('alert-gas-lista', `Erro ao carregar dados de gás: ${error.message}`, 'error'); });
 
-    // Listener para Materiais
     onSnapshot(query(materiaisCollection), (snapshot) => {
         fb_materiais = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderMateriaisStatus(); 
         renderDashboardMateriaisList();
         renderDashboardMateriaisProntos(); 
-        renderDashboardMateriaisCounts(); // (REQ 6.4) Atualiza os dois contadores
+        renderDashboardMateriaisCounts();
         console.log("Materiais atualizados:", fb_materiais.length);
     }, (error) => { console.error("Erro no listener de materiais:", error); showAlert('alert-materiais-lista', `Erro ao carregar materiais: ${error.message}`, 'error'); });
 
-    // Listener para Entradas de Estoque de Água
     onSnapshot(query(estoqueAguaCollection), (snapshot) => {
         fb_estoque_agua = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         estoqueInicialDefinido.agua = fb_estoque_agua.some(e => e.tipo === 'inicial');
-        renderEstoqueAgua(); // Recalcula e renderiza estoque
-        renderHistoricoAgua(); // Renderiza histórico de entradas
+        renderEstoqueAgua();
+        renderHistoricoAgua();
         console.log("Estoque Água (Entradas) atualizado:", fb_estoque_agua.length, "Inicial definido:", estoqueInicialDefinido.agua);
     }, (error) => { console.error("Erro no listener de estoque água:", error); });
 
-    // Listener para Entradas de Estoque de Gás
     onSnapshot(query(estoqueGasCollection), (snapshot) => {
         fb_estoque_gas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         estoqueInicialDefinido.gas = fb_estoque_gas.some(e => e.tipo === 'inicial');
-        renderEstoqueGas(); // Recalcula e renderiza estoque
-        renderHistoricoGas(); // Renderiza histórico de entradas
+        renderEstoqueGas();
+        renderHistoricoGas();
         console.log("Estoque Gás (Entradas) atualizado:", fb_estoque_gas.length, "Inicial definido:", estoqueInicialDefinido.gas);
     }, (error) => { console.error("Erro no listener de estoque gás:", error); });
 }
 
-/**
- * Limpa os dados da UI quando o Firebase é desconectado.
- */
 function clearAlmoxarifadoData() {
     fb_unidades = []; fb_agua_movimentacoes = []; fb_gas_movimentacoes = []; fb_materiais = [];
     fb_estoque_agua = []; fb_estoque_gas = []; 
     estoqueInicialDefinido = { agua: false, gas: false };
 
-    // Limpa selects de unidade
     [selectUnidadeAgua, selectUnidadeGas, selectUnidadeMateriais, 
      document.getElementById('select-previsao-unidade-agua-v2'), 
      document.getElementById('select-previsao-unidade-gas-v2'),
@@ -364,35 +289,28 @@ function clearAlmoxarifadoData() {
      document.getElementById('select-previsao-tipo-gas')
     ].forEach(sel => { if(sel) sel.innerHTML = '<option value="">Desconectado</option>'; });
     
-    // Limpa tabelas
     [tableStatusAgua, tableStatusGas, tableStatusMateriais, tableGestaoUnidades, tableHistoricoAgua, tableHistoricoGas].forEach(tbody => { if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">Desconectado do Firebase</td></tr>'; });
     
-    // Limpa containers do Dashboard
     [dashboardMateriaisListContainer, dashboardMateriaisProntosContainer].forEach(el => { if(el) el.innerHTML = '<p class="text-center py-4 text-red-500">Desconectado</p>'; });
     
-    // Destroi instâncias dos gráficos
     [dashboardAguaChartInstance, dashboardGasChartInstance, graficoPrevisao.agua, graficoPrevisao.gas].forEach(chartInstance => { 
         if (chartInstance) { 
             chartInstance.destroy(); 
-            chartInstance = null; // Garante que a referência seja limpa
+            chartInstance = null;
         } 
     });
-    // Zera contadores de estoque na UI
     [estoqueAguaInicialEl, estoqueAguaEntradasEl, estoqueAguaSaidasEl, estoqueAguaAtualEl, estoqueGasInicialEl, estoqueGasEntradasEl, estoqueGasSaidasEl, estoqueGasAtualEl].forEach(el => { if(el) el.textContent = '0'; });
     
-    // Esconde resumos e mostra loaders/botões iniciais
     [resumoEstoqueAguaEl, resumoEstoqueGasEl].forEach(el => { if(el) el.classList.add('hidden'); });
     [loadingEstoqueAguaEl, loadingEstoqueGasEl].forEach(el => { if(el) el.style.display = 'block'; });
     [btnAbrirInicialAgua, btnAbrirInicialGas].forEach(btn => { if(btn) btn.classList.remove('hidden'); }); 
     [formInicialAguaContainer, formInicialGasContainer].forEach(form => { if(form) form.classList.add('hidden'); }); 
     
-    // Zera contadores do Dashboard
     if (dashboardEstoqueAguaEl) dashboardEstoqueAguaEl.textContent = '0';
     if (dashboardEstoqueGasEl) dashboardEstoqueGasEl.textContent = '0';
     if (dashboardMateriaisSeparacaoCountEl) dashboardMateriaisSeparacaoCountEl.textContent = '0';
-    if (dashboardMateriaisRetiradaCountEl) dashboardMateriaisRetiradaCountEl.textContent = '0'; // (REQ 6.4)
+    if (dashboardMateriaisRetiradaCountEl) dashboardMateriaisRetiradaCountEl.textContent = '0';
 
-    // Limpa filtros
     if (filtroUnidadeNome) filtroUnidadeNome.value = '';
     if (filtroUnidadeTipo) filtroUnidadeTipo.value = '';
     document.getElementById('filtro-status-agua')?.setAttribute('value', ''); 
@@ -403,9 +321,6 @@ function clearAlmoxarifadoData() {
     console.log("Dados do Almoxarifado limpos devido à desconexão.");
 }
 
-/**
- * Atualiza o horário da última atualização na UI.
- */
 function updateLastUpdateTime() {
      if (!lastUpdateTimeEl) return;
     const now = new Date();
@@ -413,24 +328,17 @@ function updateLastUpdateTime() {
     lastUpdateTimeEl.textContent = `Atualizado: ${formattedDate}`;
 }
 
-/**
- * Popula um elemento <select> com as unidades, filtrando por serviço e tipo.
- */
 function populateUnidadeSelects(selectEl, serviceField, includeAll = false, includeSelecione = true, filterType = null) {
     if (!selectEl) return;
 
-    // Filtra unidades pelo serviço E pelo tipo (se fornecido)
     let unidadesFiltradas = fb_unidades.filter(u => {
         const atendeServico = serviceField ? (u[serviceField] ?? true) : true;
-        // (REQ 5.3) Normaliza tipo para 'SEDE' se for 'SEMCAS' antes de filtrar
         const tipoUnidadeNormalizado = (u.tipo || '').toUpperCase() === 'SEMCAS' ? 'SEDE' : (u.tipo || '').toUpperCase();
         const tipoCorreto = !filterType || tipoUnidadeNormalizado === (filterType || '').toUpperCase();
         return atendeServico && tipoCorreto;
     });
     
-    // Agrupa por tipo para optgroup
     const grupos = unidadesFiltradas.reduce((acc, unidade) => { 
-        // (REQ 5.3) Agrupa SEMCAS sob SEDE
         let tipo = (unidade.tipo || 'Sem Tipo').toUpperCase(); 
         if (tipo === 'SEMCAS') tipo = 'SEDE';
         if (!acc[tipo]) acc[tipo] = []; 
@@ -439,7 +347,6 @@ function populateUnidadeSelects(selectEl, serviceField, includeAll = false, incl
     }, {});
     const tiposOrdenados = Object.keys(grupos).sort();
     
-    // Monta HTML das opções
     let html = '';
     if (includeSelecione) {
         html += '<option value="">-- Selecione --</option>';
@@ -453,11 +360,9 @@ function populateUnidadeSelects(selectEl, serviceField, includeAll = false, incl
         return; 
     }
 
-    // Cria os optgroups e options
     tiposOrdenados.forEach(tipo => {
-        html += `<optgroup label="${tipo}">`; // Tipo já está em maiúsculas
+        html += `<optgroup label="${tipo}">`;
         grupos[tipo].sort((a,b) => a.nome.localeCompare(b.nome)).forEach(unidade => { 
-            // Usa ID como valor para selects da previsão, formato antigo para outros
             const optionValue = (selectEl.id.includes('-v2') || selectEl.id.includes('exclusao')) ? unidade.id : `${unidade.id}|${unidade.nome}|${unidade.tipo}`;
             html += `<option value="${optionValue}">${unidade.nome}</option>`; 
         });
@@ -466,14 +371,10 @@ function populateUnidadeSelects(selectEl, serviceField, includeAll = false, incl
     selectEl.innerHTML = html;
 }
 
-/**
- * (REQ 5.1) Popula os selects de TIPO na Previsão.
- */
-function populateTipoSelects(itemType) { // itemType é 'agua' ou 'gas'
+function populateTipoSelects(itemType) {
     const selectEl = document.getElementById(`select-previsao-tipo-${itemType}`);
     if (!selectEl) return;
 
-    // Obtém tipos únicos das unidades, tratando SEDE/SEMCAS
     const uniqueTypes = [...new Set(fb_unidades.map(u => {
         let tipo = (u.tipo || 'Sem Tipo').toUpperCase();
         return tipo === 'SEMCAS' ? 'SEDE' : tipo;
@@ -488,10 +389,6 @@ function populateTipoSelects(itemType) { // itemType é 'agua' ou 'gas'
 
 
 // --- LÓGICA DE CONTROLE DE ÁGUA ---
-
-/**
- * Controla visibilidade dos inputs Qtd Entregue/Retorno baseado no Tipo de Movimentação.
- */
 function toggleAguaFormInputs() {
     if (!selectTipoAgua) return; 
     const tipo = selectTipoAgua.value;
@@ -509,16 +406,12 @@ function toggleAguaFormInputs() {
     }
 }
 
-/**
- * Salva movimentação de água (saída para unidades).
- */
 async function handleAguaSubmit(e) {
      e.preventDefault();
     if (!isAuthReady) { showAlert('alert-agua', 'Erro: Não autenticado.', 'error'); return; }
     const selectValue = selectUnidadeAgua.value; 
     if (!selectValue) { showAlert('alert-agua', 'Selecione uma unidade.', 'warning'); return; }
     const [unidadeId, unidadeNome, tipoUnidadeRaw] = selectValue.split('|');
-    // (REQ 5.3) Normaliza tipo para consistência
     const tipoUnidade = (tipoUnidadeRaw || '').toUpperCase() === 'SEMCAS' ? 'SEDE' : (tipoUnidadeRaw || '').toUpperCase();
 
     const tipoMovimentacao = selectTipoAgua.value; 
@@ -527,7 +420,6 @@ async function handleAguaSubmit(e) {
     const data = dateToTimestamp(inputDataAgua.value);
     const responsavel = capitalizeString(inputResponsavelAgua.value.trim()); 
     
-    // Validações
     if (!unidadeId || !data || !responsavel) {
         showAlert('alert-agua', 'Dados inválidos. Verifique Unidade, Data e Responsável.', 'warning'); return;
     }
@@ -540,7 +432,6 @@ async function handleAguaSubmit(e) {
     if (tipoMovimentacao === 'retorno' && qtdRetorno <= 0) {
          showAlert('alert-agua', 'Para "Apenas Retorno", a quantidade deve ser maior que zero.', 'warning'); return;
     }
-    // Verifica estoque ANTES de salvar saída
     if (qtdEntregue > 0) {
         if (!estoqueInicialDefinido.agua) {
             showAlert('alert-agua', 'Defina o Estoque Inicial de Água antes de lançar saídas.', 'warning'); return;
@@ -555,13 +446,11 @@ async function handleAguaSubmit(e) {
     let msgSucesso = [];
     
     try {
-        const timestamp = serverTimestamp(); // Timestamp do servidor
-        // Adiciona documento para entrega (se houver)
+        const timestamp = serverTimestamp();
         if (qtdEntregue > 0) {
             await addDoc(aguaCollection, { unidadeId, unidadeNome, tipoUnidade, tipo: 'entrega', quantidade: qtdEntregue, data, responsavel, registradoEm: timestamp });
             msgSucesso.push(`${qtdEntregue} galão(ões) entregue(s)`);
         }
-        // Adiciona documento para retorno (se houver)
         if (qtdRetorno > 0) {
              await addDoc(aguaCollection, { unidadeId, unidadeNome, tipoUnidade, tipo: 'retorno', quantidade: qtdRetorno, data, responsavel, registradoEm: timestamp });
              msgSucesso.push(`${qtdRetorno} galão(ões) recebido(s)`);
@@ -579,15 +468,11 @@ async function handleAguaSubmit(e) {
     }
 }
 
-/**
- * Renderiza a tabela de status de galões por unidade.
- */
 function renderAguaStatus() {
      if (!tableStatusAgua) return;
      
      const statusMap = new Map();
      fb_unidades.forEach(u => { 
-        // (REQ 5.3) Normaliza tipo ao inicializar o mapa
         let tipoNormalizado = (u.tipo || 'N/A').toUpperCase();
         if (tipoNormalizado === 'SEMCAS') tipoNormalizado = 'SEDE';
         statusMap.set(u.id, { id: u.id, nome: u.nome, tipo: tipoNormalizado, entregues: 0, recebidos: 0, ultimosLancamentos: [] }); 
@@ -640,10 +525,6 @@ function renderAguaStatus() {
 }
 
 // --- LÓGICA DE CONTROLE DE GÁS ---
-
-/**
- * Controla visibilidade dos inputs Qtd Entregue/Retorno para Gás.
- */
 function toggleGasFormInputs() {
     if (!selectTipoGas) return; 
     const tipo = selectTipoGas.value;
@@ -661,16 +542,12 @@ function toggleGasFormInputs() {
     }
 }
 
-/**
- * Salva movimentação de gás (saída para unidades).
- */
 async function handleGasSubmit(e) {
     e.preventDefault();
     if (!isAuthReady) { showAlert('alert-gas', 'Erro: Não autenticado.', 'error'); return; }
     const selectValue = selectUnidadeGas.value; 
     if (!selectValue) { showAlert('alert-gas', 'Selecione uma unidade.', 'warning'); return; }
     const [unidadeId, unidadeNome, tipoUnidadeRaw] = selectValue.split('|');
-    // (REQ 5.3) Normaliza tipo
     const tipoUnidade = (tipoUnidadeRaw || '').toUpperCase() === 'SEMCAS' ? 'SEDE' : (tipoUnidadeRaw || '').toUpperCase();
 
     const tipoMovimentacao = selectTipoGas.value; 
@@ -727,15 +604,11 @@ async function handleGasSubmit(e) {
     }
 }
 
-/**
- * Renderiza a tabela de status de botijões por unidade.
- */
 function renderGasStatus() {
     if (!tableStatusGas) return;
     
     const statusMap = new Map();
      fb_unidades.forEach(u => { 
-        // (REQ 5.3) Normaliza tipo
         let tipoNormalizado = (u.tipo || 'N/A').toUpperCase();
         if (tipoNormalizado === 'SEMCAS') tipoNormalizado = 'SEDE';
         statusMap.set(u.id, { id: u.id, nome: u.nome, tipo: tipoNormalizado, entregues: 0, recebidos: 0, ultimosLancamentos: [] }); 
@@ -788,11 +661,7 @@ function renderGasStatus() {
 }
 
 // --- LÓGICA DE PREVISÃO INTELIGENTE ---
-
-/**
- * Chamada quando um modo de previsão é selecionado (card clicado).
- */
-window.selecionarModoPrevisao = (tipoItem, modo) => { // tipoItem: 'agua' ou 'gas'
+window.selecionarModoPrevisao = (tipoItem, modo) => {
     console.log(`Modo Previsão (${tipoItem}): ${modo}`);
     modoPrevisao[tipoItem] = modo;
     
@@ -831,9 +700,6 @@ window.selecionarModoPrevisao = (tipoItem, modo) => { // tipoItem: 'agua' ou 'ga
     selectTipoEl.addEventListener('change', handleTipoPrevisaoChange); 
 }
 
-/**
- * (REQ 5.2) Chamada quando o tipo de unidade é alterado na previsão "Por Tipo".
- */
 function handleTipoPrevisaoChange(event) {
     const selectEl = event.target;
     const tipoItem = selectEl.id.includes('agua') ? 'agua' : 'gas'; 
@@ -847,10 +713,6 @@ function handleTipoPrevisaoChange(event) {
     renderizarListaExclusoes(tipoItem);
 }
 
-
-/**
- * Adiciona uma unidade à lista de exclusão da previsão.
- */
 window.adicionarExclusao = (tipoItem) => {
     const selectExclusao = document.getElementById(`select-exclusao-${tipoItem}`);
     const unidadeId = selectExclusao.value;
@@ -868,9 +730,6 @@ window.adicionarExclusao = (tipoItem) => {
     selectExclusao.value = ""; 
 }
 
-/**
- * Renderiza os "badges" das unidades excluídas na UI da previsão.
- */
 function renderizarListaExclusoes(tipoItem) {
     const container = document.getElementById(`lista-exclusoes-${tipoItem}`);
     container.innerHTML = listaExclusoes[tipoItem].map((item, index) => `
@@ -881,17 +740,11 @@ function renderizarListaExclusoes(tipoItem) {
     `).join('');
 }
 
-/**
- * Remove uma unidade da lista de exclusão da previsão.
- */
 window.removerExclusao = (tipoItem, index) => {
     listaExclusoes[tipoItem].splice(index, 1); 
     renderizarListaExclusoes(tipoItem); 
 }
 
-/**
- * Calcula e exibe a previsão inteligente de consumo.
- */
 window.calcularPrevisaoInteligente = (tipoItem) => {
     console.log(`Calculando previsão para ${tipoItem}...`);
     const alertId = `alertas-previsao-${tipoItem}`;
@@ -932,7 +785,6 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
     const idsExcluidos = new Set(listaExclusoes[tipoItem].map(item => item.id)); 
     
     let movsFiltradas = movimentacoes.filter(m => {
-        // (REQ 5.3) Normaliza tipo da movimentação para comparar
         let tipoMov = (m.tipoUnidade || '').toUpperCase();
         if (tipoMov === 'SEMCAS') tipoMov = 'SEDE';
 
@@ -1019,16 +871,13 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
      lucide.createIcons(); 
 }
 
-/**
- * Renderiza o gráfico de linha da previsão.
- */
 function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
     const canvasId = `grafico-previsao-${tipoItem}`;
     const ctx = document.getElementById(canvasId)?.getContext('2d');
     if (!ctx) return;
 
     const dadosPorDia = movsFiltradas.reduce((acc, m) => {
-        const dataFormatada = formatTimestamp(m.data); // Usa dd/mm/yyyy como chave
+        const dataFormatada = formatTimestamp(m.data);
         if (!acc[dataFormatada]) {
             acc[dataFormatada] = { timestamp: m.data.toMillis(), total: 0 };
         }
@@ -1082,22 +931,17 @@ function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
 
 
 // --- LÓGICA DE CONTROLE DE MATERIAIS ---
-
-/**
- * Salva um registro de separação de material.
- */
 async function handleMateriaisSubmit(e) {
     e.preventDefault();
     if (!isAuthReady) { showAlert('alert-materiais', 'Erro: Não autenticado.', 'error'); return; }
     const selectValue = selectUnidadeMateriais.value; 
     if (!selectValue) { showAlert('alert-materiais', 'Selecione uma unidade.', 'warning'); return; }
     const [unidadeId, unidadeNome, tipoUnidadeRaw] = selectValue.split('|');
-    // (REQ 5.3) Normaliza tipo
     const tipoUnidade = (tipoUnidadeRaw || '').toUpperCase() === 'SEMCAS' ? 'SEDE' : (tipoUnidadeRaw || '').toUpperCase();
 
     const tipoMaterial = selectTipoMateriais.value;
     const dataSeparacao = dateToTimestamp(inputDataSeparacao.value);
-    const itens = textareaItensMateriais.value.trim(); // Observação
+    const itens = textareaItensMateriais.value.trim();
     const responsavelSeparacao = capitalizeString(inputResponsavelMateriais.value.trim()); 
      
      if (!unidadeId || !tipoMaterial || !dataSeparacao || !responsavelSeparacao) {
@@ -1107,7 +951,6 @@ async function handleMateriaisSubmit(e) {
     btnSubmitMateriais.disabled = true; btnSubmitMateriais.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
     
     try {
-        // (REQ 6.1) Adiciona documento com status inicial 'separacao'
         await addDoc(materiaisCollection, { 
             unidadeId, unidadeNome, tipoUnidade, tipoMaterial, 
             dataSeparacao, itens, status: 'separacao', 
@@ -1129,14 +972,9 @@ async function handleMateriaisSubmit(e) {
     }
 }
 
-/**
- * (REQ 6.2) Renderiza a tabela de status de materiais (separação/retirada/entregues).
- */
 function renderMateriaisStatus() {
      if (!tableStatusMateriais) return;
     
-     // Ordena: Em separação (1), Disponível (2), Entregue (3)
-     // Depois por data (mais recente primeiro)
     const materiaisOrdenados = [...fb_materiais].sort((a,b) => { 
         const statusOrder = { 'separacao': 1, 'retirada': 2, 'entregue': 3 }; 
         const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
@@ -1174,7 +1012,7 @@ function renderMateriaisStatus() {
             acoesHtml = `
                 <button class="btn-success btn-entregue text-xs py-1 px-2" data-id="${m.id}">Entregue</button>
             `;
-        } else { // entregue
+        } else {
             statusClass = 'badge-gray';
             statusText = 'Entregue';
             dataStatusText = m.dataEntrega ? ` (${formatTimestamp(m.dataEntrega)})` : '';
@@ -1203,9 +1041,6 @@ function renderMateriaisStatus() {
     lucide.createIcons(); 
 }
 
-/**
- * (REQ 6.2) Marca um material como disponível para retirada.
- */
 async function handleMarcarRetirada(e) {
     const button = e.target.closest('button.btn-retirada[data-id]');
     if (!button) return; 
@@ -1230,9 +1065,6 @@ async function handleMarcarRetirada(e) {
     }
 }
 
-/**
- * (REQ 6.3) Marca um material como entregue (vindo do status 'retirada').
- */
 async function handleMarcarEntregue(e) {
     const button = e.target.closest('button.btn-entregue[data-id]');
     if (!button) return; 
@@ -1265,10 +1097,6 @@ async function handleMarcarEntregue(e) {
 }
 
 // --- LÓGICA DE GESTÃO DE UNIDADES ---
-
-/**
- * Renderiza a tabela de gestão de unidades.
- */
 function renderGestaoUnidades() {
     if (!tableGestaoUnidades) return;
     
@@ -1276,7 +1104,6 @@ function renderGestaoUnidades() {
     const filtroTipo = normalizeString(filtroUnidadeTipo.value);
     const unidadesFiltradas = fb_unidades.filter(unidade => {
         const nomeNormalizado = normalizeString(unidade.nome);
-        // (REQ 5.3) Normaliza tipo para filtro
         let tipoNormalizado = normalizeString(unidade.tipo);
         if (tipoNormalizado === 'semcas') tipoNormalizado = 'sede';
         
@@ -1290,7 +1117,6 @@ function renderGestaoUnidades() {
         return; 
     }
     tableGestaoUnidades.innerHTML = unidadesFiltradas.map(unidade => {
-         // (REQ 5.3) Mostra 'SEDE' mesmo que o tipo original seja 'SEMCAS'
          let tipoDisplay = (unidade.tipo || 'N/A').toUpperCase();
          if (tipoDisplay === 'SEMCAS') tipoDisplay = 'SEDE';
          return `
@@ -1311,9 +1137,6 @@ function renderGestaoUnidades() {
     lucide.createIcons(); 
 }
 
-/**
- * Atualiza status (atendeAgua, etc.) de uma unidade ao clicar no checkbox.
- */
 async function handleGestaoToggle(e) {
     const checkbox = e.target.closest('.gestao-toggle'); 
     if (!checkbox) return; 
@@ -1334,22 +1157,18 @@ async function handleGestaoToggle(e) {
     } catch (error) { 
         console.error("Erro atualizar unidade:", error); 
         showAlert('alert-gestao', `Erro: ${error.message}`, 'error'); 
-        checkbox.checked = !value; // Reverte
+        checkbox.checked = !value;
     } finally { 
         checkbox.disabled = false; 
     }
 }
 
-/**
- * Habilita edição do nome da unidade (substitui texto por input).
- */
 function handleEditUnidadeClick(e) {
     const button = e.target.closest('.btn-edit-unidade');
     if (!button) return;
     
     const td = button.closest('td');
     const row = td.closest('tr');
-    const unidadeId = row.dataset.unidadeId;
     const nomeSpan = td.querySelector('.unidade-nome-display');
     const currentName = nomeSpan.textContent;
 
@@ -1365,9 +1184,6 @@ function handleEditUnidadeClick(e) {
     td.querySelector('input').focus(); 
 }
 
-/**
- * Cancela a edição do nome (restaura o texto original).
- */
 function handleCancelEditUnidadeClick(e) {
     const button = e.target.closest('.btn-cancel-edit-unidade');
     if (!button) return;
@@ -1385,9 +1201,6 @@ function handleCancelEditUnidadeClick(e) {
     lucide.createIcons(); 
 }
 
-/**
- * Salva o novo nome da unidade no Firestore.
- */
 async function handleSaveUnidadeClick(e) {
     const button = e.target.closest('.btn-save-unidade');
     if (!button) return;
@@ -1431,9 +1244,6 @@ async function handleSaveUnidadeClick(e) {
     }
 }
 
-/**
- * Adiciona unidades em lote a partir do textarea.
- */
 async function handleBulkAddUnidades() {
      if (!isAuthReady || !textareaBulkUnidades) return;
      
@@ -1445,9 +1255,8 @@ async function handleBulkAddUnidades() {
      const erros = [];
      
      lines.forEach((line, index) => {
-         const parts = line.split('\t'); // Separa por TAB
+         const parts = line.split('\t');
          if (parts.length === 2) {
-             // (REQ 5.3) Normaliza tipo para SEDE se for SEMCAS
              let tipo = parts[0].trim().toUpperCase(); 
              if (tipo === 'SEMCAS') tipo = 'SEDE';
              const nome = capitalizeString(parts[1].trim()); 
@@ -1499,10 +1308,6 @@ async function handleBulkAddUnidades() {
 }
 
 // --- LÓGICA DO DASHBOARD ---
-
-/**
- * Troca a visualização dentro do Dashboard (Geral, Água, Gás, Materiais).
- */
 function switchDashboardView(viewName) {
     document.querySelectorAll('#dashboard-nav-controls .dashboard-nav-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.view === viewName);
@@ -1520,9 +1325,6 @@ function switchDashboardView(viewName) {
     if(viewName === 'materiais') renderDashboardMateriaisList();
 }
 
-/**
- * Atualiza os cards de resumo da visão GERAL do dashboard.
- */
 function renderDashboardVisaoGeralSummary() {
     if (dashboardEstoqueAguaEl) {
         dashboardEstoqueAguaEl.textContent = estoqueAguaAtualEl?.textContent || '0';
@@ -1530,12 +1332,8 @@ function renderDashboardVisaoGeralSummary() {
     if (dashboardEstoqueGasEl) {
         dashboardEstoqueGasEl.textContent = estoqueGasAtualEl?.textContent || '0';
     }
-    // A contagem de materiais é feita em renderDashboardMateriaisCounts()
 }
 
-/**
- * (REQ 6.4) Atualiza os cards "Em Separação" e "Disponível p/ Retirada".
- */
 function renderDashboardMateriaisCounts() {
     if (!dashboardMateriaisSeparacaoCountEl || !dashboardMateriaisRetiradaCountEl) return;
     const separacaoCount = fb_materiais.filter(m => m.status === 'separacao').length;
@@ -1545,9 +1343,6 @@ function renderDashboardMateriaisCounts() {
     dashboardMateriaisRetiradaCountEl.textContent = retiradaCount;
 }
 
-/**
- * Filtra um array de movimentações para incluir apenas os últimos 30 dias.
- */
 function filterLast30Days(movimentacoes) {
     const today = new Date(); 
     today.setHours(23, 59, 59, 999); 
@@ -1565,9 +1360,6 @@ function filterLast30Days(movimentacoes) {
     });
 }
 
-/**
- * Prepara dados para os gráficos de linha (Água/Gás) dos últimos 30 dias.
- */
 function getChartDataLast30Days(movimentacoes) {
     const labels = []; const entregasData = []; const retornosData = []; 
     const dataMap = new Map(); 
@@ -1609,9 +1401,6 @@ function getChartDataLast30Days(movimentacoes) {
     };
 }
 
-/**
- * Renderiza ou atualiza o gráfico de Água no Dashboard.
- */
 function renderDashboardAguaChart() {
     const ctx = document.getElementById('dashboardAguaChart')?.getContext('2d'); if (!ctx) return; 
     const data = getChartDataLast30Days(fb_agua_movimentacoes); 
@@ -1623,9 +1412,6 @@ function renderDashboardAguaChart() {
     }
 }
 
-/**
- * Renderiza ou atualiza o gráfico de Gás no Dashboard.
- */
 function renderDashboardGasChart() {
     const ctx = document.getElementById('dashboardGasChart')?.getContext('2d'); if (!ctx) return; 
     const data = getChartDataLast30Days(fb_gas_movimentacoes); 
@@ -1637,9 +1423,6 @@ function renderDashboardGasChart() {
     }
 }
 
-/**
- * Atualiza os cards de resumo na visão de ÁGUA do dashboard.
- */
 function renderDashboardAguaSummary() {
     if (!summaryAguaPendente) return; 
     const totalEntregueGeral = fb_agua_movimentacoes.filter(m => m.tipo === 'entrega').reduce((sum, m) => sum + m.quantidade, 0);
@@ -1655,9 +1438,6 @@ function renderDashboardAguaSummary() {
     renderDashboardVisaoGeralSummary(); 
 }
 
-/**
- * Atualiza os cards de resumo na visão de GÁS do dashboard.
- */
 function renderDashboardGasSummary() {
      if (!summaryGasPendente) return; 
     const totalEntregueGeral = fb_gas_movimentacoes.filter(m => m.tipo === 'entrega').reduce((sum, m) => sum + m.quantidade, 0);
@@ -1673,9 +1453,6 @@ function renderDashboardGasSummary() {
     renderDashboardVisaoGeralSummary(); 
 }
 
-/**
- * (REQ 6.6) Renderiza a lista de materiais pendentes na visão de MATERIAIS do dashboard.
- */
 function renderDashboardMateriaisList() {
      if (!dashboardMateriaisListContainer || !loadingMateriaisDashboard) return; 
      loadingMateriaisDashboard.style.display = 'none'; 
@@ -1713,7 +1490,7 @@ function renderDashboardMateriaisList() {
 }
 
 /**
- * (REQ 6.5) Renderiza as colunas de materiais pendentes por TIPO DE UNIDADE na visão GERAL do dashboard.
+ * (REQ 4.1 & REQ 6.1) Renderiza as colunas de materiais pendentes com indicadores de status e atraso.
  */
 function renderDashboardMateriaisProntos() {
     if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos) return;
@@ -1730,15 +1507,8 @@ function renderDashboardMateriaisProntos() {
         let tipoUnidade = (m.tipoUnidade || 'OUTROS').toUpperCase();
         if (tipoUnidade === 'SEMCAS') tipoUnidade = 'SEDE'; 
         
-        if (!acc[tipoUnidade]) acc[tipoUnidade] = { separacao: {}, retirada: {} };
-        
-        const statusGrupo = m.status; 
-        const unidadeNome = m.unidadeNome || 'Desconhecida';
-
-        if (!acc[tipoUnidade][statusGrupo][unidadeNome]) { 
-            acc[tipoUnidade][statusGrupo][unidadeNome] = new Set(); 
-        }
-        acc[tipoUnidade][statusGrupo][unidadeNome].add(m.tipoMaterial || 'N/D'); 
+        if (!acc[tipoUnidade]) acc[tipoUnidade] = [];
+        acc[tipoUnidade].push(m);
         return acc;
     }, {});
 
@@ -1747,41 +1517,44 @@ function renderDashboardMateriaisProntos() {
 
     let html = '';
     let colunasRenderizadas = 0;
+    
     ordemColunas.forEach(tipoUnidade => {
-        if (gruposTipoUnidade[tipoUnidade]) { 
-            const unidadesSeparacao = gruposTipoUnidade[tipoUnidade].separacao;
-            const unidadesRetirada = gruposTipoUnidade[tipoUnidade].retirada;
-            const temSeparacao = Object.keys(unidadesSeparacao).length > 0;
-            const temRetirada = Object.keys(unidadesRetirada).length > 0;
-
-            if (!temSeparacao && !temRetirada) return; 
-
+        if (gruposTipoUnidade[tipoUnidade] && gruposTipoUnidade[tipoUnidade].length > 0) {
             colunasRenderizadas++;
             html += `<div class="materiais-prontos-col"><h4>${tipoUnidade}</h4><ul class="space-y-3">`; 
             
-            if(temSeparacao) {
-                if(temRetirada) html += `<h5>Em Separação</h5>`; 
-                const unidadesOrdenadas = Object.keys(unidadesSeparacao).sort(); 
-                unidadesOrdenadas.forEach(unidadeNome => {
-                    const tiposMateriais = Array.from(unidadesSeparacao[unidadeNome]).join(', ');
-                    html += `<li><strong>${unidadeNome}</strong><br><span class="capitalize">(${tiposMateriais})</span></li>`; 
-                });
-            }
+            const materiaisOrdenados = gruposTipoUnidade[tipoUnidade].sort((a,b) => {
+                const statusOrder = { 'separacao': 1, 'retirada': 2 };
+                const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
+                if (statusCompare !== 0) return statusCompare;
+                return (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0);
+            });
 
-            if(temRetirada) {
-                 if(temSeparacao) html += `<h5 class="pt-2 border-t border-slate-200">Disponível p/ Retirada</h5>`; 
-                 const unidadesOrdenadas = Object.keys(unidadesRetirada).sort();
-                 unidadesOrdenadas.forEach(unidadeNome => {
-                    const tiposMateriais = Array.from(unidadesRetirada[unidadeNome]).join(', ');
-                    html += `<li class="item-retirada">
-                                <div class="flex items-center gap-1">
-                                    <i data-lucide="check-circle"></i>
-                                    <strong>${unidadeNome}</strong>
-                                </div>
-                                <span class="capitalize ml-5">(${tiposMateriais})</span>
-                             </li>`; 
-                });
-            }
+            materiaisOrdenados.forEach(m => {
+                const tiposMateriais = m.tipoMaterial || 'N/D';
+                let statusIndicator = '';
+                
+                if (m.status === 'separacao') {
+                    const now = new Date();
+                    const separacaoTime = m.registradoEm.toDate(); // Usar registradoEm para maior precisão
+                    const diffHours = (now - separacaoTime) / (1000 * 60 * 60);
+                    const isLate = diffHours > 2;
+                    
+                    statusIndicator = `<span class="status-indicator separando">⏳ Separando...</span>`;
+                    if (isLate) {
+                        statusIndicator += `<span class="status-indicator late" title="Separação iniciada há mais de 2 horas"> M (Atrasado)</span>`;
+                    }
+                } else if (m.status === 'retirada') {
+                    statusIndicator = `<span class="status-indicator pronto">✅ Pronto para Retirada</span>`;
+                }
+
+                html += `
+                    <li class="${m.status === 'retirada' ? 'item-retirada' : ''}">
+                        <strong>${m.unidadeNome}</strong><br>
+                        <span class="capitalize">(${tiposMateriais})</span>
+                        <div>${statusIndicator}</div>
+                    </li>`; 
+            });
             
             html += `</ul></div>`;
         }
@@ -1792,8 +1565,20 @@ function renderDashboardMateriaisProntos() {
 }
 
 /**
- * Inicia o intervalo de atualização automática do Dashboard (a cada 2 minutos).
+ * (REQ 3.2) Rola suavemente um elemento se o conteúdo for maior que a área visível.
  */
+function autoScrollView(element) {
+    if (!element) return;
+    if (element.scrollHeight > element.clientHeight) {
+        const scrollOptions = { behavior: 'smooth' };
+        element.scrollTo({ top: element.scrollHeight, ...scrollOptions });
+        
+        setTimeout(() => {
+            element.scrollTo({ top: 0, ...scrollOptions });
+        }, 3000);
+    }
+}
+
 function startDashboardRefresh() {
     stopDashboardRefresh(); 
     console.log("Iniciando auto-refresh do Dashboard (2 min)");
@@ -1805,14 +1590,14 @@ function startDashboardRefresh() {
         renderDashboardAguaSummary(); renderDashboardGasSummary();
         renderDashboardMateriaisList(); renderDashboardMateriaisProntos();
         renderDashboardVisaoGeralSummary(); 
-        renderDashboardMateriaisCounts(); // (REQ 6.4)
+        renderDashboardMateriaisCounts();
         updateLastUpdateTime(); 
-    }, 120000); // 2 minutos
+        
+        autoScrollView(dashboardMateriaisProntosContainer);
+
+    }, 120000);
 }
 
-/**
- * Para o intervalo de atualização automática do Dashboard.
- */
 function stopDashboardRefresh() {
     if (dashboardRefreshInterval) {
         console.log("Parando auto-refresh do Dashboard");
@@ -1822,10 +1607,6 @@ function stopDashboardRefresh() {
 }
 
 // --- LÓGICA DE RELATÓRIO PDF ---
-
-/**
- * Gera o relatório PDF de fornecimento (Água ou Gás).
- */
 function handleGerarPdf() {
     if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined' || typeof window.jspdf.AutoTable === 'undefined') {
         showAlert('alert-relatorio', 'Erro: Bibliotecas PDF não carregadas. Tente recarregar a página.', 'error'); return;
@@ -1877,12 +1658,10 @@ function handleGerarPdf() {
             .sort((a,b) => b[1] - a[1])
             .map(entry => [entry[0], entry[1]]);
 
-        // --- Adiciona conteúdo ao PDF ---
         doc.setFontSize(16); doc.text(`Relatório de Fornecimento - ${tipoLabel}`, 14, 20);
         doc.setFontSize(10); doc.text(`Período: ${formatTimestamp(Timestamp.fromMillis(dataInicio))} a ${formatTimestamp(Timestamp.fromMillis(dataFim))}`, 14, 26);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 32);
 
-        // Tabela 1: Entregas por Unidade
         autoTable(doc, { 
             startY: 40, 
             head: [['Relatório de Entregas por Unidade']], 
@@ -1897,7 +1676,6 @@ function handleGerarPdf() {
             headStyles: { fillColor: [22, 160, 133] } 
         });
 
-        // Tabela 2: Recebimento por Responsável
         autoTable(doc, { 
             startY: doc.lastAutoTable.finalY + 15, 
             head: [['Relatório de Recebimento por Responsável']], 
@@ -1911,7 +1689,6 @@ function handleGerarPdf() {
             theme: 'striped', 
             headStyles: { fillColor: [41, 128, 185] } 
         });
-        // --- Fim do conteúdo do PDF ---
 
         doc.save(`Relatorio_${tipoLabel}_${dataInicioStr}_a_${dataFimStr}.pdf`);
         showAlert('alert-relatorio', 'Relatório PDF gerado com sucesso!', 'success');
@@ -1924,10 +1701,6 @@ function handleGerarPdf() {
 }
 
 // --- LÓGICA DE EXCLUSÃO ---
-
-/**
- * Abre o modal de confirmação para exclusão.
- */
 async function openConfirmDeleteModal(id, type, details = null) {
     if (!id || !type) return; 
     
@@ -1978,9 +1751,6 @@ async function openConfirmDeleteModal(id, type, details = null) {
     confirmDeleteModal.style.display = 'block'; 
 }
 
-/**
- * Executa a exclusão após confirmação no modal.
- */
 async function executeDelete() {
     if (!isAuthReady || !deleteInfo.id || !deleteInfo.collectionRef) {
          showAlert(deleteInfo.alertElementId || 'alert-gestao', 'Erro: Não autenticado ou informação de exclusão inválida.', 'error');
@@ -2013,9 +1783,6 @@ async function executeDelete() {
     }
 }
 
-/**
- * Deleta todo o histórico (água, gás, materiais) de uma unidade específica.
- */
 async function deleteUnitHistory(unidadeId) {
     if (!unidadeId || !isAuthReady) return;
     console.log(`Iniciando remoção do histórico para unidade ID: ${unidadeId}`);
@@ -2053,10 +1820,6 @@ async function deleteUnitHistory(unidadeId) {
 }
 
 // --- LÓGICA DE CONTROLE DE ESTOQUE (ENTRADA) ---
-
-/**
- * Salva o estoque inicial (só pode ser feito uma vez).
- */
 async function handleInicialEstoqueSubmit(e) {
     e.preventDefault();
     const tipoEstoque = e.target.id.includes('agua') ? 'agua' : 'gas'; 
@@ -2104,10 +1867,7 @@ async function handleInicialEstoqueSubmit(e) {
     }
 }
 
-/**
- * Alterna entre os forms de Saída (Unidades) e Entrada (Estoque).
- */
-function switchEstoqueForm(formName) { // Ex: 'saida-agua', 'entrada-gas'
+function switchEstoqueForm(formName) {
     const [action, itemType] = formName.split('-'); 
     const otherAction = (action === 'saida') ? 'entrada' : 'saida';
 
@@ -2123,9 +1883,6 @@ function switchEstoqueForm(formName) { // Ex: 'saida-agua', 'entrada-gas'
     formInativo?.classList.add('hidden');
 }
 
-/**
- * Salva uma entrada de estoque (compra/recebimento).
- */
 async function handleEntradaEstoqueSubmit(e) {
     e.preventDefault();
     if (!isAuthReady) { showAlert('alert-agua', 'Erro: Não autenticado.', 'error'); return; } 
@@ -2175,9 +1932,6 @@ async function handleEntradaEstoqueSubmit(e) {
     }
 }
 
-/**
- * Renderiza o card de resumo do estoque de Água.
- */
 function renderEstoqueAgua() {
     if (!estoqueAguaAtualEl) return; 
     
@@ -2205,9 +1959,6 @@ function renderEstoqueAgua() {
     renderDashboardVisaoGeralSummary(); 
 }
 
-/**
- * Renderiza o card de resumo do estoque de Gás.
- */
 function renderEstoqueGas() {
      if (!estoqueGasAtualEl) return;
     if (loadingEstoqueGasEl) loadingEstoqueGasEl.style.display = 'none';
@@ -2234,9 +1985,6 @@ function renderEstoqueGas() {
     renderDashboardVisaoGeralSummary(); 
 }
 
-/**
- * Renderiza a tabela de histórico de entradas de estoque de Água.
- */
 function renderHistoricoAgua() {
     if (!tableHistoricoAgua) return;
     
@@ -2266,9 +2014,6 @@ function renderHistoricoAgua() {
     if (filtroHistoricoAguaEl && filtroHistoricoAguaEl.value) { filterTable(filtroHistoricoAguaEl, 'table-historico-agua'); }
 }
 
-/**
- * Renderiza a tabela de histórico de entradas de estoque de Gás.
- */
 function renderHistoricoGas() {
      if (!tableHistoricoGas) return;
     
@@ -2300,11 +2045,7 @@ function renderHistoricoGas() {
 
 
 // --- CONTROLE DE ABAS E INICIALIZAÇÃO ---
-
-/**
- * Troca a sub-aba visível (Movimentação ou Previsão) dentro de Água/Gás.
- */
-function switchSubTabView(tabPrefix, subViewName) { // tabPrefix: 'agua' ou 'gas'
+function switchSubTabView(tabPrefix, subViewName) {
     document.querySelectorAll(`#sub-nav-${tabPrefix} .sub-nav-btn`).forEach(btn => {
         btn.classList.toggle('active', btn.dataset.subview === subViewName);
     });
@@ -2314,9 +2055,6 @@ function switchSubTabView(tabPrefix, subViewName) { // tabPrefix: 'agua' ou 'gas
      lucide.createIcons(); 
 }
 
-/**
- * Troca a aba principal visível (Dashboard, Água, Gás, etc.).
- */
 function switchTab(tabName) {
     navButtons.forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
@@ -2350,60 +2088,56 @@ function switchTab(tabName) {
         renderEstoqueGas(); 
         renderHistoricoGas(); 
     }
+    
+    if (tabName === 'materiais' && initialMaterialFilter) {
+        setTimeout(() => {
+            const filtroInput = document.getElementById('filtro-status-materiais');
+            if (filtroInput) {
+                filtroInput.value = initialMaterialFilter;
+                filtroInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            initialMaterialFilter = null;
+        }, 100);
+    }
 
     setTimeout(() => { if(typeof lucide !== 'undefined') lucide.createIcons(); }, 50); 
 }
 
-/**
- * Inicializa a aplicação após o DOM carregar (mapeia elementos e adiciona listeners).
- */
 function initApp() {
-    // --- Mapeia elementos do DOM para variáveis ---
     navButtons = document.querySelectorAll('.nav-btn'); 
     contentPanes = document.querySelectorAll('main > div[id^="content-"]'); 
     connectionStatusEl = document.getElementById('connectionStatus'); 
     lastUpdateTimeEl = document.getElementById('last-update-time');
-    // Dashboard
     dashboardNavControls = document.getElementById('dashboard-nav-controls');
     summaryAguaPendente = document.getElementById('summary-agua-pendente'); summaryAguaEntregue = document.getElementById('summary-agua-entregue'); summaryAguaRecebido = document.getElementById('summary-agua-recebido');
     summaryGasPendente = document.getElementById('summary-gas-pendente'); summaryGasEntregue = document.getElementById('summary-gas-entregue'); summaryGasRecebido = document.getElementById('summary-gas-recebido');
     dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos'); loadingMateriaisProntos = document.getElementById('loading-materiais-prontos');
     dashboardMateriaisListContainer = document.getElementById('dashboard-materiais-list'); loadingMateriaisDashboard = document.getElementById('loading-materiais-dashboard');
     dashboardEstoqueAguaEl = document.getElementById('dashboard-estoque-agua'); dashboardEstoqueGasEl = document.getElementById('dashboard-estoque-gas'); dashboardMateriaisSeparacaoCountEl = document.getElementById('dashboard-materiais-separacao-count');
-    dashboardMateriaisRetiradaCountEl = document.getElementById('dashboard-materiais-retirada-count'); // (REQ 6.4)
-    // Água
+    dashboardMateriaisRetiradaCountEl = document.getElementById('dashboard-materiais-retirada-count');
     formAgua = document.getElementById('form-agua'); selectUnidadeAgua = document.getElementById('select-unidade-agua'); selectTipoAgua = document.getElementById('select-tipo-agua'); inputDataAgua = document.getElementById('input-data-agua'); inputResponsavelAgua = document.getElementById('input-responsavel-agua'); btnSubmitAgua = document.getElementById('btn-submit-agua'); alertAgua = document.getElementById('alert-agua'); tableStatusAgua = document.getElementById('table-status-agua'); alertAguaLista = document.getElementById('alert-agua-lista');
     inputQtdEntregueAgua = document.getElementById('input-qtd-entregue-agua'); inputQtdRetornoAgua = document.getElementById('input-qtd-retorno-agua'); formGroupQtdEntregueAgua = document.getElementById('form-group-qtd-entregue-agua'); formGroupQtdRetornoAgua = document.getElementById('form-group-qtd-retorno-agua');
-    // Gás
     formGas = document.getElementById('form-gas'); selectUnidadeGas = document.getElementById('select-unidade-gas'); selectTipoGas = document.getElementById('select-tipo-gas'); inputDataGas = document.getElementById('input-data-gas'); inputResponsavelGas = document.getElementById('input-responsavel-gas'); btnSubmitGas = document.getElementById('btn-submit-gas'); alertGas = document.getElementById('alert-gas'); tableStatusGas = document.getElementById('table-status-gas'); alertGasLista = document.getElementById('alert-gas-lista');
     inputQtdEntregueGas = document.getElementById('input-qtd-entregue-gas'); inputQtdRetornoGas = document.getElementById('input-qtd-retorno-gas'); formGroupQtdEntregueGas = document.getElementById('form-group-qtd-entregue-gas'); formGroupQtdRetornoGas = document.getElementById('form-group-qtd-retorno-gas');
-    // Materiais
     formMateriais = document.getElementById('form-materiais'); selectUnidadeMateriais = document.getElementById('select-unidade-materiais'); selectTipoMateriais = document.getElementById('select-tipo-materiais'); inputDataSeparacao = document.getElementById('input-data-separacao'); textareaItensMateriais = document.getElementById('textarea-itens-materiais'); inputResponsavelMateriais = document.getElementById('input-responsavel-materiais'); btnSubmitMateriais = document.getElementById('btn-submit-materiais'); alertMateriais = document.getElementById('alert-materiais'); tableStatusMateriais = document.getElementById('table-status-materiais'); alertMateriaisLista = document.getElementById('alert-materiais-lista');
-    // Gestão
     tableGestaoUnidades = document.getElementById('table-gestao-unidades'); alertGestao = document.getElementById('alert-gestao'); textareaBulkUnidades = document.getElementById('textarea-bulk-unidades'); btnBulkAddUnidades = document.getElementById('btn-bulk-add-unidades');
     filtroUnidadeNome = document.getElementById('filtro-unidade-nome'); filtroUnidadeTipo = document.getElementById('filtro-unidade-tipo'); 
-    // Relatório PDF
     relatorioTipo = document.getElementById('relatorio-tipo'); relatorioDataInicio = document.getElementById('relatorio-data-inicio'); relatorioDataFim = document.getElementById('relatorio-data-fim'); btnGerarPdf = document.getElementById('btn-gerar-pdf'); alertRelatorio = document.getElementById('alert-relatorio');
-    // Modal Delete
     confirmDeleteModal = document.getElementById('confirm-delete-modal'); btnCancelDelete = document.getElementById('btn-cancel-delete'); btnConfirmDelete = document.getElementById('btn-confirm-delete'); deleteDetailsEl = document.getElementById('delete-details'); deleteWarningUnidadeEl = document.getElementById('delete-warning-unidade'); deleteWarningInicialEl = document.getElementById('delete-warning-inicial'); 
-    // Estoque Água
     estoqueAguaInicialEl = document.getElementById('estoque-agua-inicial'); estoqueAguaEntradasEl = document.getElementById('estoque-agua-entradas'); estoqueAguaSaidasEl = document.getElementById('estoque-agua-saidas'); estoqueAguaAtualEl = document.getElementById('estoque-agua-atual'); loadingEstoqueAguaEl = document.getElementById('loading-estoque-agua'); resumoEstoqueAguaEl = document.getElementById('resumo-estoque-agua');
     formEntradaAgua = document.getElementById('form-entrada-agua'); inputDataEntradaAgua = document.getElementById('input-data-entrada-agua'); btnSubmitEntradaAgua = document.getElementById('btn-submit-entrada-agua');
     formInicialAguaContainer = document.getElementById('form-inicial-agua-container'); formInicialAgua = document.getElementById('form-inicial-agua'); inputInicialQtdAgua = document.getElementById('input-inicial-qtd-agua'); inputInicialResponsavelAgua = document.getElementById('input-inicial-responsavel-agua'); btnSubmitInicialAgua = document.getElementById('btn-submit-inicial-agua'); alertInicialAgua = document.getElementById('alert-inicial-agua'); btnAbrirInicialAgua = document.getElementById('btn-abrir-inicial-agua');
     tableHistoricoAgua = document.getElementById('table-historico-agua'); alertHistoricoAgua = document.getElementById('alert-historico-agua');
-    // Estoque Gás
     estoqueGasInicialEl = document.getElementById('estoque-gas-inicial'); estoqueGasEntradasEl = document.getElementById('estoque-gas-entradas'); estoqueGasSaidasEl = document.getElementById('estoque-gas-saidas'); estoqueGasAtualEl = document.getElementById('estoque-gas-atual'); loadingEstoqueGasEl = document.getElementById('loading-estoque-gas'); resumoEstoqueGasEl = document.getElementById('resumo-estoque-gas');
     formEntradaGas = document.getElementById('form-entrada-gas'); inputDataEntradaGas = document.getElementById('input-data-entrada-gas'); btnSubmitEntradaGas = document.getElementById('btn-submit-entrada-gas');
     formInicialGasContainer = document.getElementById('form-inicial-gas-container'); formInicialGas = document.getElementById('form-inicial-gas'); inputInicialQtdGas = document.getElementById('input-inicial-qtd-gas'); inputInicialResponsavelGas = document.getElementById('input-inicial-responsavel-gas'); btnSubmitInicialGas = document.getElementById('btn-submit-inicial-gas'); alertInicialGas = document.getElementById('alert-inicial-gas'); btnAbrirInicialGas = document.getElementById('btn-abrir-inicial-gas');
     tableHistoricoGas = document.getElementById('table-historico-gas'); alertHistoricoGas = document.getElementById('alert-historico-gas');
-    // --- Fim do mapeamento ---
-
+    
     const todayStr = getTodayDateString();
     [inputDataAgua, inputDataGas, inputDataSeparacao, relatorioDataInicio, relatorioDataFim, inputDataEntradaAgua, inputDataEntradaGas].forEach(input => {
         if(input) input.value = todayStr;
     });
 
-    // --- Adiciona Event Listeners ---
     navButtons.forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
     if (dashboardNavControls) dashboardNavControls.addEventListener('click', (e) => { const btn = e.target.closest('button.dashboard-nav-btn[data-view]'); if (btn) switchDashboardView(btn.dataset.view); });
     if (formAgua) formAgua.addEventListener('submit', handleAguaSubmit); 
@@ -2412,17 +2146,15 @@ function initApp() {
     if (selectTipoAgua) selectTipoAgua.addEventListener('change', toggleAguaFormInputs);
     if (selectTipoGas) selectTipoGas.addEventListener('change', toggleGasFormInputs);
     
-    // Delegação de eventos na <main>
     document.querySelector('main').addEventListener('click', (e) => {
          const removeBtn = e.target.closest('button.btn-remove[data-id]');
          const entregueBtn = e.target.closest('button.btn-entregue[data-id]');
-         const retiradaBtn = e.target.closest('button.btn-retirada[data-id]'); // (REQ 6.2)
+         const retiradaBtn = e.target.closest('button.btn-retirada[data-id]');
          
          if (removeBtn) { openConfirmDeleteModal(removeBtn.dataset.id, removeBtn.dataset.type, removeBtn.dataset.details); } 
          else if (entregueBtn) { handleMarcarEntregue(e); }
          else if (retiradaBtn) { handleMarcarRetirada(e); } 
     });
-    // Gestão
     if (tableGestaoUnidades) { 
         tableGestaoUnidades.addEventListener('click', handleEditUnidadeClick);
         tableGestaoUnidades.addEventListener('click', handleCancelEditUnidadeClick);
@@ -2436,38 +2168,43 @@ function initApp() {
     }
     if (btnBulkAddUnidades) btnBulkAddUnidades.addEventListener('click', handleBulkAddUnidades);
     if (btnGerarPdf) btnGerarPdf.addEventListener('click', handleGerarPdf);
-    // Modal
     if (btnCancelDelete) btnCancelDelete.addEventListener('click', () => confirmDeleteModal.style.display = 'none');
     if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', executeDelete);
-    // Abas de Estoque
     document.querySelectorAll('.form-tab-btn[data-form="saida-agua"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('saida-agua')));
     document.querySelectorAll('.form-tab-btn[data-form="entrada-agua"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('entrada-agua')));
     document.querySelectorAll('.form-tab-btn[data-form="saida-gas"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('saida-gas')));
     document.querySelectorAll('.form-tab-btn[data-form="entrada-gas"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('entrada-gas')));
-    // Forms de Estoque
     if (formEntradaAgua) formEntradaAgua.addEventListener('submit', handleEntradaEstoqueSubmit);
     if (formEntradaGas) formEntradaGas.addEventListener('submit', handleEntradaEstoqueSubmit);
     if (btnAbrirInicialAgua) btnAbrirInicialAgua.addEventListener('click', () => { formInicialAguaContainer.classList.remove('hidden'); btnAbrirInicialAgua.classList.add('hidden'); });
     if (btnAbrirInicialGas) btnAbrirInicialGas.addEventListener('click', () => { formInicialGasContainer.classList.remove('hidden'); btnAbrirInicialGas.classList.add('hidden'); });
     if (formInicialAgua) formInicialAgua.addEventListener('submit', handleInicialEstoqueSubmit);
     if (formInicialGas) formInicialGas.addEventListener('submit', handleInicialEstoqueSubmit);
-    // Filtros
     document.getElementById('filtro-status-agua')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-agua'));
     document.getElementById('filtro-historico-agua')?.addEventListener('input', (e) => filterTable(e.target, 'table-historico-agua'));
     document.getElementById('filtro-status-gas')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-gas'));
     document.getElementById('filtro-historico-gas')?.addEventListener('input', (e) => filterTable(e.target, 'table-historico-gas'));
-    // Sub-navegação
+    document.getElementById('filtro-status-materiais')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-materiais'));
     document.getElementById('sub-nav-agua')?.addEventListener('click', (e) => { const btn = e.target.closest('button.sub-nav-btn[data-subview]'); if (btn) switchSubTabView('agua', btn.dataset.subview); });
     document.getElementById('sub-nav-gas')?.addEventListener('click', (e) => { const btn = e.target.closest('button.sub-nav-btn[data-subview]'); if (btn) switchSubTabView('gas', btn.dataset.subview); });
+
+    document.getElementById('dashboard-card-separacao')?.addEventListener('click', () => {
+        initialMaterialFilter = 'separacao';
+        switchTab('materiais');
+    });
+    
+    document.getElementById('dashboard-card-retirada')?.addEventListener('click', () => {
+        initialMaterialFilter = 'retirada';
+        switchTab('materiais');
+    });
 
     if(typeof lucide !== 'undefined') lucide.createIcons();
     toggleAguaFormInputs(); toggleGasFormInputs();
 }
 
 // --- INICIALIZAÇÃO GERAL ---
-// Inicia a aplicação quando o DOM estiver pronto.
 document.addEventListener('DOMContentLoaded', () => { 
-    initApp();          // Mapeia elementos e adiciona listeners
-    initFirebase();     // Conecta ao Firebase e inicia listeners de dados
-    switchTab('dashboard'); // Define a aba inicial
+    initApp();
+    initFirebase();
+    switchTab('dashboard');
 });
