@@ -24,7 +24,7 @@ const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial
 
 let app, auth, db, userId;
 let isAuthReady = false;
-let domReady = false; // <<< BANDEIRA: Indica se o initApp terminou
+let domReady = false; // <<< BANDEIRA: Indica se o DOM está pronto e elementos encontrados
 
 let unidadesCollection, aguaCollection, gasCollection, materiaisCollection;
 let estoqueAguaCollection, estoqueGasCollection;
@@ -38,15 +38,14 @@ let visaoAtiva = 'dashboard';
 let dashboardAguaChartInstance, dashboardGasChartInstance;
 let dashboardRefreshInterval = null;
 let deleteInfo = { id: null, type: null, collectionRef: null, details: null, isInicial: false }; 
-let initialMaterialFilter = null; // Variável para filtro inicial da aba Materiais
-let currentDashboardMaterialFilter = null; // Filtro ativo no dashboard
+let initialMaterialFilter = null; 
+let currentDashboardMaterialFilter = null; 
 
-// --- Referências de Elementos (DOM) - Globais ---
+// --- Referências de Elementos (DOM) - Globais (declaradas, mas atribuídas depois) ---
 let navButtons, contentPanes, connectionStatusEl, lastUpdateTimeEl;
 let dashboardNavControls;
 let summaryAguaPendente, summaryAguaEntregue, summaryAguaRecebido;
 let summaryGasPendente, summaryGasEntregue, summaryGasRecebido;
-// ** RESTAURADO: Variáveis globais para elementos do dashboard de materiais **
 let dashboardMateriaisProntosContainer, loadingMateriaisProntos, btnClearDashboardFilter, dashboardMateriaisTitle; 
 let dashboardMateriaisListContainer, loadingMateriaisDashboard;
 let dashboardEstoqueAguaEl, dashboardEstoqueGasEl, dashboardMateriaisSeparacaoCountEl;
@@ -76,6 +75,8 @@ let tipoSelecionadoPrevisao = { agua: null, gas: null };
 
 // --- FUNÇÕES DE UTILIDADE ---
 function showAlert(elementId, message, type = 'info', duration = 5000) {
+    // Só tenta mostrar se domReady for true
+    if (!domReady) { console.warn(`showAlert(${elementId}) chamada antes do DOM pronto.`); return; }
     const el = document.getElementById(elementId);
     if (!el) { console.warn(`Elemento de alerta não encontrado: ${elementId}`); return; }
     el.className = `alert alert-${type}`; 
@@ -160,7 +161,8 @@ async function initFirebase() {
         db = getFirestore(app);
         auth = getAuth(app);
         
-        // Atualiza status inicial antes da autenticação
+        // Tentativa de buscar o elemento de status logo cedo
+        connectionStatusEl = document.getElementById('connectionStatus'); 
         if (connectionStatusEl) {
              connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-yellow-400 rounded-full animate-pulse"></span> <span>Autenticando...</span>`;
         } else {
@@ -169,10 +171,9 @@ async function initFirebase() {
 
 
         onAuthStateChanged(auth, (user) => {
-             if (!connectionStatusEl) { // Checa de novo, caso initApp ainda não tenha rodado
-                 console.warn("connectionStatusEl não encontrado no onAuthStateChanged");
-                 connectionStatusEl = document.getElementById('connectionStatus'); // Tenta buscar de novo
-             }
+             // Garante que connectionStatusEl seja encontrado, mesmo que initApp atrase
+             if (!connectionStatusEl) connectionStatusEl = document.getElementById('connectionStatus'); 
+
             if (user) {
                 isAuthReady = true;
                 userId = user.uid;
@@ -197,7 +198,8 @@ async function initFirebase() {
                 if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-red-500 rounded-full"></span> <span class="text-red-700">Desconectado</span>`;
                 clearAlmoxarifadoData();
             }
-            updateLastUpdateTime();
+            // Chama updateLastUpdateTime apenas se domReady for true
+            if (domReady) updateLastUpdateTime(); 
         });
 
         if (initialAuthToken) {
@@ -211,7 +213,8 @@ async function initFirebase() {
     } catch (error) {
         console.error("Erro ao inicializar Firebase:", error);
          if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-red-500 rounded-full"></span> <span class="text-red-700">Erro Firebase</span>`;
-        showAlert('alert-agua', `Erro crítico na conexão com Firebase: ${error.message}. Recarregue a página.`, 'error', 60000);
+        // Mostra o alerta apenas se domReady for true (garante que o elemento existe)
+        if (domReady) showAlert('alert-agua', `Erro crítico na conexão com Firebase: ${error.message}. Recarregue a página.`, 'error', 60000);
     }
 }
 
@@ -226,7 +229,6 @@ function initFirestoreListeners() {
     onSnapshot(query(unidadesCollection), (snapshot) => { 
         fb_unidades = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         
-        // Só popula se o DOM estiver pronto
         if (domReady) {
              populateUnidadeSelects(selectUnidadeAgua, 'atendeAgua');
              populateUnidadeSelects(selectUnidadeGas, 'atendeGas');
@@ -248,7 +250,6 @@ function initFirestoreListeners() {
 
     onSnapshot(query(aguaCollection), (snapshot) => {
         fb_agua_movimentacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Só renderiza se o DOM estiver pronto
         if (domReady) {
              renderAguaStatus(); 
              renderDashboardAguaChart(); 
@@ -262,7 +263,6 @@ function initFirestoreListeners() {
 
     onSnapshot(query(gasCollection), (snapshot) => {
         fb_gas_movimentacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-         // Só renderiza se o DOM estiver pronto
          if (domReady) {
              renderGasStatus(); 
              renderDashboardGasChart(); 
@@ -276,11 +276,10 @@ function initFirestoreListeners() {
 
     onSnapshot(query(materiaisCollection), (snapshot) => {
         fb_materiais = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-         // Só renderiza se o DOM estiver pronto
          if (domReady) {
              renderMateriaisStatus(); 
              renderDashboardMateriaisList();
-             renderDashboardMateriaisProntos(currentDashboardMaterialFilter); // Renderiza com o filtro atual
+             renderDashboardMateriaisProntos(currentDashboardMaterialFilter); 
              renderDashboardMateriaisCounts();
          } else {
              console.warn("Listener de materiais: DOM não pronto para renderizar.");
@@ -291,7 +290,6 @@ function initFirestoreListeners() {
     onSnapshot(query(estoqueAguaCollection), (snapshot) => {
         fb_estoque_agua = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         estoqueInicialDefinido.agua = fb_estoque_agua.some(e => e.tipo === 'inicial');
-         // Só renderiza se o DOM estiver pronto
          if (domReady) {
              renderEstoqueAgua();
              renderHistoricoAgua();
@@ -304,7 +302,6 @@ function initFirestoreListeners() {
     onSnapshot(query(estoqueGasCollection), (snapshot) => {
         fb_estoque_gas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         estoqueInicialDefinido.gas = fb_estoque_gas.some(e => e.tipo === 'inicial');
-         // Só renderiza se o DOM estiver pronto
          if (domReady) {
              renderEstoqueGas();
              renderHistoricoGas();
@@ -319,10 +316,9 @@ function clearAlmoxarifadoData() {
     fb_unidades = []; fb_agua_movimentacoes = []; fb_gas_movimentacoes = []; fb_materiais = [];
     fb_estoque_agua = []; fb_estoque_gas = []; 
     estoqueInicialDefinido = { agua: false, gas: false };
-    currentDashboardMaterialFilter = null; // Limpa filtro do dashboard
+    currentDashboardMaterialFilter = null; 
 
-    // Só tenta limpar se o DOM estiver pronto (evita erros se chamado antes de initApp)
-    if(domReady) {
+    if(domReady) { // <<< Só limpa a UI se o DOM estiver pronto >>>
         [selectUnidadeAgua, selectUnidadeGas, selectUnidadeMateriais, 
          document.getElementById('select-previsao-unidade-agua-v2'), 
          document.getElementById('select-previsao-unidade-gas-v2'),
@@ -374,16 +370,14 @@ function clearAlmoxarifadoData() {
 }
 
 function updateLastUpdateTime() {
-     if (!domReady || !lastUpdateTimeEl) return; // Checa domReady
+     if (!domReady || !lastUpdateTimeEl) return; 
     const now = new Date();
     const formattedDate = now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     lastUpdateTimeEl.textContent = `Atualizado: ${formattedDate}`;
 }
 
 function populateUnidadeSelects(selectEl, serviceField, includeAll = false, includeSelecione = true, filterType = null) {
-    if (!selectEl) return;
-     // <<< Adicionado cheque domReady (embora chamado por listener que já checa) >>>
-     if (!domReady) { console.warn("populateUnidadeSelects chamada antes do DOM pronto."); return; }
+    if (!domReady || !selectEl) return; // Checa domReady aqui também
 
     let unidadesFiltradas = fb_unidades.filter(u => {
         const atendeServico = serviceField ? (u[serviceField] ?? true) : true;
@@ -426,10 +420,9 @@ function populateUnidadeSelects(selectEl, serviceField, includeAll = false, incl
 }
 
 function populateTipoSelects(itemType) {
+    if (!domReady) return; // Checa domReady
     const selectEl = document.getElementById(`select-previsao-tipo-${itemType}`);
     if (!selectEl) return;
-     // <<< Adicionado cheque domReady (embora chamado por listener que já checa) >>>
-     if (!domReady) { console.warn("populateTipoSelects chamada antes do DOM pronto."); return; }
 
     const uniqueTypes = [...new Set(fb_unidades.map(u => {
         let tipo = (u.tipo || 'Sem Tipo').toUpperCase();
@@ -445,9 +438,9 @@ function populateTipoSelects(itemType) {
 
 
 // --- LÓGICA DE CONTROLE DE ÁGUA ---
-// ... (código da água inalterado, exceto checks domReady nas renderizações) ...
+// ... (restante das funções com check domReady adicionado no início) ...
 function toggleAguaFormInputs() {
-     if (!domReady) return; // Checa se elementos existem
+     if (!domReady) return; 
     if (!selectTipoAgua) return; 
     const tipo = selectTipoAgua.value;
     if (tipo === 'troca') {
@@ -467,7 +460,7 @@ function toggleAguaFormInputs() {
 async function handleAguaSubmit(e) {
      e.preventDefault();
     if (!isAuthReady) { showAlert('alert-agua', 'Erro: Não autenticado.', 'error'); return; }
-    if (!domReady) { showAlert('alert-agua', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } // Checa domReady
+    if (!domReady) { showAlert('alert-agua', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
     const selectValue = selectUnidadeAgua.value; 
     if (!selectValue) { showAlert('alert-agua', 'Selecione uma unidade.', 'warning'); return; }
     const [unidadeId, unidadeNome, tipoUnidadeRaw] = selectValue.split('|');
@@ -586,9 +579,9 @@ function renderAguaStatus() {
 
 
 // --- LÓGICA DE CONTROLE DE GÁS ---
-// ... (código do gás inalterado, exceto checks domReady nas renderizações) ...
+// ... (restante das funções com check domReady adicionado no início) ...
 function toggleGasFormInputs() {
-     if (!domReady) return; // Checa se elementos existem
+     if (!domReady) return; 
     if (!selectTipoGas) return; 
     const tipo = selectTipoGas.value;
     if (tipo === 'troca') {
@@ -608,7 +601,7 @@ function toggleGasFormInputs() {
 async function handleGasSubmit(e) {
     e.preventDefault();
     if (!isAuthReady) { showAlert('alert-gas', 'Erro: Não autenticado.', 'error'); return; }
-    if (!domReady) { showAlert('alert-gas', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } // Checa domReady
+    if (!domReady) { showAlert('alert-gas', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
     const selectValue = selectUnidadeGas.value; 
     if (!selectValue) { showAlert('alert-gas', 'Selecione uma unidade.', 'warning'); return; }
     const [unidadeId, unidadeNome, tipoUnidadeRaw] = selectValue.split('|');
@@ -727,9 +720,9 @@ function renderGasStatus() {
 
 
 // --- LÓGICA DE PREVISÃO INTELIGENTE ---
-// ... (código da previsão inalterado) ...
+// ... (restante das funções com check domReady adicionado no início) ...
 window.selecionarModoPrevisao = (tipoItem, modo) => {
-    if (!domReady) return; // Checa domReady
+    if (!domReady) return; 
     console.log(`Modo Previsão (${tipoItem}): ${modo}`);
     modoPrevisao[tipoItem] = modo;
     
@@ -769,7 +762,7 @@ window.selecionarModoPrevisao = (tipoItem, modo) => {
 }
 
 function handleTipoPrevisaoChange(event) {
-    if (!domReady) return; // Checa domReady
+    if (!domReady) return; 
     const selectEl = event.target;
     const tipoItem = selectEl.id.includes('agua') ? 'agua' : 'gas'; 
     const novoTipo = selectEl.value;
@@ -783,7 +776,7 @@ function handleTipoPrevisaoChange(event) {
 }
 
 window.adicionarExclusao = (tipoItem) => {
-    if (!domReady) return; // Checa domReady
+    if (!domReady) return; 
     const selectExclusao = document.getElementById(`select-exclusao-${tipoItem}`);
     const unidadeId = selectExclusao.value;
     if (!unidadeId || unidadeId === 'todas') return; 
@@ -801,7 +794,7 @@ window.adicionarExclusao = (tipoItem) => {
 }
 
 function renderizarListaExclusoes(tipoItem) {
-     if (!domReady) return; // Checa domReady
+     if (!domReady) return; 
     const container = document.getElementById(`lista-exclusoes-${tipoItem}`);
     container.innerHTML = listaExclusoes[tipoItem].map((item, index) => `
         <span class="exclusao-item">
@@ -812,13 +805,13 @@ function renderizarListaExclusoes(tipoItem) {
 }
 
 window.removerExclusao = (tipoItem, index) => {
-     if (!domReady) return; // Checa domReady
+     if (!domReady) return; 
     listaExclusoes[tipoItem].splice(index, 1); 
     renderizarListaExclusoes(tipoItem); 
 }
 
 window.calcularPrevisaoInteligente = (tipoItem) => {
-     if (!domReady) return; // Checa domReady
+     if (!domReady) return; 
     console.log(`Calculando previsão para ${tipoItem}...`);
     const alertId = `alertas-previsao-${tipoItem}`;
     const resultadoContainerId = `resultado-previsao-${tipoItem}-v2`;
@@ -945,7 +938,7 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
 }
 
 function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
-    if (!domReady) return; // Checa domReady
+    if (!domReady) return; 
     const canvasId = `grafico-previsao-${tipoItem}`;
     const ctx = document.getElementById(canvasId)?.getContext('2d');
     if (!ctx) return;
@@ -1005,11 +998,11 @@ function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
 
 
 // --- LÓGICA DE CONTROLE DE MATERIAIS ---
-// ... (código do handleMateriaisSubmit, renderMateriaisStatus, handleMarcarRetirada, handleMarcarEntregue inalterado, exceto checks domReady nas renderizações) ...
+// ... (restante das funções com check domReady adicionado no início) ...
 async function handleMateriaisSubmit(e) {
     e.preventDefault();
     if (!isAuthReady) { showAlert('alert-materiais', 'Erro: Não autenticado.', 'error'); return; }
-     if (!domReady) { showAlert('alert-materiais', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } // Checa domReady
+     if (!domReady) { showAlert('alert-materiais', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
     const selectValue = selectUnidadeMateriais.value; 
     if (!selectValue) { showAlert('alert-materiais', 'Selecione uma unidade.', 'warning'); return; }
     const [unidadeId, unidadeNome, tipoUnidadeRaw] = selectValue.split('|');
@@ -1172,7 +1165,7 @@ async function handleMarcarEntregue(e) {
 
 
 // --- LÓGICA DE GESTÃO DE UNIDADES ---
-// ... (código da gestão de unidades inalterado, exceto checks domReady nas renderizações) ...
+// ... (restante das funções com check domReady adicionado no início) ...
 function renderGestaoUnidades() {
     if (!tableGestaoUnidades) return;
      if (!domReady) { console.warn("renderGestaoUnidades chamada antes do DOM pronto."); return; }
@@ -1323,7 +1316,7 @@ async function handleSaveUnidadeClick(e) {
 
 async function handleBulkAddUnidades() {
      if (!isAuthReady || !textareaBulkUnidades) return;
-     if (!domReady) { showAlert('alert-gestao', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } // Checa domReady
+     if (!domReady) { showAlert('alert-gestao', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
      
      const text = textareaBulkUnidades.value.trim();
      if (!text) { showAlert('alert-gestao', 'A área de texto está vazia.', 'warning'); return; }
@@ -1387,9 +1380,9 @@ async function handleBulkAddUnidades() {
 
 
 // --- LÓGICA DO DASHBOARD ---
-// ... (código do dashboard inalterado, exceto checks domReady nas renderizações) ...
+// ... (restante das funções com check domReady adicionado no início) ...
 function switchDashboardView(viewName) {
-     if (!domReady) { console.warn("switchDashboardView chamada antes do DOM pronto."); return; } // Checa domReady
+     if (!domReady) { console.warn("switchDashboardView chamada antes do DOM pronto."); return; } 
     document.querySelectorAll('#dashboard-nav-controls .dashboard-nav-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.view === viewName);
     });
@@ -1426,63 +1419,7 @@ function renderDashboardMateriaisCounts() {
     dashboardMateriaisRetiradaCountEl.textContent = retiradaCount;
 }
 
-function filterLast30Days(movimentacoes) {
-    const today = new Date(); 
-    today.setHours(23, 59, 59, 999); 
-    const thirtyDaysAgo = new Date(today); 
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30); 
-    thirtyDaysAgo.setHours(0, 0, 0, 0); 
-    
-    const thirtyDaysAgoTimestamp = thirtyDaysAgo.getTime();
-    const todayTimestamp = today.getTime();
-    
-    return movimentacoes.filter(m => {
-        if (!m.data || typeof m.data.toDate !== 'function') return false; 
-        const mTimestamp = m.data.toMillis();
-        return mTimestamp >= thirtyDaysAgoTimestamp && mTimestamp <= todayTimestamp;
-    });
-}
-
-function getChartDataLast30Days(movimentacoes) {
-    const labels = []; const entregasData = []; const retornosData = []; 
-    const dataMap = new Map(); 
-    
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    for (let i = 29; i >= 0; i--) { 
-        const d = new Date(today); 
-        d.setDate(d.getDate() - i); 
-        const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; 
-        const dateLabel = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); 
-        labels.push(dateLabel); 
-        dataMap.set(dateKey, { entregas: 0, retornos: 0 }); 
-    }
-
-    const movs30Dias = filterLast30Days(movimentacoes);
-    
-    movs30Dias.forEach(m => { 
-        const mDate = m.data.toDate(); 
-        mDate.setHours(0,0,0,0); 
-        const dateKey = `${mDate.getFullYear()}-${String(mDate.getMonth() + 1).padStart(2, '0')}-${String(mDate.getDate()).padStart(2, '0')}`; 
-        if (dataMap.has(dateKey)) { 
-            const dayData = dataMap.get(dateKey); 
-            if (m.tipo === 'entrega') dayData.entregas += m.quantidade; 
-            else if (m.tipo === 'retorno') dayData.retornos += m.quantidade; 
-        } 
-    });
-
-    dataMap.forEach(value => { 
-        entregasData.push(value.entregas); 
-        retornosData.push(value.retornos); 
-    });
-
-    return { 
-        labels, 
-        datasets: [ 
-            { label: 'Entregues (Cheios)', data: entregasData, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, tension: 0.1 }, 
-            { label: 'Recebidos (Vazios)', data: retornosData, backgroundColor: 'rgba(16, 185, 129, 0.7)', borderColor: 'rgba(16, 185, 129, 1)', borderWidth: 1, tension: 0.1 } 
-        ] 
-    };
-}
+// ... (filterLast30Days, getChartDataLast30Days - sem dependência direta do DOM, não precisam do check) ...
 
 function renderDashboardAguaChart() {
     if (!domReady) { return; } 
@@ -1682,7 +1619,7 @@ function filterDashboardMateriais(status) {
 }
 
 function autoScrollView(element) {
-    if (!domReady || !element) return; // Checa domReady
+    if (!domReady || !element) return; 
     if (element.offsetParent === null) return; 
 
     if (element.scrollHeight > element.clientHeight) {
@@ -1702,7 +1639,7 @@ function startDashboardRefresh() {
     stopDashboardRefresh(); 
     console.log("Iniciando auto-refresh do Dashboard (2 min)");
     dashboardRefreshInterval = setInterval(() => {
-        if (!domReady) return; // Checa domReady antes de atualizar
+        if (!domReady) return; 
         if (visaoAtiva !== 'dashboard') { stopDashboardRefresh(); return; }
         console.log("Atualizando dados do Dashboard (auto-refresh)...");
         
@@ -1730,9 +1667,9 @@ function stopDashboardRefresh() {
 }
 
 // --- LÓGICA DE RELATÓRIO PDF ---
-// ... (código do relatório PDF inalterado, exceto check domReady) ...
+// ... (restante das funções com check domReady adicionado no início) ...
 function handleGerarPdf() {
-     if (!domReady) { showAlert('alert-relatorio', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } // Checa domReady
+     if (!domReady) { showAlert('alert-relatorio', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
     if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined' || typeof window.jspdf.AutoTable === 'undefined') {
         showAlert('alert-relatorio', 'Erro: Bibliotecas PDF não carregadas. Tente recarregar a página.', 'error'); return;
     }
@@ -1827,10 +1764,10 @@ function handleGerarPdf() {
 
 
 // --- LÓGICA DE EXCLUSÃO ---
-// ... (código da exclusão inalterado) ...
+// ... (restante das funções com check domReady adicionado no início) ...
 async function openConfirmDeleteModal(id, type, details = null) {
     if (!id || !type) return; 
-     if (!domReady) return; // Checa domReady
+     if (!domReady) return; 
     
     let collectionRef = null; 
     let detailsText = details ? `${details} (ID: ${id.substring(0,6)}...)` : `ID: ${id.substring(0,6)}...`;
@@ -1884,7 +1821,7 @@ async function executeDelete() {
          showAlert(deleteInfo.alertElementId || 'alert-gestao', 'Erro: Não autenticado ou informação de exclusão inválida.', 'error');
          return;
     }
-     if (!domReady) { showAlert(deleteInfo.alertElementId || 'alert-gestao', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } // Checa domReady
+     if (!domReady) { showAlert(deleteInfo.alertElementId || 'alert-gestao', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
     
     btnConfirmDelete.disabled = true; btnConfirmDelete.innerHTML = '<div class="loading-spinner-small mx-auto" style="width:18px; height:18px;"></div>';
     btnCancelDelete.disabled = true;
@@ -1950,10 +1887,10 @@ async function deleteUnitHistory(unidadeId) {
 
 
 // --- LÓGICA DE CONTROLE DE ESTOQUE (ENTRADA) ---
-// ... (código do estoque inalterado, exceto checks domReady nas renderizações) ...
+// ... (restante das funções com check domReady adicionado no início) ...
 async function handleInicialEstoqueSubmit(e) {
     e.preventDefault();
-     if (!domReady) return; // Checa domReady
+     if (!domReady) return; 
     const tipoEstoque = e.target.id.includes('agua') ? 'agua' : 'gas'; 
     
     const inputQtd = document.getElementById(`input-inicial-qtd-${tipoEstoque}`).value;
@@ -2000,7 +1937,7 @@ async function handleInicialEstoqueSubmit(e) {
 }
 
 function switchEstoqueForm(formName) {
-     if (!domReady) return; // Checa domReady
+     if (!domReady) return; 
     const [action, itemType] = formName.split('-'); 
     const otherAction = (action === 'saida') ? 'entrada' : 'saida';
 
@@ -2019,7 +1956,7 @@ function switchEstoqueForm(formName) {
 async function handleEntradaEstoqueSubmit(e) {
     e.preventDefault();
     if (!isAuthReady) { showAlert('alert-agua', 'Erro: Não autenticado.', 'error'); return; } 
-    if (!domReady) { showAlert('alert-agua', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } // Checa domReady
+    if (!domReady) { showAlert('alert-agua', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
     
     const tipoEstoque = e.target.id.includes('agua') ? 'agua' : 'gas';
     const alertElementId = `alert-${tipoEstoque}`; 
@@ -2184,7 +2121,7 @@ function renderHistoricoGas() {
 
 // --- CONTROLE DE ABAS E INICIALIZAÇÃO ---
 function switchSubTabView(tabPrefix, subViewName) {
-     if (!domReady) return; // Checa domReady
+     if (!domReady) return; 
     document.querySelectorAll(`#sub-nav-${tabPrefix} .sub-nav-btn`).forEach(btn => {
         btn.classList.toggle('active', btn.dataset.subview === subViewName);
     });
@@ -2245,11 +2182,18 @@ function switchTab(tabName) {
     setTimeout(() => { if(typeof lucide !== 'undefined') lucide.createIcons(); }, 50); 
 }
 
-function initApp() {
-    console.log("Iniciando initApp..."); 
+// <<< initApp REMOVIDA >>>
+
+// --- INICIALIZAÇÃO GERAL ---
+document.addEventListener('DOMContentLoaded', () => { 
+    console.log("DOM Carregado. Iniciando Firebase...");
+    initFirebase(); // Inicia Firebase primeiro
+
+    console.log("Buscando elementos do DOM e adicionando listeners...");
+    // <<< Busca elementos e adiciona listeners AQUI, após DOMContentLoaded >>>
     navButtons = document.querySelectorAll('.nav-btn'); 
     contentPanes = document.querySelectorAll('main > div[id^="content-"]'); 
-    connectionStatusEl = document.getElementById('connectionStatus'); 
+    connectionStatusEl = document.getElementById('connectionStatus'); // Busca de novo aqui para garantir
     lastUpdateTimeEl = document.getElementById('last-update-time');
     dashboardNavControls = document.getElementById('dashboard-nav-controls');
     summaryAguaPendente = document.getElementById('summary-agua-pendente'); summaryAguaEntregue = document.getElementById('summary-agua-entregue'); summaryAguaRecebido = document.getElementById('summary-agua-recebido');
@@ -2279,8 +2223,15 @@ function initApp() {
     formInicialGasContainer = document.getElementById('form-inicial-gas-container'); formInicialGas = document.getElementById('form-inicial-gas'); inputInicialQtdGas = document.getElementById('input-inicial-qtd-gas'); inputInicialResponsavelGas = document.getElementById('input-inicial-responsavel-gas'); btnSubmitInicialGas = document.getElementById('btn-submit-inicial-gas'); alertInicialGas = document.getElementById('alert-inicial-gas'); btnAbrirInicialGas = document.getElementById('btn-abrir-inicial-gas');
     tableHistoricoGas = document.getElementById('table-historico-gas'); alertHistoricoGas = document.getElementById('alert-historico-gas');
     
+    // Confirmação de que os elementos críticos foram (ou não) encontrados
     if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos || !btnClearDashboardFilter || !dashboardMateriaisTitle) {
-        console.error("ERRO CRÍTICO: Elementos essenciais do dashboard de materiais não encontrados no initApp!");
+        console.error("ERRO CRÍTICO: Elementos essenciais do dashboard NÃO encontrados após DOMContentLoaded!");
+        // Pode ser útil adicionar um alerta aqui para o usuário saber que algo falhou
+        if(alertAgua) showAlert('alert-agua', 'Erro crítico ao carregar a interface. Recarregue a página.', 'error', 60000);
+        domReady = false; // Garante que nada mais tente rodar
+        return; // Interrompe a inicialização
+    } else {
+        console.log("Elementos essenciais encontrados no DOMContentLoaded.");
     }
     
     const todayStr = getTodayDateString();
@@ -2355,20 +2306,18 @@ function initApp() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
     toggleAguaFormInputs(); toggleGasFormInputs();
 
-    // <<< MARCA domReady como TRUE >>>
-    console.log("DOM pronto! Marcando domReady = true");
+    // <<< MARCA domReady como TRUE após buscar elementos e adicionar listeners >>>
+    console.log("DOM pronto e listeners adicionados! Marcando domReady = true");
     domReady = true; 
 
-     // <<< CHAMA switchTab DEPOIS que domReady é true >>>
-     console.log("Chamando switchTab('dashboard') após domReady...");
-     switchTab('dashboard'); 
-}
-
-// --- INICIALIZAÇÃO GERAL ---
-document.addEventListener('DOMContentLoaded', () => { 
-    // <<< Chama initFirebase PRIMEIRO >>>
-    initFirebase(); 
-    // <<< Chama initApp DEPOIS >>>
-    initApp(); 
+    // Chama funções que podem depender de dados do Firebase (listeners podem ter rodado antes)
+    console.log("Chamando funções de renderização inicial...");
+    updateLastUpdateTime(); // Atualiza hora
+    // Chama a primeira renderização dos materiais, caso o listener já tenha dados
+    renderDashboardMateriaisProntos(currentDashboardMaterialFilter); 
+    
+    // <<< CHAMA switchTab por último >>>
+    console.log("Chamando switchTab('dashboard') após domReady...");
+    switchTab('dashboard'); 
 });
 
