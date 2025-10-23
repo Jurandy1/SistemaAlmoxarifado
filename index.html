@@ -108,7 +108,13 @@
                     </div>
 
                     <div class="card">
-                        <h3 class="text-lg font-semibold text-slate-800 mb-4 text-center">Materiais do Almoxarifado</h3>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 id="dashboard-materiais-title" class="text-lg font-semibold text-slate-800 text-center">Materiais do Almoxarifado</h3>
+                            <button id="btn-clear-dashboard-filter" class="btn btn-secondary btn-sm hidden">
+                                <i data-lucide="x" class="w-4 h-4 mr-1"></i>
+                                Limpar Filtro
+                            </button>
+                        </div>
                         <div id="dashboard-materiais-prontos" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                             <div class="text-center p-10 col-span-full" id="loading-materiais-prontos">
                                 <div class="loading-spinner-small mx-auto mb-2"></div>
@@ -945,4 +951,3 @@
     <script src="app.js" type="module" defer></script>
 </body>
 </html>
-
