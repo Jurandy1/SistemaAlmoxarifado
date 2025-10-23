@@ -7,6 +7,7 @@
     --error: #ef4444; /* Vermelho erro */
     --info: #3b82f6; /* Azul info */
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color-scheme: light; /* (REQ 1.1) Força o esquema de cores claras para evitar inversão em Smart TVs */
 }
 body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; /* bg-slate-100 */ }
 .header-banner { background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 50%, var(--light-blue) 100%); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); color: white; }
@@ -35,6 +36,10 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; /* bg-slate-
 .card { background: white; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.5rem; transition: all 0.3s ease; }
 .card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
+/* (REQ 2.1) Estilo para card clicável */
+.clickable-card { cursor: pointer; }
+.clickable-card:hover { border: 1px solid var(--secondary-blue); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); }
+
 /* Formulários */
 .form-label { display: block; font-size: 0.875rem; /* text-sm */ font-medium: 600; color: #475569; margin-bottom: 0.25rem; }
 .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; background: white; transition: all 0.2s ease; }
@@ -55,7 +60,7 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; /* bg-slate-
 .btn-secondary:hover { background-color: #cbd5e1; }
 .btn-success { background-color: var(--success); color: white; padding: 0.5rem 1rem; }
 .btn-success:hover { background-color: #059669; }
-.btn-info { background-color: var(--info); color: white; padding: 0.5rem 1rem; } /* (REQ 6.1) Botão Info */
+.btn-info { background-color: var(--info); color: white; padding: 0.5rem 1rem; }
 .btn-info:hover { background-color: #2563eb; }
 .btn-danger { background-color: transparent; color: var(--error); padding: 0.25rem 0.5rem; font-size: 0.75rem; }
 .btn-danger:hover { background-color: #fee2e2; }
@@ -83,9 +88,24 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; /* bg-slate-
 .badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
 .badge-green { background: #d1fae5; color: #059669; }
 .badge-yellow { background: #fef3c7; color: #d97706; }
-.badge-blue { background: #dbeafe; color: #1e40af; } /* Badge Azul para tipo 'inicial' */
-.badge-red { background: #fee2e2; color: #dc2626; } /* Badge Vermelho para saldo negativo */
-.badge-gray { background: #e5e7eb; color: #4b5563; } /* (REQ 6.1) Badge Cinza para 'entregue' */
+.badge-blue { background: #dbeafe; color: #1e40af; }
+.badge-red { background: #fee2e2; color: #dc2626; }
+.badge-gray { background: #e5e7eb; color: #4b5563; }
+
+/* (REQ 4.1) Estilos para os indicadores de status e atraso */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.1rem 0.5rem;
+    border-radius: 0.25rem;
+    margin-top: 0.25rem;
+}
+.status-indicator.separando { background-color: #fef3c7; color: #92400e; }
+.status-indicator.pronto { background-color: #dcfce7; color: #166534; }
+.status-indicator.late { background-color: #fee2e2; color: #991b1b; margin-left: 0.5rem; }
 
 /* Loaders */
 .loading-spinner { border: 5px solid #e5e7eb; border-top: 5px solid var(--secondary-blue); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: auto; }
@@ -106,13 +126,11 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; /* bg-slate-
 .dashboard-tv-view .card-label { font-size: 1rem; /* text-base */ color: #64748b; }
 .dashboard-tv-view .materiais-prontos-col { background-color: #f8fafc; border-radius: 0.5rem; padding: 1rem; }
 .dashboard-tv-view .materiais-prontos-col h4 { font-size: 1.25rem; font-weight: 600; color: var(--primary-blue); border-bottom: 2px solid var(--primary-blue); padding-bottom: 0.5rem; margin-bottom: 0.75rem; text-align: center; }
-/* (REQ 6.5) Ajustes na lista do dashboard */
 .dashboard-tv-view .materiais-prontos-col h5 { font-size: 0.875rem; font-weight: 600; color: #475569; margin-top: 1rem; margin-bottom: 0.5rem; text-transform: uppercase; text-align: center; }
 .dashboard-tv-view .materiais-prontos-col li { font-size: 1rem; margin-bottom: 0.5rem; line-height: 1.4; padding-bottom: 0.5rem; border-bottom: 1px dashed #e2e8f0; }
 .dashboard-tv-view .materiais-prontos-col li:last-child { border-bottom: none; }
 .dashboard-tv-view .materiais-prontos-col li strong { font-weight: 600; color: #1e293b; }
 .dashboard-tv-view .materiais-prontos-col li span { font-size: 0.875rem; color: #475569; }
-/* (REQ 6.5) Estilo para item "Disponível p/ Retirada" no dashboard */
 .dashboard-tv-view .materiais-prontos-col li.item-retirada { border-left: 4px solid var(--success); padding-left: 0.75rem; background-color: #f0fdf4; }
 .dashboard-tv-view .materiais-prontos-col li.item-retirada strong { color: #065f46; }
 .dashboard-tv-view .materiais-prontos-col li.item-retirada .lucide-check-circle { width: 1em; height: 1em; color: var(--success); vertical-align: middle; margin-right: 0.25rem; }
@@ -127,9 +145,8 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; /* bg-slate-
     .nav-btn { font-size: 0.875rem; padding: 0.75rem 0.5rem; }
     .dashboard-nav-btn { font-size: 0.875rem; padding: 0.5rem; }
     .sub-nav-btn { padding: 0.5rem; }
-    /* (REQ 6.4) Ajuste no grid de cards para mobile */
-    #dashboard-view-geral .grid-cols-1.md\:grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } /* 2 colunas no mobile */
-    @media (min-width: 768px) { /* Volta a 4 colunas em telas md+ */
+    #dashboard-view-geral .grid-cols-1.md\:grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    @media (min-width: 768px) {
         #dashboard-view-geral .grid-cols-1.md\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
 }
@@ -149,77 +166,12 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; /* bg-slate-
 .modal-table th, .modal-table td { padding: 0.5rem 0.75rem; }
 .lucide-trash-2, .lucide-pencil, .lucide-save, .lucide-x-circle, .lucide-check-circle, .lucide-package-check, .lucide-package { width: 1em; height: 1em; vertical-align: middle; }
 
-/* ================================================ */
-/* === INÍCIO: CSS PREVISÃO INTELIGENTE (DO TXT) === */
-/* ================================================ */
-.previsao-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-top: 1rem;
-}
-
-.previsao-option-card {
-    background: white;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 1rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.previsao-option-card:hover {
-    border-color: #3b82f6;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-}
-
-.previsao-option-card.selected {
-    border-color: #3b82f6;
-    background-color: #eff6ff;
-}
-
-.previsao-resultado-item {
-    background: #f8fafc;
-    border-left: 4px solid #3b82f6;
-    padding: 1rem;
-    margin-bottom: 0.75rem;
-    border-radius: 4px;
-}
-
-.previsao-alerta {
-    background: #fef3c7;
-    border-left: 4px solid #f59e0b;
-    padding: 1rem;
-    border-radius: 4px;
-    margin-top: 1rem;
-}
-
-.exclusao-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: #fee2e2;
-    padding: 0.5rem 0.75rem;
-    border-radius: 6px;
-    margin: 0.25rem;
-    font-size: 0.875rem;
-}
-
-.exclusao-item button {
-    background: #dc2626;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    font-size: 0.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-/* ============================================== */
-/* === FIM: CSS PREVISÃO INTELIGENTE (DO TXT) === */
-/* ============================================== */
+/* Previsão Inteligente */
+.previsao-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; padding: 1.5rem; margin-top: 1rem; }
+.previsao-option-card { background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 1rem; cursor: pointer; transition: all 0.3s ease; }
+.previsao-option-card:hover { border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); }
+.previsao-option-card.selected { border-color: #3b82f6; background-color: #eff6ff; }
+.previsao-resultado-item { background: #f8fafc; border-left: 4px solid #3b82f6; padding: 1rem; margin-bottom: 0.75rem; border-radius: 4px; }
+.previsao-alerta { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 4px; margin-top: 1rem; }
+.exclusao-item { display: inline-flex; align-items: center; gap: 0.5rem; background: #fee2e2; padding: 0.5rem 0.75rem; border-radius: 6px; margin: 0.25rem; font-size: 0.875rem; }
+.exclusao-item button { background: #dc2626; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; }
