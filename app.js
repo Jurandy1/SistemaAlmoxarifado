@@ -2300,12 +2300,16 @@ function initApp() {
 
     if(typeof lucide !== 'undefined') lucide.createIcons();
     toggleAguaFormInputs(); toggleGasFormInputs();
+
+    // *** CORREÇÃO: Mover a inicialização do Firebase e switchTab para o FINAL do initApp ***
+    // Isso garante que todos os elementos do DOM (variáveis globais) 
+    // sejam encontrados ANTES que os listeners do Firebase tentem usá-los.
+    console.log("initApp concluído. Chamando initFirebase() e switchTab()...");
+    initFirebase();
+    switchTab('dashboard'); 
 }
 
 // --- INICIALIZAÇÃO GERAL ---
 document.addEventListener('DOMContentLoaded', () => { 
-    initApp(); // ** Garante que initApp execute primeiro **
-    initFirebase();
-    switchTab('dashboard'); // Chama depois que initApp definiu as variáveis globais
+    initApp(); // ** Chama APENAS o initApp. initFirebase() e switchTab() serão chamados por ele. **
 });
-
