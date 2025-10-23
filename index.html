@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- 
-      v.6.7 - Correções Previsão e Limpeza
-      - (REQ 5.1) Tipos de Unidade da Previsão agora são dinâmicos.
-      - (REQ 5.2) Lista de exclusão da Previsão filtra por tipo selecionado.
-      - (REQ 5.3) Tipos "SEDE" e "SEMCAS" tratados como equivalentes ("SEDE").
-      - (REQ 5.4) Limpeza de código JS não utilizado (variáveis e funções antigas da previsão).
+      v.7.0 - Adicionado Status "Disponível para Retirada"
+      - (REQ 6.1) Adicionado novo status 'retirada' entre 'separacao' e 'entregue'.
+      - (REQ 6.2) Aba Materiais: Botão "Disponível para Retirada" atualiza status para 'retirada'.
+      - (REQ 6.3) Aba Materiais: Botão "Entregue" só aparece se status for 'retirada'.
+      - (REQ 6.4) Dashboard (Geral): Adicionado card de contagem "Disponível p/ Retirada".
+      - (REQ 6.5) Dashboard (Geral): Colunas de Materiais Pendentes mostram 'separacao' e 'retirada' (com destaque verde).
+      - (REQ 6.6) Dashboard (Materiais): Lista agora mostra ambos os status pendentes.
     -->
-    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.6.7 - Correções)</title>
+    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.7.0 - Status Retirada)</title>
     
     <!-- Scripts e Links -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -85,6 +87,8 @@
         .btn-secondary:hover { background-color: #cbd5e1; }
         .btn-success { background-color: var(--success); color: white; padding: 0.5rem 1rem; }
         .btn-success:hover { background-color: #059669; }
+        .btn-info { background-color: var(--info); color: white; padding: 0.5rem 1rem; } /* (REQ 6.1) Botão Info */
+        .btn-info:hover { background-color: #2563eb; }
         .btn-danger { background-color: transparent; color: var(--error); padding: 0.25rem 0.5rem; font-size: 0.75rem; }
         .btn-danger:hover { background-color: #fee2e2; }
         .btn-sm { padding: 0.3rem 0.8rem; font-size: 0.8rem; } /* Botão pequeno */
@@ -113,6 +117,7 @@
         .badge-yellow { background: #fef3c7; color: #d97706; }
         .badge-blue { background: #dbeafe; color: #1e40af; } /* Badge Azul para tipo 'inicial' */
         .badge-red { background: #fee2e2; color: #dc2626; } /* Badge Vermelho para saldo negativo */
+        .badge-gray { background: #e5e7eb; color: #4b5563; } /* (REQ 6.1) Badge Cinza para 'entregue' */
         
         /* Loaders */
         .loading-spinner { border: 5px solid #e5e7eb; border-top: 5px solid var(--secondary-blue); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: auto; }
@@ -131,12 +136,19 @@
         .dashboard-tv-view h3 { font-size: 1.5rem; /* text-2xl */ margin-bottom: 1rem; }
         .dashboard-tv-view .card-value { font-size: 2.5rem; /* text-4xl */ font-weight: 700; line-height: 1; }
         .dashboard-tv-view .card-label { font-size: 1rem; /* text-base */ color: #64748b; }
-        .dashboard-tv-view .materiais-prontos-col { background-color: #f8fafc; border-radius: 0.5rem; padding: 1rem; } /* (REQ 3) Estilo adicionado */
-        .dashboard-tv-view .materiais-prontos-col h4 { font-size: 1.25rem; font-weight: 600; color: var(--primary-blue); border-bottom: 2px solid var(--primary-blue); padding-bottom: 0.5rem; margin-bottom: 0.75rem; text-align: center; } /* (REQ 3) Estilo ajustado */
-        .dashboard-tv-view .materiais-prontos-col li { font-size: 1rem; margin-bottom: 0.5rem; line-height: 1.4; padding-bottom: 0.5rem; border-bottom: 1px dashed #e2e8f0; } /* (REQ 3) Estilo ajustado */
-        .dashboard-tv-view .materiais-prontos-col li:last-child { border-bottom: none; } /* (REQ 3) */
+        .dashboard-tv-view .materiais-prontos-col { background-color: #f8fafc; border-radius: 0.5rem; padding: 1rem; }
+        .dashboard-tv-view .materiais-prontos-col h4 { font-size: 1.25rem; font-weight: 600; color: var(--primary-blue); border-bottom: 2px solid var(--primary-blue); padding-bottom: 0.5rem; margin-bottom: 0.75rem; text-align: center; }
+        /* (REQ 6.5) Ajustes na lista do dashboard */
+        .dashboard-tv-view .materiais-prontos-col h5 { font-size: 0.875rem; font-weight: 600; color: #475569; margin-top: 1rem; margin-bottom: 0.5rem; text-transform: uppercase; text-align: center; }
+        .dashboard-tv-view .materiais-prontos-col li { font-size: 1rem; margin-bottom: 0.5rem; line-height: 1.4; padding-bottom: 0.5rem; border-bottom: 1px dashed #e2e8f0; }
+        .dashboard-tv-view .materiais-prontos-col li:last-child { border-bottom: none; }
         .dashboard-tv-view .materiais-prontos-col li strong { font-weight: 600; color: #1e293b; }
         .dashboard-tv-view .materiais-prontos-col li span { font-size: 0.875rem; color: #475569; }
+        /* (REQ 6.5) Estilo para item "Disponível p/ Retirada" no dashboard */
+        .dashboard-tv-view .materiais-prontos-col li.item-retirada { border-left: 4px solid var(--success); padding-left: 0.75rem; background-color: #f0fdf4; }
+        .dashboard-tv-view .materiais-prontos-col li.item-retirada strong { color: #065f46; }
+        .dashboard-tv-view .materiais-prontos-col li.item-retirada .lucide-check-circle { width: 1em; height: 1em; color: var(--success); vertical-align: middle; margin-right: 0.25rem; }
+
 
         @media (max-width: 768px) {
             .logo-container { flex-direction: column; text-align: center; gap: 0.75rem; }
@@ -147,6 +159,11 @@
             .nav-btn { font-size: 0.875rem; padding: 0.75rem 0.5rem; }
             .dashboard-nav-btn { font-size: 0.875rem; padding: 0.5rem; }
             .sub-nav-btn { padding: 0.5rem; }
+            /* (REQ 6.4) Ajuste no grid de cards para mobile */
+            #dashboard-view-geral .grid-cols-1.md\:grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } /* 2 colunas no mobile */
+            @media (min-width: 768px) { /* Volta a 4 colunas em telas md+ */
+                #dashboard-view-geral .grid-cols-1.md\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            }
         }
         
         /* Modal */
@@ -162,7 +179,7 @@
         @keyframes slideInModal { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .modal-table { font-size: 0.875rem; }
         .modal-table th, .modal-table td { padding: 0.5rem 0.75rem; }
-        .lucide-trash-2, .lucide-pencil, .lucide-save, .lucide-x-circle { width: 1em; height: 1em; vertical-align: middle; }
+        .lucide-trash-2, .lucide-pencil, .lucide-save, .lucide-x-circle, .lucide-check-circle, .lucide-package-check, .lucide-package { width: 1em; height: 1em; vertical-align: middle; }
 
         /* ================================================ */
         /* === INÍCIO: CSS PREVISÃO INTELIGENTE (DO TXT) === */
@@ -320,8 +337,8 @@
                 <!-- VISÃO GERAL (NOVA) -->
                 <div id="dashboard-view-geral" class="fade-in">
                     
-                    <!-- Cards de Estoque Disponível -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <!-- (REQ 6.4) Cards de Estoque - Grid de 3 para 4 colunas -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                         <div class="card text-center">
                             <h3 class="font-semibold text-slate-800 mb-2">💧 Estoque de Água</h3>
                             <p id="dashboard-estoque-agua" class="card-value text-blue-600">0</p>
@@ -334,15 +351,21 @@
                         </div>
                         <!-- (REQ 1) Card "Vazios Pendentes" alterado para "Materiais em Separação" -->
                         <div class="card text-center">
-                            <h3 class="font-semibold text-slate-800 mb-2">Materiais em Separação</h3>
+                            <h3 class="font-semibold text-slate-800 mb-2">Em Separação</h3>
                             <p id="dashboard-materiais-separacao-count" class="card-value text-yellow-600">0</p>
                             <p class="card-label">Registros pendentes</p>
                         </div>
+                        <!-- (REQ 6.4) Card "Disponível para Retirada" -->
+                        <div class="card text-center">
+                            <h3 class="font-semibold text-slate-800 mb-2">Disponível p/ Retirada</h3>
+                            <p id="dashboard-materiais-retirada-count" class="card-value text-green-600">0</p>
+                            <p class="card-label">Registros prontos</p>
+                        </div>
                     </div>
 
-                    <!-- Card de Materiais Prontos -->
+                    <!-- (REQ 6.5) Card de Materiais Pendentes (novo título) -->
                     <div class="card">
-                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Materiais Prontos para Entrega (Em Separação)</h3>
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Materiais Pendentes</h3>
                         <div id="dashboard-materiais-prontos" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                             <!-- Colunas (CT, SEDE, CRAS, CREAS, ABRIGO) serão geradas pelo JS -->
                             <div class="text-center p-10 col-span-full" id="loading-materiais-prontos">
@@ -415,9 +438,9 @@
                 
                 <!-- VISÃO MATERIAIS -->
                 <div id="dashboard-view-materiais" class="hidden fade-in">
-                    <!-- Lista de Materiais -->
+                    <!-- (REQ 6.6) Lista de Materiais -->
                     <div class="card">
-                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Materiais em Separação</h3>
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Materiais Pendentes</h3>
                         <div id="dashboard-materiais-list" class="space-y-3 dashboard-list">
                              <div class="text-center p-10" id="loading-materiais-dashboard">
                                 <div class="loading-spinner-small mx-auto mb-2"></div>
@@ -1102,10 +1125,10 @@
                     <div id="alert-materiais" class="alert mt-4"></div>
                 </div>
                 
-                <!-- Coluna de Status -->
+                <!-- (REQ 6.2) Coluna de Status (Título atualizado) -->
                 <div class="lg:col-span-2 card">
-                    <h2 class="text-xl font-bold text-slate-800 mb-4">Materiais em Separação / Entregues</h2>
-                    <p class="text-sm text-slate-500 mb-4">Lista de materiais separados. Clique em "Entregue" para confirmar a entrega.</p>
+                    <h2 class="text-xl font-bold text-slate-800 mb-4">Status dos Materiais</h2>
+                    <p class="text-sm text-slate-500 mb-4">Controle de materiais em separação, disponíveis para retirada e já entregues.</p>
                     <div id="alert-materiais-lista" class="alert mb-4"></div>
                     <div class="overflow-x-auto">
                         <table class="table w-full text-sm">
@@ -1290,7 +1313,8 @@
         let summaryGasPendente, summaryGasEntregue, summaryGasRecebido;
         let dashboardMateriaisProntosContainer, loadingMateriaisProntos;
         let dashboardMateriaisListContainer, loadingMateriaisDashboard;
-        let dashboardEstoqueAguaEl, dashboardEstoqueGasEl, dashboardMateriaisSeparacaoCountEl; 
+        let dashboardEstoqueAguaEl, dashboardEstoqueGasEl, dashboardMateriaisSeparacaoCountEl;
+        let dashboardMateriaisRetiradaCountEl; // (REQ 6.4)
         // Água
         let formAgua, selectUnidadeAgua, selectTipoAgua, inputDataAgua, inputResponsavelAgua, btnSubmitAgua, alertAgua, tableStatusAgua, alertAguaLista;
         let inputQtdEntregueAgua, inputQtdRetornoAgua, formGroupQtdEntregueAgua, formGroupQtdRetornoAgua; 
@@ -1394,11 +1418,18 @@
                 return;
             }
             rows.forEach(row => {
-                // Não filtra linhas que estão em modo de edição
-                if (row.querySelectorAll('td').length > 1 && !row.classList.contains('editing-row')) { 
+                // Não filtra linhas que estão em modo de edição ou linhas de observação
+                if (row.querySelectorAll('td').length > 1 && !row.classList.contains('editing-row') && !row.classList.contains('obs-row')) { 
                     const rowText = normalizeString(row.textContent);
                     const isMatch = rowText.includes(searchTerm);
                     row.style.display = isMatch ? '' : 'none';
+                    // (REQ 6.2) Mostra/esconde a linha de observação correspondente
+                    const obsRow = row.nextElementSibling;
+                    if(obsRow && obsRow.classList.contains('obs-row')) {
+                        obsRow.style.display = isMatch ? '' : 'none';
+                    }
+                } else if (!row.classList.contains('obs-row')) { // Esconde linhas de edição/outras se não for observação
+                    // row.style.display = ''; // Mantém linhas de edição visíveis?
                 }
             });
         }
@@ -1521,7 +1552,7 @@
                 renderMateriaisStatus(); 
                 renderDashboardMateriaisList();
                 renderDashboardMateriaisProntos(); 
-                renderDashboardMateriaisSeparacaoCount(); 
+                renderDashboardMateriaisCounts(); // (REQ 6.4) Atualiza os dois contadores
                 console.log("Materiais atualizados:", fb_materiais.length);
             }, (error) => { console.error("Erro no listener de materiais:", error); showAlert('alert-materiais-lista', `Erro ao carregar materiais: ${error.message}`, 'error'); });
         
@@ -1585,7 +1616,8 @@
             // Zera contadores do Dashboard
             if (dashboardEstoqueAguaEl) dashboardEstoqueAguaEl.textContent = '0';
             if (dashboardEstoqueGasEl) dashboardEstoqueGasEl.textContent = '0';
-            if (dashboardMateriaisSeparacaoCountEl) dashboardMateriaisSeparacaoCountEl.textContent = '0'; 
+            if (dashboardMateriaisSeparacaoCountEl) dashboardMateriaisSeparacaoCountEl.textContent = '0';
+            if (dashboardMateriaisRetiradaCountEl) dashboardMateriaisRetiradaCountEl.textContent = '0'; // (REQ 6.4)
 
             // Limpa filtros
             if (filtroUnidadeNome) filtroUnidadeNome.value = '';
@@ -2310,11 +2342,14 @@
             btnSubmitMateriais.disabled = true; btnSubmitMateriais.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
             
             try {
-                // Adiciona documento com status inicial 'separacao'
+                // (REQ 6.1) Adiciona documento com status inicial 'separacao'
                 await addDoc(materiaisCollection, { 
                     unidadeId, unidadeNome, tipoUnidade, tipoMaterial, 
-                    dataSeparacao, itens, status: 'separacao', 
-                    dataEntrega: null, responsavelSeparacao, responsavelEntrega: null, 
+                    dataSeparacao, itens, status: 'separacao', // Status inicial
+                    dataRetirada: null, // (REQ 6.1) Novo campo
+                    dataEntrega: null, responsavelSeparacao, 
+                    responsavelRetirada: null, // (REQ 6.1) Novo campo (não usado ainda)
+                    responsavelEntrega: null, 
                     registradoEm: serverTimestamp() 
                 });
                 showAlert('alert-materiais', 'Separação registrada!', 'success');
@@ -2329,18 +2364,20 @@
             }
         }
 
-        // Renderiza a tabela de status de materiais (separação/entregues)
+        // (REQ 6.2) Renderiza a tabela de status de materiais (separação/retirada/entregues)
         function renderMateriaisStatus() {
              if (!tableStatusMateriais) return;
             
-             // Ordena: Em separação primeiro, depois por data (mais recente primeiro)
+             // Ordena: Em separação (1), Disponível (2), Entregue (3)
+             // Depois por data (mais recente primeiro)
             const materiaisOrdenados = [...fb_materiais].sort((a,b) => { 
-                const statusOrder = { 'separacao': 1, 'entregue': 2 }; 
+                const statusOrder = { 'separacao': 1, 'retirada': 2, 'entregue': 3 }; 
                 const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
                 if (statusCompare !== 0) return statusCompare;
-                const dateA = a.dataSeparacao?.toMillis() || 0; 
-                const dateB = b.dataSeparacao?.toMillis() || 0; 
-                return dateB - dateA; // Mais recente primeiro
+                // Se status for igual, ordena por data (mais recente primeiro)
+                const dateA = a.dataEntrega?.toMillis() || a.dataRetirada?.toMillis() || a.dataSeparacao?.toMillis() || 0; 
+                const dateB = b.dataEntrega?.toMillis() || b.dataRetirada?.toMillis() || b.dataSeparacao?.toMillis() || 0; 
+                return dateB - dateA; 
             });
 
             if (materiaisOrdenados.length === 0) { 
@@ -2350,28 +2387,51 @@
 
             // Gera HTML da tabela
             tableStatusMateriais.innerHTML = materiaisOrdenados.map(m => {
-                const isPendente = m.status === 'separacao';
-                const statusClass = isPendente ? 'badge-yellow' : 'badge-green';
-                const statusText = isPendente ? 'Em Separação' : 'Entregue';
-                const dataEntregaText = m.dataEntrega ? ` (${formatTimestamp(m.dataEntrega)})` : '';
+                let statusClass = '';
+                let statusText = '';
+                let dataStatusText = '';
+                let acoesHtml = '';
+                
                 const tooltipText = `Separado por: ${m.responsavelSeparacao || 'N/A'}${m.responsavelEntrega ? ' | Entregue por: '+m.responsavelEntrega : ''}`;
+                const isEntregue = m.status === 'entregue';
+                
+                if (m.status === 'separacao') {
+                    statusClass = 'badge-yellow';
+                    statusText = 'Em Separação';
+                    dataStatusText = ''; // Data da separação já está na coluna
+                    acoesHtml = `
+                        <button class="btn-info btn-retirada text-xs py-1 px-2" data-id="${m.id}">Disponível p/ Retirada</button>
+                    `;
+                } else if (m.status === 'retirada') {
+                    statusClass = 'badge-green';
+                    statusText = 'Disponível p/ Retirada';
+                    dataStatusText = m.dataRetirada ? ` (${formatTimestamp(m.dataRetirada)})` : '';
+                    acoesHtml = `
+                        <button class="btn-success btn-entregue text-xs py-1 px-2" data-id="${m.id}">Entregue</button>
+                    `;
+                } else { // entregue
+                    statusClass = 'badge-gray';
+                    statusText = 'Entregue';
+                    dataStatusText = m.dataEntrega ? ` (${formatTimestamp(m.dataEntrega)})` : '';
+                    acoesHtml = ''; // Nenhuma ação principal
+                }
                 
                 // Linha principal com dados
                 const linhaPrincipal = `
-                    <tr class="align-top ${isPendente ? '' : 'opacity-70'}" title="${tooltipText}">
+                    <tr class="align-top ${isEntregue ? 'opacity-60' : ''}" title="${tooltipText}">
                         <td class="font-medium">${m.unidadeNome || 'Unidade Desc.'}</td>
                         <td class="capitalize">${m.tipoMaterial || 'N/D'}</td>
                         <td>${formatTimestamp(m.dataSeparacao)}</td>
-                        <td><span class="badge ${statusClass}">${statusText}${dataEntregaText}</span></td>
+                        <td><span class="badge ${statusClass}">${statusText}${dataStatusText}</span></td>
                         <td class="text-right space-x-1">
-                            ${isPendente ? `<button class="btn-success btn-entregue text-xs py-1 px-2" data-id="${m.id}">Entregue</button>` : ''}
+                            ${acoesHtml}
                             <button class="btn-danger btn-remove" data-id="${m.id}" data-type="materiais" title="Remover este registro"><i data-lucide="trash-2"></i></button>
                         </td>
                     </tr>`;
                 
                 // Linha adicional para observação (se existir)
                 const linhaObservacao = m.itens ? `
-                    <tr class="${isPendente ? 'bg-slate-50' : 'bg-gray-50'} border-b-2 border-slate-200 ${isPendente ? '' : 'opacity-70'}">
+                    <tr class="obs-row ${isEntregue ? 'opacity-60' : ''} ${m.status === 'separacao' ? 'bg-slate-50' : (m.status === 'retirada' ? 'bg-green-50' : 'bg-gray-50')} border-b-2 border-slate-200">
                         <td colspan="5" class="py-2 px-6 text-sm text-slate-600 whitespace-pre-wrap"><strong>Observação:</strong> ${m.itens}</td>
                     </tr>` : '';
 
@@ -2380,7 +2440,35 @@
             lucide.createIcons(); // Recria ícones
         }
 
-        // Marca um material como entregue
+        // (REQ 6.2) Marca um material como disponível para retirada
+        async function handleMarcarRetirada(e) {
+            const button = e.target.closest('button.btn-retirada[data-id]');
+            if (!button) return; // Sai se não clicou no botão correto
+            
+            const materialId = button.dataset.id;
+            if (!isAuthReady || !materialId) return;
+            
+            // Desabilita botão e mostra loading
+            button.disabled = true; button.innerHTML = '<div class="loading-spinner-small mx-auto" style="width: 16px; height: 16px; border-width: 2px;"></div>';
+            
+            try {
+                // Atualiza documento no Firestore
+                const docRef = doc(materiaisCollection, materialId);
+                await updateDoc(docRef, { 
+                    status: 'retirada', // Novo status
+                    dataRetirada: serverTimestamp() // Data atual do servidor
+                });
+                showAlert('alert-materiais-lista', 'Material marcado como Disponível para Retirada!', 'success', 3000);
+            } catch (error) { 
+                console.error("Erro marcar p/ retirada:", error); 
+                showAlert('alert-materiais-lista', `Erro: ${error.message}`, 'error'); 
+                // Reabilita botão em caso de erro
+                button.disabled = false; 
+                button.textContent = 'Disponível p/ Retirada'; 
+            }
+        }
+
+        // (REQ 6.3) Marca um material como entregue (vindo do status 'retirada')
         async function handleMarcarEntregue(e) {
             const button = e.target.closest('button.btn-entregue[data-id]');
             if (!button) return; // Sai se não clicou no botão correto
@@ -2389,7 +2477,7 @@
             if (!isAuthReady || !materialId) return;
             
             // Pede nome do responsável pela entrega
-            const responsavelEntrega = prompt("Nome do responsável pela entrega:");
+            const responsavelEntrega = prompt("Nome do responsável pela entrega/retirada:");
             if (!responsavelEntrega) { // Se cancelar ou deixar vazio
                  showAlert('alert-materiais-lista', 'Nome do responsável é obrigatório para marcar como entregue.', 'warning');
                  return; 
@@ -2695,14 +2783,17 @@
             if (dashboardEstoqueGasEl) {
                 dashboardEstoqueGasEl.textContent = estoqueGasAtualEl?.textContent || '0';
             }
-            // A contagem de materiais é feita em outra função
+            // A contagem de materiais é feita em renderDashboardMateriaisCounts()
         }
         
-        // Atualiza o card "Materiais em Separação" na visão GERAL
-        function renderDashboardMateriaisSeparacaoCount() {
-            if (!dashboardMateriaisSeparacaoCountEl) return;
-            const pendentesCount = fb_materiais.filter(m => m.status === 'separacao').length;
-            dashboardMateriaisSeparacaoCountEl.textContent = pendentesCount;
+        // (REQ 6.4) Atualiza os cards "Em Separação" e "Disponível p/ Retirada"
+        function renderDashboardMateriaisCounts() {
+            if (!dashboardMateriaisSeparacaoCountEl || !dashboardMateriaisRetiradaCountEl) return;
+            const separacaoCount = fb_materiais.filter(m => m.status === 'separacao').length;
+            const retiradaCount = fb_materiais.filter(m => m.status === 'retirada').length;
+            
+            dashboardMateriaisSeparacaoCountEl.textContent = separacaoCount;
+            dashboardMateriaisRetiradaCountEl.textContent = retiradaCount;
         }
 
         // Filtra um array de movimentações para incluir apenas os últimos 30 dias
@@ -2832,53 +2923,72 @@
             renderDashboardVisaoGeralSummary(); // Atualiza card de estoque na visão geral
         }
 
-        // Renderiza a lista de materiais pendentes na visão de MATERIAIS do dashboard
+        // (REQ 6.6) Renderiza a lista de materiais pendentes (separacao e retirada) na visão de MATERIAIS do dashboard
         function renderDashboardMateriaisList() {
              if (!dashboardMateriaisListContainer || !loadingMateriaisDashboard) return; 
              loadingMateriaisDashboard.style.display = 'none'; // Esconde loading
              
-             // Filtra e ordena materiais pendentes (mais antigos primeiro)
-            const pendentes = fb_materiais.filter(m => m.status === 'separacao').sort((a,b) => (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0)); 
+             // Filtra e ordena materiais pendentes (separacao primeiro, depois retirada, depois mais antigos)
+            const pendentes = fb_materiais
+                .filter(m => m.status === 'separacao' || m.status === 'retirada')
+                .sort((a,b) => { 
+                    const statusOrder = { 'separacao': 1, 'retirada': 2 }; 
+                    const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
+                    if (statusCompare !== 0) return statusCompare;
+                    return (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0); // Mais antigos primeiro
+                }); 
             
             // Renderiza HTML da lista
             if (pendentes.length === 0) { 
-                dashboardMateriaisListContainer.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Nenhum material em separação.</p>'; 
+                dashboardMateriaisListContainer.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Nenhum material pendente.</p>'; 
                 return; 
             }
-            dashboardMateriaisListContainer.innerHTML = pendentes.map(m => ` 
-                <div class="p-3 bg-slate-50 rounded-lg border border-slate-200"> 
-                    <div class="flex justify-between items-center gap-2"> 
-                        <span class="font-medium text-slate-700 text-sm truncate" title="${m.unidadeNome || ''}">${m.unidadeNome || 'Unidade Desc.'}</span> 
-                        <span class="badge badge-yellow flex-shrink-0">${formatTimestamp(m.dataSeparacao)}</span> 
-                    </div> 
-                    <p class="text-xs text-slate-600 capitalize mt-1">${m.tipoMaterial || 'N/D'}</p> 
-                    ${m.itens ? `<p class="text-xs text-gray-500 mt-1 truncate" title="${m.itens}">Obs: ${m.itens}</p>` : ''} 
-                </div> `
-            ).join('');
+            dashboardMateriaisListContainer.innerHTML = pendentes.map(m => {
+                const isSeparacao = m.status === 'separacao';
+                const badgeClass = isSeparacao ? 'badge-yellow' : 'badge-green';
+                const badgeText = isSeparacao ? 'Em Separação' : 'Disponível';
+                const bgColor = isSeparacao ? 'bg-slate-50' : 'bg-green-50';
+                const borderColor = isSeparacao ? 'border-slate-200' : 'border-green-300';
+
+                return ` 
+                    <div class="p-3 ${bgColor} rounded-lg border ${borderColor}"> 
+                        <div class="flex justify-between items-center gap-2"> 
+                            <span class="font-medium text-slate-700 text-sm truncate" title="${m.unidadeNome || ''}">${m.unidadeNome || 'Unidade Desc.'}</span> 
+                            <span class="badge ${badgeClass} flex-shrink-0">${badgeText} (${formatTimestamp(m.dataSeparacao)})</span> 
+                        </div> 
+                        <p class="text-xs text-slate-600 capitalize mt-1">${m.tipoMaterial || 'N/D'}</p> 
+                        ${m.itens ? `<p class="text-xs text-gray-500 mt-1 truncate" title="${m.itens}">Obs: ${m.itens}</p>` : ''} 
+                    </div> `
+            }).join('');
         }
         
-        // Renderiza as colunas de materiais prontos por TIPO DE UNIDADE na visão GERAL do dashboard
+        // (REQ 6.5) Renderiza as colunas de materiais pendentes (separacao e retirada) por TIPO DE UNIDADE na visão GERAL do dashboard
         function renderDashboardMateriaisProntos() {
             if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos) return;
             loadingMateriaisProntos.style.display = 'none'; // Esconde loading
             
-            const pendentes = fb_materiais.filter(m => m.status === 'separacao');
+            const pendentes = fb_materiais.filter(m => m.status === 'separacao' || m.status === 'retirada');
             
             if (pendentes.length === 0) {
-                dashboardMateriaisProntosContainer.innerHTML = '<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material em separação.</p>';
+                dashboardMateriaisProntosContainer.innerHTML = '<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material pendente.</p>';
                 return;
             }
 
-            // Agrupa unidades pendentes por TIPO DE UNIDADE, depois por NOME DA UNIDADE
+            // Agrupa unidades pendentes por TIPO DE UNIDADE, depois por STATUS, depois por NOME DA UNIDADE
             const gruposTipoUnidade = pendentes.reduce((acc, m) => {
-                // (REQ 5.3) Normaliza tipo para agrupar
+                // Normaliza tipo para agrupar
                 let tipoUnidade = (m.tipoUnidade || 'OUTROS').toUpperCase();
                 if (tipoUnidade === 'SEMCAS') tipoUnidade = 'SEDE'; 
-
-                if (!acc[tipoUnidade]) acc[tipoUnidade] = {};
+                
+                if (!acc[tipoUnidade]) acc[tipoUnidade] = { separacao: {}, retirada: {} };
+                
+                const statusGrupo = m.status; // 'separacao' ou 'retirada'
                 const unidadeNome = m.unidadeNome || 'Desconhecida';
-                if (!acc[tipoUnidade][unidadeNome]) { acc[tipoUnidade][unidadeNome] = new Set(); } // Usa Set para evitar tipos de material duplicados por unidade
-                acc[tipoUnidade][unidadeNome].add(m.tipoMaterial || 'N/D'); 
+
+                if (!acc[tipoUnidade][statusGrupo][unidadeNome]) { 
+                    acc[tipoUnidade][statusGrupo][unidadeNome] = new Set(); 
+                }
+                acc[tipoUnidade][statusGrupo][unidadeNome].add(m.tipoMaterial || 'N/D'); 
                 return acc;
             }, {});
 
@@ -2892,19 +3002,50 @@
             let colunasRenderizadas = 0;
             ordemColunas.forEach(tipoUnidade => {
                 if (gruposTipoUnidade[tipoUnidade]) { // Só renderiza se houver unidades desse tipo
+                    const unidadesSeparacao = gruposTipoUnidade[tipoUnidade].separacao;
+                    const unidadesRetirada = gruposTipoUnidade[tipoUnidade].retirada;
+                    const temSeparacao = Object.keys(unidadesSeparacao).length > 0;
+                    const temRetirada = Object.keys(unidadesRetirada).length > 0;
+
+                    if (!temSeparacao && !temRetirada) return; // Pula se este tipo não tiver nada pendente
+
                     colunasRenderizadas++;
                     html += `<div class="materiais-prontos-col"><h4>${tipoUnidade}</h4><ul class="space-y-3">`; 
-                    const unidadesOrdenadas = Object.keys(gruposTipoUnidade[tipoUnidade]).sort(); // Ordena unidades alfabeticamente
-                    unidadesOrdenadas.forEach(unidadeNome => {
-                        const tiposMateriais = Array.from(gruposTipoUnidade[tipoUnidade][unidadeNome]).join(', '); // Lista de tipos de material
-                        html += `<li><strong>${unidadeNome}</strong><br><span class="capitalize">(${tiposMateriais})</span></li>`; 
-                    });
+                    
+                    // Renderiza "Em Separação"
+                    if(temSeparacao) {
+                        if(temRetirada) html += `<h5>Em Separação</h5>`; // Só mostra subtítulo se houver os dois
+                        const unidadesOrdenadas = Object.keys(unidadesSeparacao).sort(); 
+                        unidadesOrdenadas.forEach(unidadeNome => {
+                            const tiposMateriais = Array.from(unidadesSeparacao[unidadeNome]).join(', ');
+                            html += `<li><strong>${unidadeNome}</strong><br><span class="capitalize">(${tiposMateriais})</span></li>`; 
+                        });
+                    }
+
+                    // Renderiza "Disponível p/ Retirada"
+                    if(temRetirada) {
+                         if(temSeparacao) html += `<h5 class="pt-2 border-t border-slate-200">Disponível p/ Retirada</h5>`; // Subtítulo com separador
+                         const unidadesOrdenadas = Object.keys(unidadesRetirada).sort();
+                         unidadesOrdenadas.forEach(unidadeNome => {
+                            const tiposMateriais = Array.from(unidadesRetirada[unidadeNome]).join(', ');
+                            // (REQ 6.5) Adiciona classe 'item-retirada' e ícone
+                            html += `<li class="item-retirada">
+                                        <div class="flex items-center gap-1">
+                                            <i data-lucide="check-circle"></i>
+                                            <strong>${unidadeNome}</strong>
+                                        </div>
+                                        <span class="capitalize ml-5">(${tiposMateriais})</span>
+                                     </li>`; 
+                        });
+                    }
+                    
                     html += `</ul></div>`;
                 }
             });
 
             // Insere HTML no container
-            dashboardMateriaisProntosContainer.innerHTML = colunasRenderizadas > 0 ? html : '<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material em separação.</p>';
+            dashboardMateriaisProntosContainer.innerHTML = colunasRenderizadas > 0 ? html : '<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material pendente.</p>';
+            lucide.createIcons(); // Recria ícones (importante para o ícone de check)
         }
         
         // Inicia o intervalo de atualização automática do Dashboard
@@ -2919,7 +3060,8 @@
                 renderDashboardAguaChart(); renderDashboardGasChart();
                 renderDashboardAguaSummary(); renderDashboardGasSummary();
                 renderDashboardMateriaisList(); renderDashboardMateriaisProntos();
-                renderDashboardVisaoGeralSummary(); renderDashboardMateriaisSeparacaoCount(); 
+                renderDashboardVisaoGeralSummary(); 
+                renderDashboardMateriaisCounts(); // (REQ 6.4)
                 updateLastUpdateTime(); // Atualiza hora
             }, 120000); // 120000 ms = 2 minutos
         }
@@ -3128,14 +3270,6 @@
                     const message = deleteInfo.isInicial ? 'Lançamento de Estoque Inicial removido!' : 'Lançamento removido com sucesso!';
                     showAlert(deleteInfo.alertElementId || 'alert-gestao', message, 'success');
                 }
-                
-                // Força atualização de partes relevantes do Dashboard (já que o listener pode demorar um pouco)
-                // if (deleteInfo.type === 'agua' || deleteInfo.type === 'entrada-agua') { renderDashboardAguaChart(); renderDashboardAguaSummary(); }
-                // if (deleteInfo.type === 'gas' || deleteInfo.type === 'entrada-gas') { renderDashboardGasChart(); renderDashboardGasSummary(); }
-                // if (deleteInfo.type === 'materiais') { renderDashboardMateriaisList(); renderDashboardMateriaisProntos(); renderDashboardMateriaisSeparacaoCount(); }
-                // if (deleteInfo.type.includes('agua') || deleteInfo.type.includes('gas')) { renderDashboardVisaoGeralSummary(); }
-                // if (deleteInfo.type === 'unidade') { renderGestaoUnidades(); }
-                // Comentado acima pois os listeners devem cuidar disso. Se houver lentidão, pode ser reativado.
 
             } catch (error) {
                 console.error(`Erro ao remover ${deleteInfo.type}:`, error);
@@ -3515,7 +3649,8 @@
             summaryGasPendente = document.getElementById('summary-gas-pendente'); summaryGasEntregue = document.getElementById('summary-gas-entregue'); summaryGasRecebido = document.getElementById('summary-gas-recebido');
             dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos'); loadingMateriaisProntos = document.getElementById('loading-materiais-prontos');
             dashboardMateriaisListContainer = document.getElementById('dashboard-materiais-list'); loadingMateriaisDashboard = document.getElementById('loading-materiais-dashboard');
-            dashboardEstoqueAguaEl = document.getElementById('dashboard-estoque-agua'); dashboardEstoqueGasEl = document.getElementById('dashboard-estoque-gas'); dashboardMateriaisSeparacaoCountEl = document.getElementById('dashboard-materiais-separacao-count'); 
+            dashboardEstoqueAguaEl = document.getElementById('dashboard-estoque-agua'); dashboardEstoqueGasEl = document.getElementById('dashboard-estoque-gas'); dashboardMateriaisSeparacaoCountEl = document.getElementById('dashboard-materiais-separacao-count');
+            dashboardMateriaisRetiradaCountEl = document.getElementById('dashboard-materiais-retirada-count'); // (REQ 6.4)
             // Água
             formAgua = document.getElementById('form-agua'); selectUnidadeAgua = document.getElementById('select-unidade-agua'); selectTipoAgua = document.getElementById('select-tipo-agua'); inputDataAgua = document.getElementById('input-data-agua'); inputResponsavelAgua = document.getElementById('input-responsavel-agua'); btnSubmitAgua = document.getElementById('btn-submit-agua'); alertAgua = document.getElementById('alert-agua'); tableStatusAgua = document.getElementById('table-status-agua'); alertAguaLista = document.getElementById('alert-agua-lista');
             inputQtdEntregueAgua = document.getElementById('input-qtd-entregue-agua'); inputQtdRetornoAgua = document.getElementById('input-qtd-retorno-agua'); formGroupQtdEntregueAgua = document.getElementById('form-group-qtd-entregue-agua'); formGroupQtdRetornoAgua = document.getElementById('form-group-qtd-retorno-agua');
@@ -3561,12 +3696,16 @@
             // Selects de Tipo de Movimentação (Água/Gás)
             if (selectTipoAgua) selectTipoAgua.addEventListener('change', toggleAguaFormInputs);
             if (selectTipoGas) selectTipoGas.addEventListener('change', toggleGasFormInputs);
-            // Delegação de eventos para botões 'Remover' e 'Entregue' (mais eficiente)
+            
+            // (REQ 6.2) Delegação de eventos para botões 'Remover', 'Entregue' e 'Retirada'
             document.querySelector('main').addEventListener('click', (e) => {
                  const removeBtn = e.target.closest('button.btn-remove[data-id]');
                  const entregueBtn = e.target.closest('button.btn-entregue[data-id]');
+                 const retiradaBtn = e.target.closest('button.btn-retirada[data-id]'); // (REQ 6.2)
+                 
                  if (removeBtn) { openConfirmDeleteModal(removeBtn.dataset.id, removeBtn.dataset.type, removeBtn.dataset.details); } 
                  else if (entregueBtn) { handleMarcarEntregue(e); }
+                 else if (retiradaBtn) { handleMarcarRetirada(e); } // (REQ 6.2)
             });
             // Edição de Unidades (Gestão)
             if (tableGestaoUnidades) { 
@@ -3625,4 +3764,3 @@
     </script>
 </body>
 </html>
-
