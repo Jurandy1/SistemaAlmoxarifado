@@ -163,6 +163,81 @@
         .modal-table { font-size: 0.875rem; }
         .modal-table th, .modal-table td { padding: 0.5rem 0.75rem; }
         .lucide-trash-2, .lucide-pencil, .lucide-save, .lucide-x-circle { width: 1em; height: 1em; vertical-align: middle; }
+
+        /* ================================================ */
+        /* === INÍCIO: CSS PREVISÃO INTELIGENTE (DO TXT) === */
+        /* ================================================ */
+        .previsao-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .previsao-option-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .previsao-option-card:hover {
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+
+        .previsao-option-card.selected {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        .previsao-resultado-item {
+            background: #f8fafc;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: 4px;
+        }
+
+        .previsao-alerta {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+
+        .exclusao-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #fee2e2;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            margin: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .exclusao-item button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* ============================================== */
+        /* === FIM: CSS PREVISÃO INTELIGENTE (DO TXT) === */
+        /* ============================================== */
     </style>
 </head>
 <body class="text-slate-700 antialiased">
@@ -552,28 +627,128 @@
             </div> <!-- Fim Subview Movimentação Água -->
 
             <!-- (REQ 4) Subview Previsão Água -->
+            <!-- ======================================================== -->
+            <!-- === INÍCIO: HTML PREVISÃO ÁGUA SUBSTITUÍDO (DO TXT) === -->
+            <!-- ======================================================== -->
             <div id="subview-previsao-agua" class="hidden">
-                 <div class="card max-w-2xl mx-auto">
-                    <h2 class="text-xl font-bold text-slate-800 mb-4">Previsão de Consumo (Água)</h2>
-                    <p class="text-sm text-slate-500 mb-4">Calcule a média de entregas para prever a necessidade de estoque.</p>
-                    <div class="flex flex-wrap gap-4 items-end">
-                        <div class="flex-grow">
-                            <label for="select-previsao-unidade-agua" class="form-label">Unidade</label>
-                            <select id="select-previsao-unidade-agua" class="form-select"></select>
+                <div class="card max-w-6xl mx-auto">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">
+                        🔮 Previsão Inteligente de Consumo - Água
+                    </h2>
+                    <p class="text-sm text-slate-500 mb-6">
+                        Calcule previsões precisas baseadas no histórico de consumo para planejar compras e garantir abastecimento suficiente.
+                    </p>
+
+                    <!-- ETAPA 1: Selecionar Modo -->
+                    <div class="mb-6">
+                        <h3 class="font-semibold text-slate-700 mb-3">1. Selecione o modo de previsão:</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="previsao-option-card" data-modo="unidade-especifica" onclick="selecionarModoPrevisao('agua', 'unidade-especifica')">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="bg-blue-100 p-2 rounded-full">
+                                        <i data-lucide="building" class="text-blue-600"></i>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800">Unidade Específica</h4>
+                                </div>
+                                <p class="text-sm text-slate-600">Previsão detalhada para uma unidade individual</p>
+                            </div>
+
+                            <div class="previsao-option-card" data-modo="por-tipo" onclick="selecionarModoPrevisao('agua', 'por-tipo')">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="bg-green-100 p-2 rounded-full">
+                                        <i data-lucide="layers" class="text-green-600"></i>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800">Por Tipo</h4>
+                                </div>
+                                <p class="text-sm text-slate-600">Previsão para todas as unidades de um tipo</p>
+                            </div>
+
+                            <div class="previsao-option-card" data-modo="completo" onclick="selecionarModoPrevisao('agua', 'completo')">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="bg-purple-100 p-2 rounded-full">
+                                        <i data-lucide="globe" class="text-purple-600"></i>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800">Completo</h4>
+                                </div>
+                                <p class="text-sm text-slate-600">Previsão total para todas as unidades</p>
+                            </div>
                         </div>
-                        <button id="btn-calcular-previsao-agua" class="btn btn-secondary">Calcular</button>
                     </div>
-                    <div id="resultado-previsao-agua" class="mt-4 hidden">
-                        <h4 class="font-semibold text-slate-700">Resultado da Previsão (<span id="previsao-agua-label"></span>):</h4>
-                        <ul class="list-disc list-inside space-y-1 mt-2 text-slate-600">
-                            <li id="previsao-agua-media">Consumo Médio Diário: <strong>0.00</strong></li>
-                            <li id="previsao-agua-semanal">Previsão Semanal (7 dias): <strong>0</strong></li>
-                            <li id="previsao-agua-mensal">Previsão Mensal (30 dias): <strong>0</strong></li>
-                        </ul>
-                        <p id="previsao-agua-erro" class="text-sm text-red-600 mt-2"></p>
+
+                    <!-- ETAPA 2: Configurações -->
+                    <div id="config-previsao-agua" class="hidden mb-6">
+                        <h3 class="font-semibold text-slate-700 mb-3">2. Configure sua previsão:</h3>
+
+                        <div id="select-unidade-container-agua" class="hidden mb-4">
+                            <label for="select-previsao-unidade-agua-v2" class="form-label">Selecione a Unidade:</label>
+                            <select id="select-previsao-unidade-agua-v2" class="form-select"></select>
+                        </div>
+
+                        <div id="select-tipo-container-agua" class="hidden mb-4">
+                            <label for="select-previsao-tipo-agua" class="form-label">Selecione o Tipo:</label>
+                            <select id="select-previsao-tipo-agua" class="form-select">
+                                <option value="">-- Selecione --</option>
+                                <option value="CRAS">CRAS</option>
+                                <option value="CREAS">CREAS</option>
+                                <option value="CT">Centro Terapêutico</option>
+                                <option value="SEDE">SEDE</option>
+                                <option value="ABRIGO">Abrigo</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="dias-previsao-agua" class="form-label">Período da Previsão (dias):</label>
+                                <input type="number" id="dias-previsao-agua" class="form-input" min="1" value="7">
+                            </div>
+                            <div>
+                                <label for="margem-seguranca-agua" class="form-label">Margem de Segurança (%):</label>
+                                <input type="number" id="margem-seguranca-agua" class="form-input" min="0" max="100" value="15">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Excluir Unidades do Cálculo (opcional)</label>
+                            <div id="exclusao-container-agua" class="mb-2">
+                                <select id="select-exclusao-agua" class="form-select mb-2">
+                                    <option value="">-- Selecione para excluir --</option>
+                                </select>
+                                <button type="button" onclick="adicionarExclusao('agua')" class="btn btn-secondary btn-sm">
+                                    + Adicionar Exclusão
+                                </button>
+                            </div>
+                            <div id="lista-exclusoes-agua" class="flex flex-wrap gap-2 mt-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- ETAPA 3: Calcular -->
+                    <div class="text-center mb-6">
+                        <button id="btn-calcular-previsao-agua-v2" class="btn btn-primary btn-lg px-8" onclick="calcularPrevisaoInteligente('agua')">
+                            <i data-lucide="calculator"></i>
+                            Calcular Previsão
+                        </button>
+                    </div>
+
+                    <!-- RESULTADOS -->
+                    <div id="resultado-previsao-agua-v2" class="hidden">
+                        <div class="previsao-card mb-6">
+                            <h3 class="text-xl font-bold mb-4">📊 Resultados da Previsão</h3>
+                            <div id="resultado-content-agua"></div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <h4 class="font-semibold text-slate-700 mb-3">📈 Tendência de Consumo</h4>
+                            <canvas id="grafico-previsao-agua" style="height: 200px;"></canvas>
+                        </div>
+
+                        <div id="alertas-previsao-agua" class="mt-4"></div>
                     </div>
                 </div>
-            </div> <!-- Fim Subview Previsão Água -->
+            </div>
+            <!-- ====================================================== -->
+            <!-- === FIM: HTML PREVISÃO ÁGUA SUBSTITUÍDO (DO TXT) === -->
+            <!-- ====================================================== -->
+            <!-- Fim Subview Previsão Água -->
 
         </div> <!-- Fim Content Água -->
 
@@ -775,28 +950,124 @@
             </div> <!-- Fim Subview Movimentação Gás -->
             
             <!-- (REQ 4) Subview Previsão Gás -->
+            <!-- ======================================================= -->
+            <!-- === INÍCIO: HTML PREVISÃO GÁS SUBSTITUÍDO (DO TXT) === -->
+            <!-- ======================================================= -->
             <div id="subview-previsao-gas" class="hidden">
-                 <div class="card max-w-2xl mx-auto">
-                        <h2 class="text-xl font-bold text-slate-800 mb-4">Previsão de Consumo (Gás)</h2>
-                        <p class="text-sm text-slate-500 mb-4">Calcule a média de entregas para prever a necessidade de estoque.</p>
-                        <div class="flex flex-wrap gap-4 items-end">
-                            <div class="flex-grow">
-                                <label for="select-previsao-unidade-gas" class="form-label">Unidade</label>
-                                <select id="select-previsao-unidade-gas" class="form-select"></select>
+                <div class="card max-w-6xl mx-auto">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">
+                        🔮 Previsão Inteligente de Consumo - Gás
+                    </h2>
+                    <p class="text-sm text-slate-500 mb-6">
+                        Calcule previsões precisas baseadas no histórico de consumo para planejar compras e garantir abastecimento suficiente.
+                    </p>
+
+                    <div class="mb-6">
+                        <h3 class="font-semibold text-slate-700 mb-3">1. Selecione o modo de previsão:</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="previsao-option-card" data-modo="unidade-especifica" onclick="selecionarModoPrevisao('gas', 'unidade-especifica')">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="bg-blue-100 p-2 rounded-full">
+                                        <i data-lucide="building" class="text-blue-600"></i>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800">Unidade Específica</h4>
+                                </div>
+                                <p class="text-sm text-slate-600">Previsão detalhada para uma unidade individual</p>
                             </div>
-                            <button id="btn-calcular-previsao-gas" class="btn btn-secondary">Calcular</button>
-                        </div>
-                        <div id="resultado-previsao-gas" class="mt-4 hidden">
-                            <h4 class="font-semibold text-slate-700">Resultado da Previsão (<span id="previsao-gas-label"></span>):</h4>
-                            <ul class="list-disc list-inside space-y-1 mt-2 text-slate-600">
-                                <li id="previsao-gas-media">Consumo Médio Diário: <strong>0.00</strong></li>
-                                <li id="previsao-gas-semanal">Previsão Semanal (7 dias): <strong>0</strong></li>
-                                <li id="previsao-gas-mensal">Previsão Mensal (30 dias): <strong>0</strong></li>
-                            </ul>
-                            <p id="previsao-gas-erro" class="text-sm text-red-600 mt-2"></p>
+
+                            <div class="previsao-option-card" data-modo="por-tipo" onclick="selecionarModoPrevisao('gas', 'por-tipo')">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="bg-green-100 p-2 rounded-full">
+                                        <i data-lucide="layers" class="text-green-600"></i>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800">Por Tipo</h4>
+                                </div>
+                                <p class="text-sm text-slate-600">Previsão para todas as unidades de um tipo</p>
+                            </div>
+
+                            <div class="previsao-option-card" data-modo="completo" onclick="selecionarModoPrevisao('gas', 'completo')">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="bg-purple-100 p-2 rounded-full">
+                                        <i data-lucide="globe" class="text-purple-600"></i>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800">Completo</h4>
+                                </div>
+                                <p class="text-sm text-slate-600">Previsão total para todas as unidades</p>
+                            </div>
                         </div>
                     </div>
-            </div> <!-- Fim Subview Previsão Gás -->
+
+                    <div id="config-previsao-gas" class="hidden mb-6">
+                        <h3 class="font-semibold text-slate-700 mb-3">2. Configure sua previsão:</h3>
+
+                        <div id="select-unidade-container-gas" class="hidden mb-4">
+                            <label for="select-previsao-unidade-gas-v2" class="form-label">Selecione a Unidade:</label>
+                            <select id="select-previsao-unidade-gas-v2" class="form-select"></select>
+                        </div>
+
+                        <div id="select-tipo-container-gas" class="hidden mb-4">
+                            <label for="select-previsao-tipo-gas" class="form-label">Selecione o Tipo:</label>
+                            <select id="select-previsao-tipo-gas" class="form-select">
+                                <option value="">-- Selecione --</option>
+                                <option value="CRAS">CRAS</option>
+                                <option value="CREAS">CREAS</option>
+                                <option value="CT">Centro Terapêutico</option>
+                                <option value="SEDE">SEDE</option>
+                                <option value="ABRIGO">Abrigo</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="dias-previsao-gas" class="form-label">Período da Previsão (dias):</label>
+                                <input type="number" id="dias-previsao-gas" class="form-input" min="1" value="7">
+                            </div>
+                            <div>
+                                <label for="margem-seguranca-gas" class="form-label">Margem de Segurança (%):</label>
+                                <input type="number" id="margem-seguranca-gas" class="form-input" min="0" max="100" value="15">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Excluir Unidades do Cálculo (opcional)</label>
+                            <div id="exclusao-container-gas" class="mb-2">
+                                <select id="select-exclusao-gas" class="form-select mb-2">
+                                    <option value="">-- Selecione para excluir --</option>
+                                </select>
+                                <button type="button" onclick="adicionarExclusao('gas')" class="btn btn-secondary btn-sm">
+                                    + Adicionar Exclusão
+                                </button>
+                            </div>
+                            <div id="lista-exclusoes-gas" class="flex flex-wrap gap-2 mt-2"></div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mb-6">
+                        <button id="btn-calcular-previsao-gas-v2" class="btn btn-primary btn-lg px-8" onclick="calcularPrevisaoInteligente('gas')">
+                            <i data-lucide="calculator"></i>
+                            Calcular Previsão
+                        </button>
+                    </div>
+
+                    <div id="resultado-previsao-gas-v2" class="hidden">
+                        <div class="previsao-card mb-6">
+                            <h3 class="text-xl font-bold mb-4">📊 Resultados da Previsão</h3>
+                            <div id="resultado-content-gas"></div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <h4 class="font-semibold text-slate-700 mb-3">📈 Tendência de Consumo</h4>
+                            <canvas id="grafico-previsao-gas" style="height: 200px;"></canvas>
+                        </div>
+
+                        <div id="alertas-previsao-gas" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- ===================================================== -->
+            <!-- === FIM: HTML PREVISÃO GÁS SUBSTITUÍDO (DO TXT) === -->
+            <!-- ===================================================== -->
+            <!-- Fim Subview Previsão Gás -->
 
         </div> <!-- Fim Content Gás -->
 
@@ -1058,6 +1329,11 @@
         let formInicialGasContainer, formInicialGas, inputInicialQtdGas, inputInicialResponsavelGas, btnSubmitInicialGas, alertInicialGas, btnAbrirInicialGas; 
         let tableHistoricoGas, alertHistoricoGas; 
 
+        // (NOVO) Variáveis Globais para a nova Previsão
+        let listaExclusoes = { agua: [], gas: [] };
+        let modoPrevisao = { agua: null, gas: null };
+        let graficoPrevisao = { agua: null, gas: null };
+
 
         // --- FUNÇÕES DE UTILIDADE ---
 
@@ -1201,8 +1477,13 @@
                 populateUnidadeSelects(selectUnidadeAgua, 'atendeAgua');
                 populateUnidadeSelects(selectUnidadeGas, 'atendeGas');
                 populateUnidadeSelects(selectUnidadeMateriais, 'atendeMateriais');
-                populateUnidadeSelects(selectPrevisaoUnidadeAgua, 'atendeAgua', true); 
-                populateUnidadeSelects(selectPrevisaoUnidadeGas, 'atendeGas', true); 
+                
+                // (NOVO) Popula os selects da nova previsão
+                populateUnidadeSelects(document.getElementById('select-previsao-unidade-agua-v2'), 'atendeAgua', false); 
+                populateUnidadeSelects(document.getElementById('select-previsao-unidade-gas-v2'), 'atendeGas', false); 
+                populateUnidadeSelects(document.getElementById('select-exclusao-agua'), 'atendeAgua', true, false); // Popula sem o "Selecione"
+                populateUnidadeSelects(document.getElementById('select-exclusao-gas'), 'atendeGas', true, false); // Popula sem o "Selecione"
+                
                 renderGestaoUnidades(); 
                 renderAguaStatus(); 
                 renderGasStatus(); 
@@ -1263,10 +1544,19 @@
             fb_estoque_agua = []; fb_estoque_gas = []; 
             estoqueInicialDefinido = { agua: false, gas: false };
 
-            [selectUnidadeAgua, selectUnidadeGas, selectUnidadeMateriais, selectPrevisaoUnidadeAgua, selectPrevisaoUnidadeGas].forEach(sel => { if(sel) sel.innerHTML = '<option value="">Desconectado</option>'; });
+            [selectUnidadeAgua, selectUnidadeGas, selectUnidadeMateriais, 
+             document.getElementById('select-previsao-unidade-agua-v2'), 
+             document.getElementById('select-previsao-unidade-gas-v2')
+            ].forEach(sel => { if(sel) sel.innerHTML = '<option value="">Desconectado</option>'; });
+            
             [tableStatusAgua, tableStatusGas, tableStatusMateriais, tableGestaoUnidades, tableHistoricoAgua, tableHistoricoGas].forEach(tbody => { if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">Desconectado do Firebase</td></tr>'; });
             [dashboardMateriaisListContainer, dashboardMateriaisProntosContainer].forEach(el => { if(el) el.innerHTML = '<p class="text-center py-4 text-red-500">Desconectado</p>'; });
-            [dashboardAguaChartInstance, dashboardGasChartInstance].forEach(chartInstance => { if (chartInstance) { chartInstance.data.datasets.forEach(ds => ds.data = []); chartInstance.update(); } });
+            [dashboardAguaChartInstance, dashboardGasChartInstance, graficoPrevisao.agua, graficoPrevisao.gas].forEach(chartInstance => { 
+                if (chartInstance) { 
+                    chartInstance.destroy(); 
+                    chartInstance = null;
+                } 
+            });
             
             [estoqueAguaInicialEl, estoqueAguaEntradasEl, estoqueAguaSaidasEl, estoqueAguaAtualEl, estoqueGasInicialEl, estoqueGasEntradasEl, estoqueGasSaidasEl, estoqueGasAtualEl].forEach(el => { if(el) el.textContent = '0'; });
             [resumoEstoqueAguaEl, resumoEstoqueGasEl].forEach(el => { if(el) el.classList.add('hidden'); });
@@ -1296,13 +1586,10 @@
             lastUpdateTimeEl.textContent = `Atualizado: ${formattedDate}`;
         }
 
-        function populateUnidadeSelects(selectEl, serviceField, includeAll = false) {
+        function populateUnidadeSelects(selectEl, serviceField, includeAll = false, includeSelecione = true) {
             if (!selectEl) return;
             const unidadesFiltradas = fb_unidades.filter(u => serviceField ? (u[serviceField] ?? true) : true);
-            if (unidadesFiltradas.length === 0) { 
-                selectEl.innerHTML = '<option value="">Nenhuma unidade habilitada</option>'; 
-                return; 
-            }
+            
             const grupos = unidadesFiltradas.reduce((acc, unidade) => { 
                 const tipo = unidade.tipo || 'Sem Tipo'; 
                 if (!acc[tipo]) acc[tipo] = []; 
@@ -1310,11 +1597,25 @@
                 return acc; 
             }, {});
             const tiposOrdenados = Object.keys(grupos).sort();
-            let html = includeAll ? '<option value="todas">Todas as Unidades</option>' : '<option value="">Selecione uma unidade...</option>';
+            
+            let html = '';
+            if (includeSelecione) {
+                html += includeAll ? '<option value="">-- Selecione (ou "Todas") --</option>' : '<option value="">Selecione uma unidade...</option>';
+            }
+            if (includeAll) {
+                 html += '<option value="todas">Todas as Unidades</option>';
+            }
+
+            if (unidadesFiltradas.length === 0 && !includeAll) { 
+                selectEl.innerHTML = '<option value="">Nenhuma unidade habilitada</option>'; 
+                return; 
+            }
+
             tiposOrdenados.forEach(tipo => {
                 html += `<optgroup label="${tipo.toUpperCase()}">`;
                 grupos[tipo].sort((a,b) => a.nome.localeCompare(b.nome)).forEach(unidade => { 
-                    const optionValue = includeAll ? unidade.id : `${unidade.id}|${unidade.nome}|${unidade.tipo}`;
+                    // Para os selects da previsão, usamos o ID como valor. Para os forms antigos, mantemos o split.
+                    const optionValue = (selectEl.id.includes('-v2') || selectEl.id.includes('exclusao')) ? unidade.id : `${unidade.id}|${unidade.nome}|${unidade.tipo}`;
                     html += `<option value="${optionValue}">${unidade.nome}</option>`; 
                 });
                 html += `</optgroup>`;
@@ -1566,44 +1867,265 @@
             }
         }
 
-        // --- LÓGICA DE PREVISÃO (ÁGUA E GÁS) ---
+        // --- LÓGICA DE PREVISÃO (ANTIGA - REMOVIDA) ---
+        // A função handleCalcularPrevisao foi removida pois o novo HTML (do TXT)
+        // chama funções diferentes (selecionarModoPrevisao, calcularPrevisaoInteligente)
+        // que NÃO ESTÃO DEFINIDAS AINDA.
         
-        function handleCalcularPrevisao(tipo) {
-            const [movimentacoes, select, resultadoEl, labelEl, mediaEl, semanalEl, mensalEl, erroEl] = 
-                tipo === 'agua' 
-                ? [fb_agua_movimentacoes, selectPrevisaoUnidadeAgua, resultadoPrevisaoAgua, previsaoAguaLabel, previsaoAguaMedia, previsaoAguaSemanal, previsaoAguaMensal, previsaoAguaErro]
-                : [fb_gas_movimentacoes, selectPrevisaoUnidadeGas, resultadoPrevisaoGas, previsaoGasLabel, previsaoGasMedia, previsaoGasSemanal, previsaoGasMensal, previsaoGasErro];
-            if (!movimentacoes || !select || !resultadoEl) return;
-            const unidadeId = select.value;
-            const unidadeNome = select.options[select.selectedIndex].text;
-            labelEl.textContent = unidadeNome;
-            let movsFiltradas = movimentacoes.filter(m => m.tipo === 'entrega' && m.data);
-            if (unidadeId !== 'todas') {
-                movsFiltradas = movsFiltradas.filter(m => m.unidadeId === unidadeId);
+        // --- (NOVO) LÓGICA DE PREVISÃO INTELIGENTE (DO TXT) ---
+        // ATENÇÃO: As funções abaixo são chamadas pelo HTML, mas precisam
+        // ser implementadas. Elas estão aqui como placeholders.
+        
+        window.selecionarModoPrevisao = (tipo, modo) => {
+            console.log(`Modo Previsão (${tipo}): ${modo}`);
+            modoPrevisao[tipo] = modo;
+            
+            // Seletores
+            const configContainer = document.getElementById(`config-previsao-${tipo}`);
+            const cards = document.querySelectorAll(`#subview-previsao-${tipo} .previsao-option-card`);
+            const selectUnidadeContainer = document.getElementById(`select-unidade-container-${tipo}`);
+            const selectTipoContainer = document.getElementById(`select-tipo-container-${tipo}`);
+            const exclusaoContainer = document.getElementById(`exclusao-container-${tipo}`);
+
+            // Resetar
+            configContainer.classList.remove('hidden');
+            selectUnidadeContainer.classList.add('hidden');
+            selectTipoContainer.classList.add('hidden');
+            exclusaoContainer.classList.remove('hidden'); // Visível por padrão, exceto para 'unidade-especifica'
+            
+            cards.forEach(card => {
+                card.classList.toggle('selected', card.dataset.modo === modo);
+            });
+
+            if (modo === 'unidade-especifica') {
+                selectUnidadeContainer.classList.remove('hidden');
+                exclusaoContainer.classList.add('hidden'); // Não faz sentido excluir se estamos vendo uma específica
+            } else if (modo === 'por-tipo') {
+                selectTipoContainer.classList.remove('hidden');
+            } else if (modo === 'completo') {
+                // Nenhuma seleção extra necessária, mas as exclusões são permitidas
             }
-            erroEl.textContent = '';
-            resultadoEl.style.display = 'block';
-            if (movsFiltradas.length < 2) { 
-                erroEl.textContent = 'Dados insuficientes para calcular (necessário no mínimo 2 entregas).';
-                mediaEl.innerHTML = 'Consumo Médio Diário: <strong>N/A</strong>';
-                semanalEl.innerHTML = 'Previsão Semanal (7 dias): <strong>N/A</strong>';
-                mensalEl.innerHTML = 'Previsão Mensal (30 dias): <strong>N/A</strong>';
+
+            // Resetar exclusões
+            listaExclusoes[tipo] = [];
+            renderizarListaExclusoes(tipo);
+        }
+
+        window.adicionarExclusao = (tipo) => {
+            const selectExclusao = document.getElementById(`select-exclusao-${tipo}`);
+            const unidadeId = selectExclusao.value;
+            if (!unidadeId || unidadeId === 'todas') return;
+            
+            // Evitar duplicados
+            if (listaExclusoes[tipo].find(item => item.id === unidadeId)) {
+                selectExclusao.value = "";
                 return;
             }
+
+            const unidadeNome = selectExclusao.options[selectExclusao.selectedIndex].text;
+            listaExclusoes[tipo].push({ id: unidadeId, nome: unidadeNome });
+            
+            renderizarListaExclusoes(tipo);
+            selectExclusao.value = ""; // Resetar o select
+        }
+        
+        function renderizarListaExclusoes(tipo) {
+            const container = document.getElementById(`lista-exclusoes-${tipo}`);
+            container.innerHTML = listaExclusoes[tipo].map((item, index) => `
+                <span class="exclusao-item">
+                    ${item.nome}
+                    <button type="button" onclick="removerExclusao('${tipo}', ${index})">&times;</button>
+                </span>
+            `).join('');
+        }
+        
+        window.removerExclusao = (tipo, index) => {
+            listaExclusoes[tipo].splice(index, 1);
+            renderizarListaExclusoes(tipo);
+        }
+
+        window.calcularPrevisaoInteligente = (tipo) => {
+            console.log(`Calculando previsão para ${tipo}...`);
+            const alertId = `alertas-previsao-${tipo}`;
+            const resultadoContainerId = `resultado-previsao-${tipo}-v2`;
+            
+            // 1. Validar Modo
+            if (!modoPrevisao[tipo]) {
+                showAlert(alertId, 'Por favor, selecione um modo de previsão primeiro (Etapa 1).', 'warning');
+                return;
+            }
+
+            // 2. Obter Dados do Formulário
+            const diasPrevisao = parseInt(document.getElementById(`dias-previsao-${tipo}`).value, 10) || 7;
+            const margemSeguranca = (parseInt(document.getElementById(`margem-seguranca-${tipo}`).value, 10) || 15) / 100;
+            
+            let unidadeId = null;
+            let tipoUnidade = null;
+
+            if (modoPrevisao[tipo] === 'unidade-especifica') {
+                unidadeId = document.getElementById(`select-previsao-unidade-${tipo}-v2`).value;
+                if (!unidadeId) {
+                    showAlert(alertId, 'Por favor, selecione uma unidade específica (Etapa 2).', 'warning');
+                    return;
+                }
+            } else if (modoPrevisao[tipo] === 'por-tipo') {
+                tipoUnidade = document.getElementById(`select-previsao-tipo-${tipo}`).value;
+                 if (!tipoUnidade) {
+                    showAlert(alertId, 'Por favor, selecione um tipo de unidade (Etapa 2).', 'warning');
+                    return;
+                }
+            }
+            
+            // Mostrar container de resultado
+            document.getElementById(resultadoContainerId).classList.remove('hidden');
+            const resultadoContentEl = document.getElementById(`resultado-content-${tipo}`);
+            const alertasContentEl = document.getElementById(alertId);
+            resultadoContentEl.innerHTML = '<div class="loading-spinner-small mx-auto" style="border-color: #fff; border-top-color: #ccc;"></div>';
+            alertasContentEl.innerHTML = ''; // Limpar alertas antigos
+
+            // --- LÓGICA DE CÁLCULO (Exemplo) ---
+            // Esta é a parte que precisa ser implementada com a lógica real
+            // Por enquanto, é apenas um placeholder:
+            
+            // 3. Filtrar Movimentações (Esta é a lógica principal que falta)
+            const movimentacoes = (tipo === 'agua') ? fb_agua_movimentacoes : fb_gas_movimentacoes;
+            const idsExcluidos = new Set(listaExclusoes[tipo].map(item => item.id));
+            
+            let movsFiltradas = movimentacoes.filter(m => 
+                m.tipo === 'entrega' && 
+                m.data && 
+                !idsExcluidos.has(m.unidadeId)
+            );
+
+            let tituloPrevisao = "Previsão Completa";
+
+            if (modoPrevisao[tipo] === 'unidade-especifica') {
+                movsFiltradas = movsFiltradas.filter(m => m.unidadeId === unidadeId);
+                const unidade = fb_unidades.find(u => u.id === unidadeId);
+                tituloPrevisao = `Previsão para: ${unidade?.nome || 'Unidade'}`;
+            } else if (modoPrevisao[tipo] === 'por-tipo') {
+                movsFiltradas = movsFiltradas.filter(m => m.tipoUnidade === tipoUnidade);
+                tituloPrevisao = `Previsão para tipo: ${tipoUnidade}`;
+            }
+
+            // 4. Calcular Média Diária (Lógica simplificada do sistema antigo)
+            if (movsFiltradas.length < 2) {
+                resultadoContentEl.innerHTML = `<p class="text-yellow-200">Dados insuficientes para calcular (necessário no mínimo 2 entregas no período/filtro).</p>`;
+                if (graficoPrevisao[tipo]) graficoPrevisao[tipo].destroy();
+                return;
+            }
+            
             movsFiltradas.sort((a, b) => a.data.toMillis() - b.data.toMillis());
+            
             const primeiraData = movsFiltradas[0].data.toDate();
             const ultimaData = movsFiltradas[movsFiltradas.length - 1].data.toDate();
+            
             const diffTime = Math.abs(ultimaData.getTime() - primeiraData.getTime());
             let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-            if (diffDays === 0) diffDays = 1; 
-            const totalQuantidade = movsFiltradas.reduce((sum, m) => sum + m.quantidade, 0);
+            if (diffDays === 0) diffDays = 1; // Evitar divisão por zero se forem no mesmo dia
+            
+            const totalQuantidade = movsFiltradas.reduce((sum, m) => sum + (m.quantidade || 0), 0);
             const mediaDiaria = totalQuantidade / diffDays;
-            const previsaoSemanal = Math.ceil(mediaDiaria * 7);
-            const previsaoMensal = Math.ceil(mediaDiaria * 30);
-            mediaEl.innerHTML = `Consumo Médio Diário: <strong>${mediaDiaria.toFixed(2)}</strong>`;
-            semanalEl.innerHTML = `Previsão Semanal (7 dias): <strong>${previsaoSemanal}</strong>`;
-            mensalEl.innerHTML = `Previsão Mensal (30 dias): <strong>${previsaoMensal}</strong>`;
+            
+            const previsaoBase = mediaDiaria * diasPrevisao;
+            const valorMargem = previsaoBase * margemSeguranca;
+            const previsaoFinal = Math.ceil(previsaoBase + valorMargem);
+
+            // 5. Renderizar Resultados
+            resultadoContentEl.innerHTML = `
+                <h4 class="text-lg font-semibold mb-3">${tituloPrevisao}</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <div>
+                        <span class="text-sm opacity-80 block">Média Diária</span>
+                        <span class="text-2xl font-bold">${mediaDiaria.toFixed(2)}</span>
+                    </div>
+                    <div>
+                        <span class="text-sm opacity-80 block">Previsão p/ ${diasPrevisao} dias</span>
+                        <span class="text-2xl font-bold">${Math.ceil(previsaoBase)}</span>
+                    </div>
+                    <div>
+                        <span class="text-sm opacity-80 block">Total Recomendado (+${margemSeguranca * 100}%)</span>
+                        <span class="text-3xl font-bold text-yellow-300">${previsaoFinal}</span>
+                    </div>
+                </div>
+                <p class="text-xs opacity-70 mt-3 text-center">Cálculo baseado em ${totalQuantidade} unidades entregues entre ${formatTimestamp(movsFiltradas[0].data)} e ${formatTimestamp(movsFiltradas[movsFiltradas.length - 1].data)} (${diffDays} dias).</p>
+            `;
+            
+            // 6. Renderizar Gráfico (Exemplo)
+            renderizarGraficoPrevisao(tipo, movsFiltradas);
+            
+            // 7. (Opcional) Gerar Alertas
+            const estoqueAtual = (tipo === 'agua') ? 
+                (parseInt(estoqueAguaAtualEl.textContent) || 0) : 
+                (parseInt(estoqueGasAtualEl.textContent) || 0);
+                
+            if (estoqueAtual < previsaoFinal) {
+                 alertasContentEl.innerHTML = `
+                    <div class="previsao-alerta">
+                        <h4 class="font-bold text-yellow-800">Alerta de Estoque Baixo!</h4>
+                        <p class="text-sm text-yellow-700">Seu estoque atual (${estoqueAtual}) está abaixo da necessidade prevista (${previsaoFinal}) para os próximos ${diasPrevisao} dias. Recomenda-se reposição.</p>
+                    </div>
+                `;
+            }
         }
+        
+        function renderizarGraficoPrevisao(tipo, movsFiltradas) {
+            const canvasId = `grafico-previsao-${tipo}`;
+            const ctx = document.getElementById(canvasId)?.getContext('2d');
+            if (!ctx) return;
+
+            // Agrupar dados por dia
+            const dadosPorDia = movsFiltradas.reduce((acc, m) => {
+                const dataFormatada = formatTimestamp(m.data);
+                if (!acc[dataFormatada]) {
+                    acc[dataFormatada] = 0;
+                }
+                acc[dataFormatada] += m.quantidade;
+                return acc;
+            }, {});
+            
+            const labels = Object.keys(dadosPorDia);
+            const data = Object.values(dadosPorDia);
+
+            // Se houver mais de 60 pontos, talvez simplificar (ex: por semana) - (lógica futura)
+            
+            if (graficoPrevisao[tipo]) {
+                graficoPrevisao[tipo].destroy();
+            }
+            
+            graficoPrevisao[tipo] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Consumo Diário (Entregas)',
+                        data: data,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } },
+                        x: { 
+                            ticks: {
+                                // Mostra menos labels se houver muitos
+                                autoSkip: true,
+                                maxTicksLimit: 10 
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
 
         // --- LÓGICA DE CONTROLE DE MATERIAIS ---
         
@@ -2457,10 +2979,20 @@
             dashboardEstoqueAguaEl = document.getElementById('dashboard-estoque-agua'); dashboardEstoqueGasEl = document.getElementById('dashboard-estoque-gas'); dashboardMateriaisSeparacaoCountEl = document.getElementById('dashboard-materiais-separacao-count'); 
             formAgua = document.getElementById('form-agua'); selectUnidadeAgua = document.getElementById('select-unidade-agua'); selectTipoAgua = document.getElementById('select-tipo-agua'); inputDataAgua = document.getElementById('input-data-agua'); inputResponsavelAgua = document.getElementById('input-responsavel-agua'); btnSubmitAgua = document.getElementById('btn-submit-agua'); alertAgua = document.getElementById('alert-agua'); tableStatusAgua = document.getElementById('table-status-agua'); alertAguaLista = document.getElementById('alert-agua-lista');
             inputQtdEntregueAgua = document.getElementById('input-qtd-entregue-agua'); inputQtdRetornoAgua = document.getElementById('input-qtd-retorno-agua'); formGroupQtdEntregueAgua = document.getElementById('form-group-qtd-entregue-agua'); formGroupQtdRetornoAgua = document.getElementById('form-group-qtd-retorno-agua');
-            selectPrevisaoUnidadeAgua = document.getElementById('select-previsao-unidade-agua'); btnCalcularPrevisaoAgua = document.getElementById('btn-calcular-previsao-agua'); resultadoPrevisaoAgua = document.getElementById('resultado-previsao-agua'); previsaoAguaLabel = document.getElementById('previsao-agua-label'); previsaoAguaMedia = document.getElementById('previsao-agua-media'); previsaoAguaSemanal = document.getElementById('previsao-agua-semanal'); previsaoAguaMensal = document.getElementById('previsao-agua-mensal'); previsaoAguaErro = document.getElementById('previsao-agua-erro');
+            
+            // IDs da previsão ANTIGA (agora não são mais usados pelo novo HTML)
+            // selectPrevisaoUnidadeAgua = document.getElementById('select-previsao-unidade-agua'); 
+            // btnCalcularPrevisaoAgua = document.getElementById('btn-calcular-previsao-agua'); 
+            // ... (etc)
+            
             formGas = document.getElementById('form-gas'); selectUnidadeGas = document.getElementById('select-unidade-gas'); selectTipoGas = document.getElementById('select-tipo-gas'); inputDataGas = document.getElementById('input-data-gas'); inputResponsavelGas = document.getElementById('input-responsavel-gas'); btnSubmitGas = document.getElementById('btn-submit-gas'); alertGas = document.getElementById('alert-gas'); tableStatusGas = document.getElementById('table-status-gas'); alertGasLista = document.getElementById('alert-gas-lista');
             inputQtdEntregueGas = document.getElementById('input-qtd-entregue-gas'); inputQtdRetornoGas = document.getElementById('input-qtd-retorno-gas'); formGroupQtdEntregueGas = document.getElementById('form-group-qtd-entregue-gas'); formGroupQtdRetornoGas = document.getElementById('form-group-qtd-retorno-gas');
-            selectPrevisaoUnidadeGas = document.getElementById('select-previsao-unidade-gas'); btnCalcularPrevisaoGas = document.getElementById('btn-calcular-previsao-gas'); resultadoPrevisaoGas = document.getElementById('resultado-previsao-gas'); previsaoGasLabel = document.getElementById('previsao-gas-label'); previsaoGasMedia = document.getElementById('previsao-gas-media'); previsaoGasSemanal = document.getElementById('previsao-gas-semanal'); previsaoGasMensal = document.getElementById('previsao-gas-mensal'); previsaoGasErro = document.getElementById('previsao-gas-erro');
+            
+            // IDs da previsão ANTIGA (agora não são mais usados pelo novo HTML)
+            // selectPrevisaoUnidadeGas = document.getElementById('select-previsao-unidade-gas'); 
+            // btnCalcularPrevisaoGas = document.getElementById('btn-calcular-previsao-gas'); 
+            // ... (etc)
+            
             formMateriais = document.getElementById('form-materiais'); selectUnidadeMateriais = document.getElementById('select-unidade-materiais'); selectTipoMateriais = document.getElementById('select-tipo-materiais'); inputDataSeparacao = document.getElementById('input-data-separacao'); textareaItensMateriais = document.getElementById('textarea-itens-materiais'); inputResponsavelMateriais = document.getElementById('input-responsavel-materiais'); btnSubmitMateriais = document.getElementById('btn-submit-materiais'); alertMateriais = document.getElementById('alert-materiais'); tableStatusMateriais = document.getElementById('table-status-materiais'); alertMateriaisLista = document.getElementById('alert-materiais-lista');
             tableGestaoUnidades = document.getElementById('table-gestao-unidades'); alertGestao = document.getElementById('alert-gestao'); textareaBulkUnidades = document.getElementById('textarea-bulk-unidades'); btnBulkAddUnidades = document.getElementById('btn-bulk-add-unidades');
             filtroUnidadeNome = document.getElementById('filtro-unidade-nome'); filtroUnidadeTipo = document.getElementById('filtro-unidade-tipo'); 
@@ -2506,8 +3038,11 @@
                 if(filtroUnidadeTipo) filtroUnidadeTipo.addEventListener('input', renderGestaoUnidades);
             }
             if (btnBulkAddUnidades) btnBulkAddUnidades.addEventListener('click', handleBulkAddUnidades);
-            if(btnCalcularPrevisaoAgua) btnCalcularPrevisaoAgua.addEventListener('click', () => handleCalcularPrevisao('agua'));
-            if(btnCalcularPrevisaoGas) btnCalcularPrevisaoGas.addEventListener('click', () => handleCalcularPrevisao('gas'));
+            
+            // Listeners da previsão ANTIGA (removidos, pois os botões não existem mais)
+            // if(btnCalcularPrevisaoAgua) btnCalcularPrevisaoAgua.addEventListener('click', () => handleCalcularPrevisao('agua'));
+            // if(btnCalcularPrevisaoGas) btnCalcularPrevisaoGas.addEventListener('click', () => handleCalcularPrevisao('gas'));
+            
             if (btnGerarPdf) btnGerarPdf.addEventListener('click', handleGerarPdf);
             if (btnCancelDelete) btnCancelDelete.addEventListener('click', () => confirmDeleteModal.style.display = 'none');
             if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', executeDelete);
@@ -2543,4 +3078,3 @@
     </script>
 </body>
 </html>
-
