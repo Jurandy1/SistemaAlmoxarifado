@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.6.2 - Estoque v2)</title>
+    <!-- 
+      v.6.3 - Mudanças solicitadas
+      1. (Req 1 & 6) "Tipo de Movimentação" de Água/Gás agora inclui "Troca" (para lançar entrada e saída de vazios/cheios de uma vez), "Apenas Saída" e "Apenas Retorno".
+      2. (Req 2) Dashboard "Visão Geral" agora mostra o estoque disponível de Água e Gás e o total de vazios pendentes.
+      3. (Req 3) Aba "Entrega de Materiais" trocou "Itens Separados (Opcional)" por "Observação:".
+      4. (Req 4) Bugs: Exclusões agora atualizam o dashboard imediatamente.
+      5. (Req 5) Tabelas de status de Água/Gás agora mostram "Saldo (Vazios)" (Faltando, Crédito, Zerado) em vez de "Pendentes".
+    -->
+    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.6.3 - Estoque v2.1)</title>
     
     <!-- Scripts e Links -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -95,6 +103,7 @@
         .badge-green { background: #d1fae5; color: #059669; }
         .badge-yellow { background: #fef3c7; color: #d97706; }
         .badge-blue { background: #dbeafe; color: #1e40af; } /* Badge Azul para tipo 'inicial' */
+        .badge-red { background: #fee2e2; color: #dc2626; } /* Badge Vermelho para saldo negativo */
         
         /* Loaders */
         .loading-spinner { border: 5px solid #e5e7eb; border-top: 5px solid var(--secondary-blue); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: auto; }
@@ -171,7 +180,7 @@
                     </div>
                     <div>
                         <h2 class="font-bold text-lg text-slate-800">Sistema de Almoxarifado</h2>
-                        <p class="text-sm text-slate-500">v.6.2 (Firebase + Estoque v2)</p> <!-- Versão Atualizada -->
+                        <p class="text-sm text-slate-500">v.6.3 (Firebase + Estoque v2.1)</p> <!-- Versão Atualizada -->
                     </div>
                 </div>
                 <div class="flex items-center space-x-4 text-sm">
@@ -223,6 +232,27 @@
                 
                 <!-- VISÃO GERAL (NOVA) -->
                 <div id="dashboard-view-geral" class="fade-in">
+                    
+                    <!-- (REQ 2) Cards de Estoque Disponível -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="card text-center">
+                            <h3 class="font-semibold text-slate-800 mb-2">💧 Estoque de Água</h3>
+                            <p id="dashboard-estoque-agua" class="card-value text-blue-600">0</p>
+                            <p class="card-label">Galões Disponíveis</p>
+                        </div>
+                        <div class="card text-center">
+                            <h3 class="font-semibold text-slate-800 mb-2">🔥 Estoque de Gás</h3>
+                            <p id="dashboard-estoque-gas" class="card-value text-orange-600">0</p>
+                            <p class="card-label">Botijões Disponíveis</p>
+                        </div>
+                        <div class="card text-center">
+                            <h3 class="font-semibold text-slate-800 mb-2"> Vazios Pendentes</h3>
+                            <p id="dashboard-pendente-total" class="card-value text-red-600">0</p>
+                            <p class="card-label">Total Faltando (Unidades)</p>
+                        </div>
+                    </div>
+
+                    <!-- Card de Materiais Prontos -->
                     <div class="card">
                         <h3 class="text-lg font-semibold text-slate-800 mb-4">Materiais Prontos para Entrega (Em Separação)</h3>
                         <div id="dashboard-materiais-prontos" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
@@ -373,24 +403,36 @@
                         <button class="form-tab-btn" data-form="entrada-agua">📥 Entrada (Estoque)</button>
                     </div>
 
-                    <!-- Form 1: Saída -->
+                    <!-- Form 1: Saída (Movimentação Unidades) -->
                     <form id="form-agua" class="">
-                        <h2 class="text-xl font-bold text-slate-800 mb-4">Lançar Saída (Água)</h2>
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">Lançar Movimentação (Água)</h2>
                         <div class="mb-4">
                             <label for="select-unidade-agua" class="form-label">Unidade (Apenas habilitadas)</label>
                             <select id="select-unidade-agua" class="form-select" required></select>
                         </div>
+                        
+                        <!-- (REQ 1 & 6) Tipo de Movimentação Atualizado -->
                         <div class="mb-4">
                             <label for="select-tipo-agua" class="form-label">Tipo de Movimentação</label>
                             <select id="select-tipo-agua" class="form-select" required>
-                                <option value="entrega">Saída de Galão (Cheio)</option>
-                                <option value="retorno">Retorno de Galão (Vazio)</option>
+                                <option value="troca">Troca (Entregar Cheio / Receber Vazio)</option>
+                                <option value="entrega">Apenas Saída (Entregar Cheio)</option>
+                                <option value="retorno">Apenas Retorno (Receber Vazio)</option>
                             </select>
                         </div>
-                        <div class="mb-4">
-                            <label for="input-qtd-agua" class="form-label">Quantidade</label>
-                            <input type="number" id="input-qtd-agua" class="form-input" min="1" value="1" required>
+                        
+                        <!-- (REQ 1 & 6) Quantidade Entregue (Cheio) -->
+                        <div class="mb-4" id="form-group-qtd-entregue-agua">
+                            <label for="input-qtd-entregue-agua" class="form-label">Qtd. Entregue (Cheio)</label>
+                            <input type="number" id="input-qtd-entregue-agua" class="form-input" min="0" value="0" required>
                         </div>
+
+                        <!-- (REQ 1 & 6) Quantidade Recebida (Vazio) -->
+                        <div class="mb-4 hidden" id="form-group-qtd-retorno-agua">
+                            <label for="input-qtd-retorno-agua" class="form-label">Qtd. Recebida (Vazio)</label>
+                            <input type="number" id="input-qtd-retorno-agua" class="form-input" min="0" value="0" required>
+                        </div>
+
                         <div class="mb-4">
                             <label for="input-data-agua" class="form-label">Data</label>
                             <input type="date" id="input-data-agua" class="form-input" required>
@@ -399,10 +441,10 @@
                              <label for="input-responsavel-agua" class="form-label">Responsável (Unidade)</label>
                              <input type="text" id="input-responsavel-agua" class="form-input" placeholder="Nome de quem recebeu/entregou" required>
                         </div>
-                        <button type="submit" id="btn-submit-agua" class="btn btn-primary w-full">Salvar Saída</button>
+                        <button type="submit" id="btn-submit-agua" class="btn btn-primary w-full">Salvar Movimentação</button>
                     </form>
 
-                    <!-- Form 2: Entrada -->
+                    <!-- Form 2: Entrada (Estoque) -->
                     <form id="form-entrada-agua" class="hidden">
                         <h2 class="text-xl font-bold text-slate-800 mb-4">Dar Entrada no Estoque (Água)</h2>
                         <div class="mb-4">
@@ -431,7 +473,7 @@
                 <div class="lg:col-span-2 space-y-6">
                     <!-- Card Status (Pendentes) -->
                     <div class="card">
-                        <h2 class="text-xl font-bold text-slate-800 mb-4">Status de Galões (Pendentes nas Unidades)</h2>
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">Status de Galões (Saldo nas Unidades)</h2>
                         <p class="text-sm text-slate-500 mb-4">Lista de unidades e saldo de galões. Passe o mouse na linha para ver o último responsável.</p>
                         <div id="alert-agua-lista" class="alert mb-4"></div>
                         <div class="overflow-x-auto">
@@ -442,7 +484,7 @@
                                         <th>Tipo</th>
                                         <th>Entregues</th>
                                         <th>Recebidos</th>
-                                        <th>Pendentes</th>
+                                        <th>Saldo (Vazios)</th> <!-- (REQ 5) Título da coluna atualizado -->
                                         <th>Ação</th>
                                     </tr>
                                 </thead>
@@ -563,24 +605,36 @@
                         <button class="form-tab-btn" data-form="entrada-gas">📥 Entrada (Estoque)</button>
                     </div>
 
-                    <!-- Form 1: Saída -->
+                    <!-- Form 1: Saída (Movimentação Unidades) -->
                     <form id="form-gas" class="">
-                        <h2 class="text-xl font-bold text-slate-800 mb-4">Lançar Saída (Gás)</h2>
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">Lançar Movimentação (Gás)</h2>
                         <div class="mb-4">
                             <label for="select-unidade-gas" class="form-label">Unidade (Apenas habilitadas)</label>
                             <select id="select-unidade-gas" class="form-select" required></select>
                         </div>
+                        
+                        <!-- (REQ 1 & 6) Tipo de Movimentação Atualizado -->
                         <div class="mb-4">
                             <label for="select-tipo-gas" class="form-label">Tipo de Movimentação</label>
                             <select id="select-tipo-gas" class="form-select" required>
-                                <option value="entrega">Saída de Botijão (Cheio)</option>
-                                <option value="retorno">Retorno de Botijão (Vazio)</option>
+                                <option value="troca">Troca (Entregar Cheio / Receber Vazio)</option>
+                                <option value="entrega">Apenas Saída (Entregar Cheio)</option>
+                                <option value="retorno">Apenas Retorno (Receber Vazio)</option>
                             </select>
                         </div>
-                        <div class="mb-4">
-                            <label for="input-qtd-gas" class="form-label">Quantidade</label>
-                            <input type="number" id="input-qtd-gas" class="form-input" min="1" value="1" required>
+
+                        <!-- (REQ 1 & 6) Quantidade Entregue (Cheio) -->
+                        <div class="mb-4" id="form-group-qtd-entregue-gas">
+                            <label for="input-qtd-entregue-gas" class="form-label">Qtd. Entregue (Cheio)</label>
+                            <input type="number" id="input-qtd-entregue-gas" class="form-input" min="0" value="0" required>
                         </div>
+                        
+                        <!-- (REQ 1 & 6) Quantidade Recebida (Vazio) -->
+                        <div class="mb-4 hidden" id="form-group-qtd-retorno-gas">
+                            <label for="input-qtd-retorno-gas" class="form-label">Qtd. Recebida (Vazio)</label>
+                            <input type="number" id="input-qtd-retorno-gas" class="form-input" min="0" value="0" required>
+                        </div>
+                        
                          <div class="mb-4">
                             <label for="input-data-gas" class="form-label">Data</label>
                             <input type="date" id="input-data-gas" class="form-input" required>
@@ -589,10 +643,10 @@
                              <label for="input-responsavel-gas" class="form-label">Responsável (Unidade)</label>
                              <input type="text" id="input-responsavel-gas" class="form-input" placeholder="Nome de quem recebeu/entregou" required>
                         </div>
-                        <button type="submit" id="btn-submit-gas" class="btn btn-primary w-full">Salvar Saída</button>
+                        <button type="submit" id="btn-submit-gas" class="btn btn-primary w-full">Salvar Movimentação</button>
                     </form>
 
-                    <!-- Form 2: Entrada -->
+                    <!-- Form 2: Entrada (Estoque) -->
                     <form id="form-entrada-gas" class="hidden">
                         <h2 class="text-xl font-bold text-slate-800 mb-4">Dar Entrada no Estoque (Gás)</h2>
                         <div class="mb-4">
@@ -621,7 +675,7 @@
                 <div class="lg:col-span-2 space-y-6">
                     <!-- Card Status Gás -->
                     <div class="card">
-                        <h2 class="text-xl font-bold text-slate-800 mb-4">Status de Botijões (Pendentes nas Unidades)</h2>
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">Status de Botijões (Saldo nas Unidades)</h2>
                         <p class="text-sm text-slate-500 mb-4">Lista de unidades e saldo de botijões. Passe o mouse na linha para ver o último responsável.</p>
                         <div id="alert-gas-lista" class="alert mb-4"></div>
                         <div class="overflow-x-auto">
@@ -632,7 +686,7 @@
                                         <th>Tipo</th>
                                         <th>Entregues</th>
                                         <th>Recebidos</th>
-                                        <th>Pendentes</th>
+                                        <th>Saldo (Vazios)</th> <!-- (REQ 5) Título da coluna atualizado -->
                                         <th>Ação</th>
                                     </tr>
                                 </thead>
@@ -716,10 +770,13 @@
                             <label for="input-data-separacao" class="form-label">Data da Separação</label>
                             <input type="date" id="input-data-separacao" class="form-input" required>
                         </div>
+                        
+                        <!-- (REQ 3) Label e Placeholder atualizados -->
                         <div class="mb-4">
-                             <label for="textarea-itens-materiais" class="form-label">Itens Separados (Opcional)</label>
-                             <textarea id="textarea-itens-materiais" class="form-textarea" placeholder="Ex: 10x Arroz 5kg, 5x Resma A4, 2x Água Sanitária 1L..."></textarea>
+                             <label for="textarea-itens-materiais" class="form-label">Observação:</label>
+                             <textarea id="textarea-itens-materiais" class="form-textarea" placeholder="Alguma observação sobre esta separação... (Opcional)"></textarea>
                         </div>
+
                          <div class="mb-4">
                              <label for="input-responsavel-materiais" class="form-label">Responsável (Separação)</label>
                              <input type="text" id="input-responsavel-materiais" class="form-input" placeholder="Nome de quem separou" required>
@@ -826,7 +883,7 @@
 
     <!-- 5. Rodapé -->
     <footer class="text-center mt-12 mb-6 text-sm text-slate-500">
-        <p>Painel de Controle de Almoxarifado - SEMCAS (v.6.2)</p>
+        <p>Painel de Controle de Almoxarifado - SEMCAS (v.6.3)</p>
     </footer>
     
 
@@ -848,14 +905,12 @@
       </div>
     </div>
 
-    <!-- Modal de Configuração Inicial REMOVIDO -->
-
     <!-- Script Principal -->
     <script type="module">
         // --- IMPORTS DO FIREBASE ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, Timestamp, serverTimestamp, setLogLevel, setDoc, getDocs, where, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, Timestamp, serverTimestamp, setLogLevel, setDoc, getDocs, where, limit, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Adicionado getDoc
 
         // --- CONFIGURAÇÃO E VARIÁVEIS GLOBAIS ---
         
@@ -904,11 +959,14 @@
         let summaryGasPendente, summaryGasEntregue, summaryGasRecebido;
         let dashboardMateriaisProntosContainer, loadingMateriaisProntos;
         let dashboardMateriaisListContainer, loadingMateriaisDashboard;
+        let dashboardEstoqueAguaEl, dashboardEstoqueGasEl, dashboardPendenteTotalEl; // (REQ 2) Novos elementos do Dashboard
         // Água
-        let formAgua, selectUnidadeAgua, selectTipoAgua, inputQtdAgua, inputDataAgua, inputResponsavelAgua, btnSubmitAgua, alertAgua, tableStatusAgua, alertAguaLista;
+        let formAgua, selectUnidadeAgua, selectTipoAgua, inputDataAgua, inputResponsavelAgua, btnSubmitAgua, alertAgua, tableStatusAgua, alertAguaLista;
+        let inputQtdEntregueAgua, inputQtdRetornoAgua, formGroupQtdEntregueAgua, formGroupQtdRetornoAgua; // (REQ 1) Novos inputs
         let selectPrevisaoUnidadeAgua, btnCalcularPrevisaoAgua, resultadoPrevisaoAgua, previsaoAguaLabel, previsaoAguaMedia, previsaoAguaSemanal, previsaoAguaMensal, previsaoAguaErro;
         // Gás
-        let formGas, selectUnidadeGas, selectTipoGas, inputQtdGas, inputDataGas, inputResponsavelGas, btnSubmitGas, alertGas, tableStatusGas, alertGasLista;
+        let formGas, selectUnidadeGas, selectTipoGas, inputDataGas, inputResponsavelGas, btnSubmitGas, alertGas, tableStatusGas, alertGasLista;
+        let inputQtdEntregueGas, inputQtdRetornoGas, formGroupQtdEntregueGas, formGroupQtdRetornoGas; // (REQ 1) Novos inputs
         let selectPrevisaoUnidadeGas, btnCalcularPrevisaoGas, resultadoPrevisaoGas, previsaoGasLabel, previsaoGasMedia, previsaoGasSemanal, previsaoGasMensal, previsaoGasErro;
         // Materiais
         let formMateriais, selectUnidadeMateriais, selectTipoMateriais, inputDataSeparacao, textareaItensMateriais, inputResponsavelMateriais, btnSubmitMateriais, alertMateriais, tableStatusMateriais, alertMateriaisLista;
@@ -922,24 +980,20 @@
         // Elementos de Estoque (Água)
         let estoqueAguaInicialEl, estoqueAguaEntradasEl, estoqueAguaSaidasEl, estoqueAguaAtualEl, loadingEstoqueAguaEl, resumoEstoqueAguaEl;
         let formEntradaAgua, inputQtdEntradaAgua, inputDataEntradaAgua, inputResponsavelEntradaAgua, inputNfEntradaAgua, btnSubmitEntradaAgua;
-        let formInicialAguaContainer, formInicialAgua, inputInicialQtdAgua, inputInicialResponsavelAgua, btnSubmitInicialAgua, alertInicialAgua, btnAbrirInicialAgua; // Novo form inicial
-        let tableHistoricoAgua, alertHistoricoAgua; // Novo histórico
+        let formInicialAguaContainer, formInicialAgua, inputInicialQtdAgua, inputInicialResponsavelAgua, btnSubmitInicialAgua, alertInicialAgua, btnAbrirInicialAgua; 
+        let tableHistoricoAgua, alertHistoricoAgua; 
         
         // Elementos de Estoque (Gás)
         let estoqueGasInicialEl, estoqueGasEntradasEl, estoqueGasSaidasEl, estoqueGasAtualEl, loadingEstoqueGasEl, resumoEstoqueGasEl;
         let formEntradaGas, inputQtdEntradaGas, inputDataEntradaGas, inputResponsavelEntradaGas, inputNfEntradaGas, btnSubmitEntradaGas;
-        let formInicialGasContainer, formInicialGas, inputInicialQtdGas, inputInicialResponsavelGas, btnSubmitInicialGas, alertInicialGas, btnAbrirInicialGas; // Novo form inicial
-        let tableHistoricoGas, alertHistoricoGas; // Novo histórico
+        let formInicialGasContainer, formInicialGas, inputInicialQtdGas, inputInicialResponsavelGas, btnSubmitInicialGas, alertInicialGas, btnAbrirInicialGas; 
+        let tableHistoricoGas, alertHistoricoGas; 
 
 
         // --- FUNÇÕES DE UTILIDADE ---
 
         /**
          * Exibe um alerta temporário na tela.
-         * @param {string} elementId - ID do elemento de alerta.
-         * @param {string} message - Mensagem a ser exibida.
-         * @param {string} type - Tipo do alerta (error, success, warning, info).
-         * @param {number} duration - Duração em milissegundos.
          */
         function showAlert(elementId, message, type = 'info', duration = 5000) {
             const el = document.getElementById(elementId);
@@ -1019,7 +1073,7 @@
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                // setLogLevel('Debug'); // Habilitar para ver logs detalhados do Firebase
+                // setLogLevel('Debug'); 
                 
                 connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-yellow-400 rounded-full animate-pulse"></span> <span>Autenticando...</span>`;
 
@@ -1169,6 +1223,11 @@
             [btnAbrirInicialAgua, btnAbrirInicialGas].forEach(btn => { if(btn) btn.classList.remove('hidden'); }); // Mostra botão inicial
             [formInicialAguaContainer, formInicialGasContainer].forEach(form => { if(form) form.classList.add('hidden'); }); // Esconde form inicial
             
+            // (REQ 2) Limpa cards do dashboard geral
+            if (dashboardEstoqueAguaEl) dashboardEstoqueAguaEl.textContent = '0';
+            if (dashboardEstoqueGasEl) dashboardEstoqueGasEl.textContent = '0';
+            if (dashboardPendenteTotalEl) dashboardPendenteTotalEl.textContent = '0';
+
             console.log("Dados do Almoxarifado limpos devido à desconexão.");
         }
 
@@ -1184,9 +1243,6 @@
 
         /**
          * Popula um elemento <select> com as unidades, agrupadas por tipo.
-         * @param {HTMLElement} selectEl - O elemento <select> a ser populado.
-         * @param {string} serviceField - O campo de serviço (ex: 'atendeAgua') para filtrar.
-         * @param {boolean} includeAll - Se deve incluir a opção "Todas as Unidades".
          */
         function populateUnidadeSelects(selectEl, serviceField, includeAll = false) {
             if (!selectEl) return;
@@ -1226,7 +1282,26 @@
         // --- LÓGICA DE CONTROLE DE ÁGUA (SAÍDA) ---
         
         /**
-         * Manipula o submit do formulário de SAÍDA de água.
+         * (REQ 1) Mostra/esconde os inputs de quantidade com base no tipo de movimentação.
+         */
+        function toggleAguaFormInputs() {
+            const tipo = selectTipoAgua.value;
+            if (tipo === 'troca') {
+                formGroupQtdEntregueAgua.classList.remove('hidden');
+                formGroupQtdRetornoAgua.classList.remove('hidden');
+            } else if (tipo === 'entrega') {
+                formGroupQtdEntregueAgua.classList.remove('hidden');
+                formGroupQtdRetornoAgua.classList.add('hidden');
+                inputQtdRetornoAgua.value = "0"; // Zera para não enviar valor
+            } else if (tipo === 'retorno') {
+                formGroupQtdEntregueAgua.classList.add('hidden');
+                formGroupQtdRetornoAgua.classList.remove('hidden');
+                inputQtdEntregueAgua.value = "0"; // Zera para não enviar valor
+            }
+        }
+
+        /**
+         * (REQ 1 & 6) Manipula o submit do formulário de MOVIMENTAÇÃO de água.
          */
         async function handleAguaSubmit(e) {
              e.preventDefault();
@@ -1236,83 +1311,116 @@
             if (!selectValue) { showAlert('alert-agua', 'Selecione uma unidade.', 'warning'); return; }
             
             const [unidadeId, unidadeNome, tipoUnidade] = selectValue.split('|');
-            const tipo = selectTipoAgua.value;
-            const quantidade = parseInt(inputQtdAgua.value, 10);
+            const tipoMovimentacao = selectTipoAgua.value; // 'troca', 'entrega', 'retorno'
+            const qtdEntregue = parseInt(inputQtdEntregueAgua.value, 10) || 0;
+            const qtdRetorno = parseInt(inputQtdRetornoAgua.value, 10) || 0;
             const data = dateToTimestamp(inputDataAgua.value);
             const responsavel = capitalizeString(inputResponsavelAgua.value.trim()); 
 
-            if (!unidadeId || !tipo || !quantidade || quantidade <= 0 || !data || !responsavel) {
-                showAlert('alert-agua', 'Dados inválidos. Verifique todos os campos (incluindo Responsável).', 'warning'); return;
+            if (!unidadeId || !data || !responsavel) {
+                showAlert('alert-agua', 'Dados inválidos. Verifique Unidade, Data e Responsável.', 'warning'); return;
+            }
+
+            if (tipoMovimentacao === 'troca' && qtdEntregue === 0 && qtdRetorno === 0) {
+                 showAlert('alert-agua', 'Para "Troca", ao menos uma das quantidades deve ser maior que zero.', 'warning'); return;
+            }
+            if (tipoMovimentacao === 'entrega' && qtdEntregue <= 0) {
+                 showAlert('alert-agua', 'Para "Apenas Saída", a quantidade deve ser maior que zero.', 'warning'); return;
+            }
+            if (tipoMovimentacao === 'retorno' && qtdRetorno <= 0) {
+                 showAlert('alert-agua', 'Para "Apenas Retorno", a quantidade deve ser maior que zero.', 'warning'); return;
             }
 
             // Validação de Estoque
-            if (!estoqueInicialDefinido.agua) {
-                 showAlert('alert-agua', 'Defina o Estoque Inicial de Água antes de lançar saídas.', 'warning'); return;
-            }
-            if (tipo === 'entrega') {
+            if (qtdEntregue > 0) {
+                if (!estoqueInicialDefinido.agua) {
+                    showAlert('alert-agua', 'Defina o Estoque Inicial de Água antes de lançar saídas.', 'warning'); return;
+                }
                 const estoqueAtual = parseInt(estoqueAguaAtualEl.textContent) || 0;
-                if (quantidade > estoqueAtual) {
+                if (qtdEntregue > estoqueAtual) {
                     showAlert('alert-agua', `Erro: Estoque insuficiente. Disponível: ${estoqueAtual}`, 'error'); return;
                 }
             }
             
             btnSubmitAgua.disabled = true; btnSubmitAgua.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
             
+            let sucesso = true;
+            let msgSucesso = [];
+
             try {
-                // Adiciona o documento na coleção de saídas de água
-                await addDoc(aguaCollection, { 
-                    unidadeId, 
-                    unidadeNome, 
-                    tipoUnidade, 
-                    tipo, // 'entrega' ou 'retorno'
-                    quantidade, 
-                    data, 
-                    responsavel, 
-                    registradoEm: serverTimestamp() 
-                });
-                showAlert('alert-agua', `Lançamento de ${tipo} de água salvo!`, 'success');
+                const timestamp = serverTimestamp();
+
+                // 1. Registra a ENTREGA (Saída do Estoque)
+                if (qtdEntregue > 0) {
+                    await addDoc(aguaCollection, { 
+                        unidadeId, 
+                        unidadeNome, 
+                        tipoUnidade, 
+                        tipo: 'entrega', // Sempre 'entrega' para saída
+                        quantidade: qtdEntregue, 
+                        data, 
+                        responsavel, 
+                        registradoEm: timestamp 
+                    });
+                    msgSucesso.push(`${qtdEntregue} galão(ões) entregue(s)`);
+                }
+
+                // 2. Registra o RETORNO (Entrada de Vazio)
+                if (qtdRetorno > 0) {
+                     await addDoc(aguaCollection, { 
+                        unidadeId, 
+                        unidadeNome, 
+                        tipoUnidade, 
+                        tipo: 'retorno', // Sempre 'retorno' para entrada de vazio
+                        quantidade: qtdRetorno, 
+                        data, 
+                        responsavel, 
+                        registradoEm: timestamp 
+                    });
+                     msgSucesso.push(`${qtdRetorno} galão(ões) recebido(s)`);
+                }
+
+                showAlert('alert-agua', `Movimentação salva! ${msgSucesso.join('; ')}.`, 'success');
                 formAgua.reset(); 
                 inputDataAgua.value = getTodayDateString(); 
+                toggleAguaFormInputs(); // Reseta a visibilidade dos inputs
+
             } catch (error) { 
                 console.error("Erro salvar água:", error); 
                 showAlert('alert-agua', `Erro: ${error.message}`, 'error');
+                sucesso = false;
             } finally { 
                 btnSubmitAgua.disabled = false; 
-                btnSubmitAgua.textContent = 'Salvar Saída'; 
+                btnSubmitAgua.textContent = 'Salvar Movimentação'; 
             }
         }
 
         /**
-         * Renderiza a tabela de status de galões pendentes por unidade.
+         * (REQ 5) Renderiza a tabela de status de galões com "Saldo" (Faltando/Crédito).
          */
         function renderAguaStatus() {
              if (!tableStatusAgua) return;
              
-             // Cria um mapa com todas as unidades
              const statusMap = new Map();
              fb_unidades.forEach(u => { statusMap.set(u.id, { id: u.id, nome: u.nome, tipo: u.tipo, entregues: 0, recebidos: 0, ultimosLancamentos: [] }); });
 
-             // Ordena as movimentações pela data de registro (mais recente primeiro)
              const movsOrdenadas = [...fb_agua_movimentacoes].sort((a, b) => (b.registradoEm?.toMillis() || 0) - (a.registradoEm?.toMillis() || 0));
 
-             // Processa as movimentações para calcular saldos
              movsOrdenadas.forEach(m => {
                  if (statusMap.has(m.unidadeId)) {
                      const unidadeStatus = statusMap.get(m.unidadeId);
                      if (m.tipo === 'entrega') unidadeStatus.entregues += m.quantidade;
                      else if (m.tipo === 'retorno') unidadeStatus.recebidos += m.quantidade;
                      
-                     // Guarda os 2 últimos lançamentos para o tooltip e botão de exclusão
                      if (unidadeStatus.ultimosLancamentos.length < 2) { 
                          unidadeStatus.ultimosLancamentos.push({id: m.id, resp: m.responsavel, data: formatTimestamp(m.data), tipo: m.tipo});
                      }
                  }
              });
 
-             // Converte o mapa em array, calcula pendentes, filtra e ordena
              const statusArray = Array.from(statusMap.values())
-                 .map(s => ({ ...s, pendentes: s.entregues - s.recebidos }))
-                 .filter(s => s.entregues > 0 || s.pendentes !== 0) // Só mostra unidades com movimentação
+                 .map(s => ({ ...s, pendentes: s.entregues - s.recebidos })) // 'pendentes' é o saldo de vazios
+                 .filter(s => s.entregues > 0 || s.pendentes !== 0) 
                  .sort((a, b) => b.pendentes - a.pendentes || a.nome.localeCompare(b.nome)); // Ordena por mais pendentes
 
             if (statusArray.length === 0) { 
@@ -1322,26 +1430,51 @@
                 
             tableStatusAgua.innerHTML = statusArray.map(s => {
                 const tooltipText = s.ultimosLancamentos.map(l => `${l.tipo === 'entrega' ? 'E': 'R'}: ${l.resp} (${l.data})`).join(' | ');
-                const ultimoId = s.ultimosLancamentos[0]?.id; // Pega o ID do último lançamento
+                const ultimoId = s.ultimosLancamentos[0]?.id;
+                
+                // (REQ 5) Lógica do Saldo
+                const saldo = s.pendentes;
+                const saldoText = saldo > 0 ? `Faltando ${saldo}` : (saldo < 0 ? `Crédito ${Math.abs(saldo)}` : 'Zerado');
+                const saldoClass = saldo > 0 ? 'text-red-600' : (saldo < 0 ? 'text-blue-600' : 'text-green-600');
+
                 return `
                 <tr title="${tooltipText || 'Sem detalhes de responsável'}">
                     <td class="font-medium">${s.nome}</td>
                     <td>${s.tipo || 'N/A'}</td>
                     <td class="text-center">${s.entregues}</td>
                     <td class="text-center">${s.recebidos}</td>
-                    <td class="text-center font-bold ${s.pendentes > 0 ? 'text-red-600' : (s.pendentes < 0 ? 'text-blue-600' : 'text-green-600')}">${s.pendentes}</td>
+                    <td class="text-center font-bold ${saldoClass}">${saldoText}</td>
                     <td class="text-center">
                         ${ultimoId ? `<button class="btn-danger btn-remove" data-id="${ultimoId}" data-type="agua" title="Remover último lançamento desta unidade"><i data-lucide="trash-2"></i></button>` : '-'}
                     </td>
                 </tr>
             `}).join('');
-             lucide.createIcons(); // Recria ícones do Lucide
+             lucide.createIcons();
         }
         
         // --- LÓGICA DE CONTROLE DE GÁS (SAÍDA) ---
         
         /**
-         * Manipula o submit do formulário de SAÍDA de gás.
+         * (REQ 1) Mostra/esconde os inputs de quantidade com base no tipo de movimentação.
+         */
+        function toggleGasFormInputs() {
+            const tipo = selectTipoGas.value;
+            if (tipo === 'troca') {
+                formGroupQtdEntregueGas.classList.remove('hidden');
+                formGroupQtdRetornoGas.classList.remove('hidden');
+            } else if (tipo === 'entrega') {
+                formGroupQtdEntregueGas.classList.remove('hidden');
+                formGroupQtdRetornoGas.classList.add('hidden');
+                inputQtdRetornoGas.value = "0"; // Zera para não enviar valor
+            } else if (tipo === 'retorno') {
+                formGroupQtdEntregueGas.classList.add('hidden');
+                formGroupQtdRetornoGas.classList.remove('hidden');
+                inputQtdEntregueGas.value = "0"; // Zera para não enviar valor
+            }
+        }
+        
+        /**
+         * (REQ 1 & 6) Manipula o submit do formulário de MOVIMENTAÇÃO de gás.
          */
         async function handleGasSubmit(e) {
             e.preventDefault();
@@ -1351,59 +1484,96 @@
             if (!selectValue) { showAlert('alert-gas', 'Selecione uma unidade.', 'warning'); return; }
             
             const [unidadeId, unidadeNome, tipoUnidade] = selectValue.split('|');
-            const tipo = selectTipoGas.value;
-            const quantidade = parseInt(inputQtdGas.value, 10);
+            const tipoMovimentacao = selectTipoGas.value; // 'troca', 'entrega', 'retorno'
+            const qtdEntregue = parseInt(inputQtdEntregueGas.value, 10) || 0;
+            const qtdRetorno = parseInt(inputQtdRetornoGas.value, 10) || 0;
             const data = dateToTimestamp(inputDataGas.value);
             const responsavel = capitalizeString(inputResponsavelGas.value.trim()); 
 
-             if (!unidadeId || !tipo || !quantidade || quantidade <= 0 || !data || !responsavel) { 
-                showAlert('alert-gas', 'Dados inválidos. Verifique todos os campos (incluindo Responsável).', 'warning'); return;
+             if (!unidadeId || !data || !responsavel) { 
+                showAlert('alert-gas', 'Dados inválidos. Verifique Unidade, Data e Responsável.', 'warning'); return;
+            }
+
+            if (tipoMovimentacao === 'troca' && qtdEntregue === 0 && qtdRetorno === 0) {
+                 showAlert('alert-gas', 'Para "Troca", ao menos uma das quantidades deve ser maior que zero.', 'warning'); return;
+            }
+            if (tipoMovimentacao === 'entrega' && qtdEntregue <= 0) {
+                 showAlert('alert-gas', 'Para "Apenas Saída", a quantidade deve ser maior que zero.', 'warning'); return;
+            }
+            if (tipoMovimentacao === 'retorno' && qtdRetorno <= 0) {
+                 showAlert('alert-gas', 'Para "Apenas Retorno", a quantidade deve ser maior que zero.', 'warning'); return;
             }
 
             // Validação de Estoque
-            if (!estoqueInicialDefinido.gas) {
-                 showAlert('alert-gas', 'Defina o Estoque Inicial de Gás antes de lançar saídas.', 'warning'); return;
-            }
-            if (tipo === 'entrega') {
+            if (qtdEntregue > 0) {
+                if (!estoqueInicialDefinido.gas) {
+                    showAlert('alert-gas', 'Defina o Estoque Inicial de Gás antes de lançar saídas.', 'warning'); return;
+                }
                 const estoqueAtual = parseInt(estoqueGasAtualEl.textContent) || 0;
-                if (quantidade > estoqueAtual) {
+                if (qtdEntregue > estoqueAtual) {
                     showAlert('alert-gas', `Erro: Estoque insuficiente. Disponível: ${estoqueAtual}`, 'error'); return;
                 }
             }
 
             btnSubmitGas.disabled = true; btnSubmitGas.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
             
+            let sucesso = true;
+            let msgSucesso = [];
+
             try {
-                // Adiciona o documento na coleção de saídas de gás
-                await addDoc(gasCollection, { 
-                    unidadeId, 
-                    unidadeNome, 
-                    tipoUnidade, 
-                    tipo, // 'entrega' ou 'retorno'
-                    quantidade, 
-                    data, 
-                    responsavel, 
-                    registradoEm: serverTimestamp() 
-                });
-                showAlert('alert-gas', `Lançamento de ${tipo} de gás salvo!`, 'success');
+                const timestamp = serverTimestamp();
+                
+                // 1. Registra a ENTREGA (Saída do Estoque)
+                if (qtdEntregue > 0) {
+                    await addDoc(gasCollection, { 
+                        unidadeId, 
+                        unidadeNome, 
+                        tipoUnidade, 
+                        tipo: 'entrega', 
+                        quantidade: qtdEntregue, 
+                        data, 
+                        responsavel, 
+                        registradoEm: timestamp 
+                    });
+                    msgSucesso.push(`${qtdEntregue} botijão(ões) entregue(s)`);
+                }
+
+                // 2. Registra o RETORNO (Entrada de Vazio)
+                if (qtdRetorno > 0) {
+                     await addDoc(gasCollection, { 
+                        unidadeId, 
+                        unidadeNome, 
+                        tipoUnidade, 
+                        tipo: 'retorno', 
+                        quantidade: qtdRetorno, 
+                        data, 
+                        responsavel, 
+                        registradoEm: timestamp 
+                    });
+                     msgSucesso.push(`${qtdRetorno} botijão(ões) recebido(s)`);
+                }
+                
+                showAlert('alert-gas', `Movimentação salva! ${msgSucesso.join('; ')}.`, 'success');
                 formGas.reset(); 
                 inputDataGas.value = getTodayDateString(); 
+                toggleGasFormInputs(); // Reseta a visibilidade dos inputs
+
             } catch (error) { 
                 console.error("Erro salvar gás:", error); 
                 showAlert('alert-gas', `Erro: ${error.message}`, 'error');
+                sucesso = false;
             } finally { 
                 btnSubmitGas.disabled = false; 
-                btnSubmitGas.textContent = 'Salvar Saída'; 
+                btnSubmitGas.textContent = 'Salvar Movimentação'; 
             }
         }
 
         /**
-         * Renderiza a tabela de status de botijões pendentes por unidade.
+         * (REQ 5) Renderiza a tabela de status de botijões com "Saldo" (Faltando/Crédito).
          */
         function renderGasStatus() {
             if (!tableStatusGas) return;
             
-             // Lógica idêntica ao renderAguaStatus, mas para Gás
              const statusMap = new Map();
              fb_unidades.forEach(u => { statusMap.set(u.id, { id: u.id, nome: u.nome, tipo: u.tipo, entregues: 0, recebidos: 0, ultimosLancamentos: [] }); });
 
@@ -1433,13 +1603,19 @@
              tableStatusGas.innerHTML = statusArray.map(s => {
                 const tooltipText = s.ultimosLancamentos.map(l => `${l.tipo === 'entrega' ? 'E': 'R'}: ${l.resp} (${l.data})`).join(' | ');
                 const ultimoId = s.ultimosLancamentos[0]?.id;
+                
+                // (REQ 5) Lógica do Saldo
+                const saldo = s.pendentes;
+                const saldoText = saldo > 0 ? `Faltando ${saldo}` : (saldo < 0 ? `Crédito ${Math.abs(saldo)}` : 'Zerado');
+                const saldoClass = saldo > 0 ? 'text-red-600' : (saldo < 0 ? 'text-blue-600' : 'text-green-600');
+
                 return `
                 <tr title="${tooltipText || 'Sem detalhes de responsável'}">
                     <td class="font-medium">${s.nome}</td>
                     <td>${s.tipo || 'N/A'}</td>
                     <td class="text-center">${s.entregues}</td>
                     <td class="text-center">${s.recebidos}</td>
-                    <td class="text-center font-bold ${s.pendentes > 0 ? 'text-red-600' : (s.pendentes < 0 ? 'text-blue-600' : 'text-green-600')}">${s.pendentes}</td>
+                    <td class="text-center font-bold ${saldoClass}">${saldoText}</td>
                      <td class="text-center">
                         ${ultimoId ? `<button class="btn-danger btn-remove" data-id="${ultimoId}" data-type="gas" title="Remover último lançamento"><i data-lucide="trash-2"></i></button>` : '-'}
                     </td>
@@ -1452,7 +1628,6 @@
         
         /**
          * Calcula a previsão de consumo para Água ou Gás.
-         * @param {string} tipo - 'agua' ou 'gas'.
          */
         function handleCalcularPrevisao(tipo) {
             const [movimentacoes, select, resultadoEl, labelEl, mediaEl, semanalEl, mensalEl, erroEl] = 
@@ -1492,14 +1667,11 @@
             
             // Calcula o número de dias entre a primeira e a última entrega
             const diffTime = Math.abs(ultimaData.getTime() - primeiraData.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 para incluir o dia inicial
+            let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            
+            if (diffDays === 0) diffDays = 1; // Se todas no mesmo dia, considera 1 dia
 
             const totalQuantidade = movsFiltradas.reduce((sum, m) => sum + m.quantidade, 0);
-
-            if (diffDays <= 0) {
-                 erroEl.textContent = 'Não foi possível calcular o intervalo de dias (entregas no mesmo dia).';
-                 return;
-            }
 
             const mediaDiaria = totalQuantidade / diffDays;
             const previsaoSemanal = Math.ceil(mediaDiaria * 7);
@@ -1525,7 +1697,7 @@
             const [unidadeId, unidadeNome, tipoUnidade] = selectValue.split('|');
             const tipoMaterial = selectTipoMateriais.value;
             const dataSeparacao = dateToTimestamp(inputDataSeparacao.value);
-            const itens = textareaItensMateriais.value.trim(); 
+            const itens = textareaItensMateriais.value.trim(); // (REQ 3) Agora é 'Observação'
             const responsavelSeparacao = capitalizeString(inputResponsavelMateriais.value.trim()); 
 
              if (!unidadeId || !tipoMaterial || !dataSeparacao || !responsavelSeparacao) {
@@ -1542,7 +1714,7 @@
                     tipoUnidade, 
                     tipoMaterial, 
                     dataSeparacao, 
-                    itens, 
+                    itens, // (REQ 3) Campo 'itens' agora armazena a observação
                     status: 'separacao', // Status inicial
                     dataEntrega: null, 
                     responsavelSeparacao, 
@@ -1562,12 +1734,11 @@
         }
 
         /**
-         * Renderiza a tabela de status de materiais (em separação e entregues).
+         * (REQ 3) Renderiza a tabela de status de materiais (observação atualizada).
          */
         function renderMateriaisStatus() {
              if (!tableStatusMateriais) return;
             
-            // Ordena por status (separação primeiro) e depois por data (mais recente primeiro)
             const materiaisOrdenados = [...fb_materiais].sort((a,b) => { 
                 const statusOrder = { 'separacao': 1, 'entregue': 2 }; 
                 const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
@@ -1588,8 +1759,8 @@
                 const statusText = isPendente ? 'Em Separação' : 'Entregue';
                 const dataEntregaText = m.dataEntrega ? ` (${formatTimestamp(m.dataEntrega)})` : '';
                 const tooltipText = `Separado por: ${m.responsavelSeparacao || 'N/A'}${m.responsavelEntrega ? ' | Entregue por: '+m.responsavelEntrega : ''}`;
-
-                // Cria uma linha para o item principal e uma linha opcional para os "itens"
+                
+                // (REQ 3) Texto "Itens:" atualizado para "Observação:"
                 return `
                     <tr class="align-top ${isPendente ? '' : 'opacity-70'}" title="${tooltipText}">
                         <td class="font-medium">${m.unidadeNome || 'Unidade Desc.'}</td>
@@ -1603,7 +1774,7 @@
                     </tr>
                     ${m.itens ? `
                     <tr class="${isPendente ? 'bg-slate-50' : 'bg-gray-50'} border-b-2 border-slate-200 ${isPendente ? '' : 'opacity-70'}">
-                        <td colspan="5" class="py-2 px-6 text-sm text-slate-600 whitespace-pre-wrap"><strong>Itens:</strong> ${m.itens}</td>
+                        <td colspan="5" class="py-2 px-6 text-sm text-slate-600 whitespace-pre-wrap"><strong>Observação:</strong> ${m.itens}</td>
                     </tr>
                     ` : ''}
                 `;
@@ -1621,7 +1792,6 @@
             const materialId = button.dataset.id;
             if (!isAuthReady || !materialId) return;
 
-            // Pede o nome do responsável pela entrega
             const responsavelEntrega = prompt("Nome do responsável pela entrega:");
             if (!responsavelEntrega) {
                  showAlert('alert-materiais-lista', 'Nome do responsável é obrigatório para marcar como entregue.', 'warning');
@@ -1631,7 +1801,6 @@
             button.disabled = true; button.innerHTML = '<div class="loading-spinner-small mx-auto" style="width: 16px; height: 16px; border-width: 2px;"></div>';
             
             try {
-                // Atualiza o documento no Firebase
                 const docRef = doc(materiaisCollection, materialId);
                 await updateDoc(docRef, { 
                     status: 'entregue', 
@@ -1662,7 +1831,6 @@
             tableGestaoUnidades.innerHTML = fb_unidades.map(unidade => `
                 <tr>
                     <td class="font-medium">${unidade.nome}</td><td>${unidade.tipo || 'N/A'}</td>
-                    <!-- Os toggles refletem o estado no Firebase, com fallback para 'true' se indefinido -->
                     <td class="text-center"><input type="checkbox" class="form-toggle gestao-toggle" data-id="${unidade.id}" data-field="atendeAgua" ${(unidade.atendeAgua ?? true) ? 'checked' : ''}></td>
                     <td class="text-center"><input type="checkbox" class="form-toggle gestao-toggle" data-id="${unidade.id}" data-field="atendeGas" ${(unidade.atendeGas ?? true) ? 'checked' : ''}></td>
                     <td class="text-center"><input type="checkbox" class="form-toggle gestao-toggle" data-id="${unidade.id}" data-field="atendeMateriais" ${(unidade.atendeMateriais ?? true) ? 'checked' : ''}></td>
@@ -1682,14 +1850,12 @@
             
             if (!isAuthReady || !id || !field) return; 
             
-            checkbox.disabled = true; // Desabilita enquanto salva
+            checkbox.disabled = true; 
             
             try {
-                // Atualiza o campo específico (ex: 'atendeAgua') no documento da unidade
                 const docRef = doc(unidadesCollection, id); 
                 await updateDoc(docRef, { [field]: value });
                 
-                // Atualiza o dado localmente para evitar atraso da UI
                 const localUnidade = fb_unidades.find(u => u.id === id); 
                 if (localUnidade) localUnidade[field] = value;
                 
@@ -1697,7 +1863,7 @@
             } catch (error) { 
                 console.error("Erro atualizar unidade:", error); 
                 showAlert('alert-gestao', `Erro: ${error.message}`, 'error'); 
-                checkbox.checked = !value; // Reverte a mudança em caso de erro
+                checkbox.checked = !value; 
             } finally { 
                 checkbox.disabled = false; 
             }
@@ -1722,10 +1888,8 @@
                      const tipo = parts[0].trim().toUpperCase(); 
                      const nome = capitalizeString(parts[1].trim()); 
                      if (tipo && nome) {
-                         // Verifica se a unidade (nome e tipo) já existe
                          const existe = fb_unidades.some(u => normalizeString(u.nome) === normalizeString(nome) && normalizeString(u.tipo) === normalizeString(tipo));
                          if (!existe) {
-                             // Adiciona à lista para adicionar (com serviços habilitados por padrão)
                              unidadesParaAdd.push({ nome, tipo, atendeAgua: true, atendeGas: true, atendeMateriais: true });
                          } else {
                              console.log(`Unidade já existe (ignorada): ${tipo} - ${nome}`);
@@ -1746,7 +1910,6 @@
              let adicionadasCount = 0;
              
              try {
-                 // Adiciona cada nova unidade
                  for (const unidade of unidadesParaAdd) {
                      await addDoc(unidadesCollection, unidade);
                      adicionadasCount++;
@@ -1781,12 +1944,33 @@
                  pane.classList.toggle('hidden', pane.id !== `dashboard-view-${viewName}`);
             });
             
-            // Renderiza o conteúdo específico da aba selecionada
+            // (REQ 2) Renderiza o conteúdo específico da aba selecionada
             if(viewName === 'agua') renderDashboardAguaChart();
             if(viewName === 'gas') renderDashboardGasChart();
-            if(viewName === 'geral') renderDashboardMateriaisProntos();
+            if(viewName === 'geral') {
+                renderDashboardVisaoGeralSummary(); // Atualiza os cards de estoque
+                renderDashboardMateriaisProntos();
+            }
             if(viewName === 'materiais') renderDashboardMateriaisList();
         }
+
+        /**
+         * (REQ 2) Atualiza os cards da Visão Geral (Estoque e Pendentes).
+         */
+        function renderDashboardVisaoGeralSummary() {
+            if (dashboardEstoqueAguaEl) {
+                dashboardEstoqueAguaEl.textContent = estoqueAguaAtualEl.textContent;
+            }
+            if (dashboardEstoqueGasEl) {
+                dashboardEstoqueGasEl.textContent = estoqueGasAtualEl.textContent;
+            }
+            if (dashboardPendenteTotalEl) {
+                const pendenteAgua = parseInt(summaryAguaPendente.textContent) || 0;
+                const pendenteGas = parseInt(summaryGasPendente.textContent) || 0;
+                dashboardPendenteTotalEl.textContent = (pendenteAgua + pendenteGas);
+            }
+        }
+
 
         /**
          * Filtra um array de movimentações para incluir apenas os últimos 30 dias.
@@ -1849,8 +2033,8 @@
             return { 
                 labels, 
                 datasets: [ 
-                    { label: 'Entregues', data: entregasData, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, tension: 0.1 }, 
-                    { label: 'Recebidos', data: retornosData, backgroundColor: 'rgba(239, 68, 68, 0.7)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1, tension: 0.1 } 
+                    { label: 'Entregues (Cheios)', data: entregasData, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, tension: 0.1 }, 
+                    { label: 'Recebidos (Vazios)', data: retornosData, backgroundColor: 'rgba(16, 185, 129, 0.7)', borderColor: 'rgba(16, 185, 129, 1)', borderWidth: 1, tension: 0.1 } // Corrigido para verde
                 ] 
             };
         }
@@ -1901,6 +2085,8 @@
             
             summaryAguaEntregue.textContent = totalEntregue30d;
             summaryAguaRecebido.textContent = totalRecebido30d;
+            
+            renderDashboardVisaoGeralSummary(); // (REQ 2) Atualiza dashboard geral
         }
 
         /**
@@ -1921,6 +2107,8 @@
             
             summaryGasEntregue.textContent = totalEntregue30d;
             summaryGasRecebido.textContent = totalRecebido30d;
+            
+            renderDashboardVisaoGeralSummary(); // (REQ 2) Atualiza dashboard geral
         }
 
         /**
@@ -1936,6 +2124,7 @@
                 dashboardMateriaisListContainer.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Nenhum material em separação.</p>'; 
                 return; 
             }
+            // (REQ 3) Atualizado para 'Observação'
             dashboardMateriaisListContainer.innerHTML = pendentes.map(m => ` 
                 <div class="p-3 bg-slate-50 rounded-lg border border-slate-200"> 
                     <div class="flex justify-between items-center gap-2"> 
@@ -1943,7 +2132,7 @@
                         <span class="badge badge-yellow flex-shrink-0">${formatTimestamp(m.dataSeparacao)}</span> 
                     </div> 
                     <p class="text-xs text-slate-600 capitalize mt-1">${m.tipoMaterial || 'N/D'}</p> 
-                    ${m.itens ? `<p class="text-xs text-gray-500 mt-1 truncate" title="${m.itens}">Itens: ${m.itens}</p>` : ''} 
+                    ${m.itens ? `<p class="text-xs text-gray-500 mt-1 truncate" title="${m.itens}">Obs: ${m.itens}</p>` : ''} 
                 </div> `
             ).join('');
         }
@@ -2032,6 +2221,7 @@
                 renderDashboardGasSummary();
                 renderDashboardMateriaisList();
                 renderDashboardMateriaisProntos();
+                renderDashboardVisaoGeralSummary(); // (REQ 2) Atualiza cards
                 updateLastUpdateTime(); 
             }, 120000); // 120000 ms = 2 minutos
         }
@@ -2053,7 +2243,6 @@
          * Gera e baixa um relatório em PDF usando jsPDF e jsPDF-AutoTable.
          */
         function handleGerarPdf() {
-            // Verifica se as bibliotecas jsPDF estão carregadas
             if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined' || typeof window.jspdf.AutoTable === 'undefined') {
                 showAlert('alert-relatorio', 'Erro: Bibliotecas PDF não carregadas. Tente recarregar a página.', 'error');
                 console.error("jsPDF ou jsPDF.AutoTable não encontrados no window.jspdf:", window.jspdf);
@@ -2072,7 +2261,6 @@
                 return;
             }
 
-            // Converte datas para milissegundos
             const dataInicio = dateToTimestamp(dataInicioStr).toMillis();
             const dataFim = dateToTimestamp(dataFimStr).toMillis() + (24 * 60 * 60 * 1000 - 1); // Inclui o dia final inteiro
 
@@ -2170,24 +2358,21 @@
         
         /**
          * Abre o modal de confirmação de exclusão.
-         * @param {string} id - ID do documento a ser excluído.
-         * @param {string} type - Tipo do documento (ex: 'agua', 'gas', 'entrada-agua').
          */
         function openConfirmDeleteModal(id, type) {
             if (!id || !type) return;
             
             let collectionRef = null;
             let detailsText = `ID: ${id.substring(0,6)}...`;
-            let alertElementId = 'alert-gestao'; // Padrão
+            let alertElementId = 'alert-gestao'; 
             
-            // Define qual coleção e qual alerta usar com base no tipo
             if (type === 'agua') { 
                 collectionRef = aguaCollection; 
-                detailsText = `Saída de Água ${detailsText}`; 
+                detailsText = `Movimentação de Água ${detailsText}`; 
                 alertElementId = 'alert-agua-lista';
             } else if (type === 'gas') { 
                 collectionRef = gasCollection; 
-                detailsText = `Saída de Gás ${detailsText}`; 
+                detailsText = `Movimentação de Gás ${detailsText}`; 
                 alertElementId = 'alert-gas-lista';
             } else if (type === 'materiais') { 
                 collectionRef = materiaisCollection; 
@@ -2196,23 +2381,22 @@
             } else if (type === 'entrada-agua') { 
                 collectionRef = estoqueAguaCollection; 
                 detailsText = `Entrada de Estoque (Água) ${detailsText}`; 
-                alertElementId = 'alert-historico-agua'; // Usa o alerta do histórico
+                alertElementId = 'alert-historico-agua'; 
             } else if (type === 'entrada-gas') { 
                 collectionRef = estoqueGasCollection; 
                 detailsText = `Entrada de Estoque (Gás) ${detailsText}`; 
-                alertElementId = 'alert-historico-gas'; // Usa o alerta do histórico
+                alertElementId = 'alert-historico-gas'; 
             } else { 
                 console.error("Tipo inválido para exclusão:", type); return; 
             }
 
-            // Armazena as informações para a exclusão
             deleteInfo = { id, type, collectionRef, alertElementId };
             deleteDetailsEl.textContent = `Detalhes: ${detailsText}`;
             confirmDeleteModal.style.display = 'block';
         }
         
         /**
-         * Executa a exclusão após confirmação no modal.
+         * (REQ 4) Executa a exclusão e atualiza o dashboard.
          */
         async function executeDelete() {
             if (!isAuthReady || !deleteInfo.id || !deleteInfo.collectionRef) {
@@ -2224,9 +2408,6 @@
             btnCancelDelete.disabled = true;
 
             try {
-                // Não é permitido excluir 'entrada-inicial' por este modal simples,
-                // pois isso quebraria a lógica de estoque. 
-                // Apenas entradas normais e saídas podem ser removidas.
                 if (deleteInfo.type === 'entrada-agua' || deleteInfo.type === 'entrada-gas') {
                     const docSnap = await getDoc(doc(deleteInfo.collectionRef, deleteInfo.id));
                     if (docSnap.exists() && docSnap.data().tipo === 'inicial') {
@@ -2235,17 +2416,34 @@
                     }
                 }
                 
-                // Exclui o documento
                 const docRef = doc(deleteInfo.collectionRef, deleteInfo.id);
                 await deleteDoc(docRef);
                 showAlert(deleteInfo.alertElementId || 'alert-gestao', 'Lançamento removido com sucesso!', 'success');
+                
+                // (REQ 4) Atualiza o dashboard imediatamente após a exclusão
+                if (deleteInfo.type === 'agua' || deleteInfo.type === 'entrada-agua') { 
+                    renderDashboardAguaChart(); 
+                    renderDashboardAguaSummary(); 
+                }
+                if (deleteInfo.type === 'gas' || deleteInfo.type === 'entrada-gas') { 
+                    renderDashboardGasChart(); 
+                    renderDashboardGasSummary(); 
+                }
+                if (deleteInfo.type === 'materiais') { 
+                    renderDashboardMateriaisList(); 
+                    renderDashboardMateriaisProntos(); 
+                }
+                // (REQ 2 & 4) Atualiza os cards da visão geral
+                if (deleteInfo.type.includes('agua') || deleteInfo.type.includes('gas')) {
+                    renderDashboardVisaoGeralSummary();
+                }
+
             } catch (error) {
                 console.error(`Erro ao remover ${deleteInfo.type}:`, error);
                 if (error.message !== "Tentativa de exclusão de estoque inicial.") {
                     showAlert(deleteInfo.alertElementId || 'alert-gestao', `Erro ao remover: ${error.message}`, 'error');
                 }
             } finally {
-                // Limpa e fecha o modal
                 confirmDeleteModal.style.display = 'none';
                 btnConfirmDelete.disabled = false; btnConfirmDelete.textContent = 'Confirmar Exclusão';
                 btnCancelDelete.disabled = false;
@@ -2275,7 +2473,6 @@
                 return;
             }
 
-            // Checa novamente se já não existe uma entrada inicial (evita duplicidade)
             const estoqueAtual = (tipoEstoque === 'agua') ? fb_estoque_agua : fb_estoque_gas;
             if (estoqueAtual.some(e => e.tipo === 'inicial')) {
                  showAlert(alertElId, "O estoque inicial já foi definido.", 'info'); 
@@ -2291,18 +2488,16 @@
             const collectionRef = (tipoEstoque === 'agua') ? estoqueAguaCollection : estoqueGasCollection;
             
             try {
-                // Adiciona um documento do tipo 'inicial'
                 await addDoc(collectionRef, {
                     tipo: 'inicial', 
                     quantidade: quantidade,
-                    data: serverTimestamp(), // Usa a data do servidor
+                    data: serverTimestamp(), 
                     responsavel: responsavel,
                     notaFiscal: 'INICIAL',
                     registradoEm: serverTimestamp()
                 });
                 
                 showAlert(alertElId, "Estoque inicial salvo!", 'success', 2000);
-                 // Esconde o form e o botão, onSnapshot fará o resto
                  document.getElementById(`form-inicial-${tipoEstoque}-container`).classList.add('hidden');
                  document.getElementById(`btn-abrir-inicial-${tipoEstoque}`).classList.add('hidden');
 
@@ -2349,7 +2544,7 @@
             if (!isAuthReady) { showAlert('alert-agua', 'Erro: Não autenticado.', 'error'); return; }
 
             const tipoEstoque = e.target.id.includes('agua') ? 'agua' : 'gas';
-            const alertElementId = `alert-${tipoEstoque}`; // Reutiliza o alerta principal da aba
+            const alertElementId = `alert-${tipoEstoque}`; 
             
             const inputQtd = document.getElementById(`input-qtd-entrada-${tipoEstoque}`).value;
             const inputData = document.getElementById(`input-data-entrada-${tipoEstoque}`).value;
@@ -2367,7 +2562,6 @@
                 showAlert(alertElementId, 'Dados inválidos. Verifique quantidade, data e responsável.', 'warning'); return;
             }
 
-             // Validação de Estoque Inicial
             if (!estoqueInicialDefinido[tipoEstoque]) {
                  showAlert(alertElementId, `Defina o Estoque Inicial de ${tipoEstoque === 'agua' ? 'Água' : 'Gás'} antes de lançar entradas.`, 'warning'); return;
             }
@@ -2377,7 +2571,6 @@
             const collectionRef = (tipoEstoque === 'agua') ? estoqueAguaCollection : estoqueGasCollection;
             
             try {
-                // Adiciona um documento do tipo 'entrada'
                 await addDoc(collectionRef, {
                     tipo: 'entrada',
                     quantidade: quantidade,
@@ -2399,14 +2592,13 @@
         }
 
         /**
-         * Renderiza o card de Resumo de Estoque de Água.
+         * (REQ 2) Renderiza o card de Resumo de Estoque de Água e atualiza o dashboard.
          */
         function renderEstoqueAgua() {
             if (!estoqueAguaAtualEl) return;
             
             if (loadingEstoqueAguaEl) loadingEstoqueAguaEl.style.display = 'none';
 
-            // Controla visibilidade do botão/form inicial vs resumo
             if (estoqueInicialDefinido.agua) {
                 btnAbrirInicialAgua.classList.add('hidden');
                 formInicialAguaContainer.classList.add('hidden');
@@ -2414,10 +2606,8 @@
             } else {
                 btnAbrirInicialAgua.classList.remove('hidden');
                 resumoEstoqueAguaEl.classList.add('hidden');
-                // Não esconde o form se ele já estiver aberto pelo usuário
             }
             
-            // Calcula totais com base nos dados locais (atualizados pelos listeners)
             const estoqueInicial = fb_estoque_agua
                 .filter(e => e.tipo === 'inicial')
                 .reduce((sum, e) => sum + e.quantidade, 0);
@@ -2426,28 +2616,28 @@
                 .filter(e => e.tipo === 'entrada')
                 .reduce((sum, e) => sum + e.quantidade, 0);
 
-            const totalSaidas = fb_agua_movimentacoes // Pega das saídas (outra coleção)
+            const totalSaidas = fb_agua_movimentacoes 
                 .filter(m => m.tipo === 'entrega')
                 .reduce((sum, m) => sum + m.quantidade, 0);
 
             const estoqueAtual = estoqueInicial + totalEntradas - totalSaidas;
 
-            // Atualiza a UI
             estoqueAguaInicialEl.textContent = estoqueInicial;
             estoqueAguaEntradasEl.textContent = `+${totalEntradas}`;
             estoqueAguaSaidasEl.textContent = `-${totalSaidas}`;
             estoqueAguaAtualEl.textContent = estoqueAtual;
+            
+            renderDashboardVisaoGeralSummary(); // (REQ 2) Atualiza dashboard
         }
 
         /**
-         * Renderiza o card de Resumo de Estoque de Gás.
+         * (REQ 2) Renderiza o card de Resumo de Estoque de Gás e atualiza o dashboard.
          */
         function renderEstoqueGas() {
              if (!estoqueGasAtualEl) return;
 
             if (loadingEstoqueGasEl) loadingEstoqueGasEl.style.display = 'none';
 
-             // Controla visibilidade
             if (estoqueInicialDefinido.gas) {
                 btnAbrirInicialGas.classList.add('hidden');
                 formInicialGasContainer.classList.add('hidden');
@@ -2457,7 +2647,6 @@
                 resumoEstoqueGasEl.classList.add('hidden');
             }
             
-            // Calcula totais
             const estoqueInicial = fb_estoque_gas
                 .filter(e => e.tipo === 'inicial')
                 .reduce((sum, e) => sum + e.quantidade, 0);
@@ -2466,20 +2655,21 @@
                 .filter(e => e.tipo === 'entrada')
                 .reduce((sum, e) => sum + e.quantidade, 0);
 
-            const totalSaidas = fb_gas_movimentacoes // Pega das saídas (outra coleção)
+            const totalSaidas = fb_gas_movimentacoes 
                 .filter(m => m.tipo === 'entrega')
                 .reduce((sum, m) => sum + m.quantidade, 0);
 
             const estoqueAtual = estoqueInicial + totalEntradas - totalSaidas;
 
-            // Atualiza UI
             estoqueGasInicialEl.textContent = estoqueInicial;
             estoqueGasEntradasEl.textContent = `+${totalEntradas}`;
             estoqueGasSaidasEl.textContent = `-${totalSaidas}`;
             estoqueGasAtualEl.textContent = estoqueAtual;
+            
+            renderDashboardVisaoGeralSummary(); // (REQ 2) Atualiza dashboard
         }
 
-        // --- NOVO: Renderiza Histórico de Entradas ---
+        // --- Renderiza Histórico de Entradas ---
         
         /**
          * Renderiza a tabela com o histórico de entradas no estoque de Água.
@@ -2572,10 +2762,20 @@
             
             // Garante que os dados corretos sejam renderizados ao entrar nas abas
             if (tabName === 'gestao') { renderGestaoUnidades(); }
-            if (tabName === 'agua') { switchEstoqueForm('saida-agua'); renderEstoqueAgua(); renderHistoricoAgua(); }
-            if (tabName === 'gas') { switchEstoqueForm('saida-gas'); renderEstoqueGas(); renderHistoricoGas(); }
+            if (tabName === 'agua') { 
+                switchEstoqueForm('saida-agua'); 
+                toggleAguaFormInputs(); // (REQ 1) Ajusta inputs do form
+                renderEstoqueAgua(); 
+                renderHistoricoAgua(); 
+            }
+            if (tabName === 'gas') { 
+                switchEstoqueForm('saida-gas'); 
+                toggleGasFormInputs(); // (REQ 1) Ajusta inputs do form
+                renderEstoqueGas(); 
+                renderHistoricoGas(); 
+            }
 
-            // Recria os ícones do Lucide (necessário para conteúdo carregado dinamicamente)
+            // Recria os ícones do Lucide
             setTimeout(() => {
                 if(typeof lucide !== 'undefined') lucide.createIcons();
             }, 50); 
@@ -2603,18 +2803,26 @@
             loadingMateriaisProntos = document.getElementById('loading-materiais-prontos');
             dashboardMateriaisListContainer = document.getElementById('dashboard-materiais-list');
             loadingMateriaisDashboard = document.getElementById('loading-materiais-dashboard');
+            // (REQ 2) Novos refs do Dashboard
+            dashboardEstoqueAguaEl = document.getElementById('dashboard-estoque-agua');
+            dashboardEstoqueGasEl = document.getElementById('dashboard-estoque-gas');
+            dashboardPendenteTotalEl = document.getElementById('dashboard-pendente-total');
 
             // Água (Saída)
             formAgua = document.getElementById('form-agua'); 
             selectUnidadeAgua = document.getElementById('select-unidade-agua'); 
             selectTipoAgua = document.getElementById('select-tipo-agua'); 
-            inputQtdAgua = document.getElementById('input-qtd-agua'); 
             inputDataAgua = document.getElementById('input-data-agua'); 
             inputResponsavelAgua = document.getElementById('input-responsavel-agua'); 
             btnSubmitAgua = document.getElementById('btn-submit-agua'); 
             alertAgua = document.getElementById('alert-agua'); 
             tableStatusAgua = document.getElementById('table-status-agua'); 
             alertAguaLista = document.getElementById('alert-agua-lista');
+            // (REQ 1) Novos refs de Água
+            inputQtdEntregueAgua = document.getElementById('input-qtd-entregue-agua');
+            inputQtdRetornoAgua = document.getElementById('input-qtd-retorno-agua');
+            formGroupQtdEntregueAgua = document.getElementById('form-group-qtd-entregue-agua');
+            formGroupQtdRetornoAgua = document.getElementById('form-group-qtd-retorno-agua');
             // Água (Previsão)
             selectPrevisaoUnidadeAgua = document.getElementById('select-previsao-unidade-agua'); 
             btnCalcularPrevisaoAgua = document.getElementById('btn-calcular-previsao-agua'); 
@@ -2629,13 +2837,17 @@
             formGas = document.getElementById('form-gas'); 
             selectUnidadeGas = document.getElementById('select-unidade-gas'); 
             selectTipoGas = document.getElementById('select-tipo-gas'); 
-            inputQtdGas = document.getElementById('input-qtd-gas'); 
             inputDataGas = document.getElementById('input-data-gas'); 
             inputResponsavelGas = document.getElementById('input-responsavel-gas'); 
             btnSubmitGas = document.getElementById('btn-submit-gas'); 
             alertGas = document.getElementById('alert-gas'); 
             tableStatusGas = document.getElementById('table-status-gas'); 
             alertGasLista = document.getElementById('alert-gas-lista');
+             // (REQ 1) Novos refs de Gás
+            inputQtdEntregueGas = document.getElementById('input-qtd-entregue-gas');
+            inputQtdRetornoGas = document.getElementById('input-qtd-retorno-gas');
+            formGroupQtdEntregueGas = document.getElementById('form-group-qtd-entregue-gas');
+            formGroupQtdRetornoGas = document.getElementById('form-group-qtd-retorno-gas');
             // Gás (Previsão)
             selectPrevisaoUnidadeGas = document.getElementById('select-previsao-unidade-gas'); 
             btnCalcularPrevisaoGas = document.getElementById('btn-calcular-previsao-gas'); 
@@ -2745,16 +2957,18 @@
             if (formGas) formGas.addEventListener('submit', handleGasSubmit); 
             if (formMateriais) formMateriais.addEventListener('submit', handleMateriaisSubmit); 
             
+            // (REQ 1) Listeners para troca de tipo (Água e Gás)
+            if (selectTipoAgua) selectTipoAgua.addEventListener('change', toggleAguaFormInputs);
+            if (selectTipoGas) selectTipoGas.addEventListener('change', toggleGasFormInputs);
+
             // Listener unificado na <main> para botões de ação nas tabelas (Remover, Entregue)
             document.querySelector('main').addEventListener('click', (e) => {
                  const removeButton = e.target.closest('button.btn-remove[data-id]');
                  const entregueButton = e.target.closest('button.btn-entregue[data-id]');
                  
                  if (removeButton) {
-                     // Abre modal de exclusão
                      openConfirmDeleteModal(removeButton.dataset.id, removeButton.dataset.type);
                  } else if (entregueButton) {
-                      // Marca material como entregue
                       handleMarcarEntregue(e);
                  }
             });
@@ -2794,6 +3008,10 @@
 
 
             if(typeof lucide !== 'undefined') lucide.createIcons();
+            
+            // (REQ 1) Inicia os formulários com os inputs corretos
+            toggleAguaFormInputs();
+            toggleGasFormInputs();
         }
 
         // --- INICIALIZAÇÃO GERAL ---
