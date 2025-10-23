@@ -1,0 +1,18 @@
+    [
+      {
+        "origin": ["*"],
+        "method": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+        "maxAgeSeconds": 3600
+      }
+    ]
+    ```
+
+2.  **Abra o seu Terminal** (ou Cloud Shell) e execute os seguintes comandos. Certifique-se de ter o `gsutil` instalado ou use o Cloud Shell:
+
+    ```bash
+    # 1. Defina a variável do nome do seu bucket (use o nome completo do projeto)
+    BUCKET_NAME="gs://controle-almoxarifado-semcas.appspot.com"
+
+    # 2. Configure a política CORS
+    gsutil cors set cors-config.json $BUCKET_NAME
+    
