@@ -3,42 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 
-      v.7.0 - Adicionado Status "Disponível para Retirada"
-      - (REQ 6.1) Adicionado novo status 'retirada' entre 'separacao' e 'entregue'.
-      - (REQ 6.2) Aba Materiais: Botão "Disponível para Retirada" atualiza status para 'retirada'.
-      - (REQ 6.3) Aba Materiais: Botão "Entregue" só aparece se status for 'retirada'.
-      - (REQ 6.4) Dashboard (Geral): Adicionado card de contagem "Disponível p/ Retirada".
-      - (REQ 6.5) Dashboard (Geral): Colunas de Materiais Pendentes mostram 'separacao' e 'retirada' (com destaque verde).
-      - (REQ 6.6) Dashboard (Materiais): Lista agora mostra ambos os status pendentes.
-    -->
-    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.7.0 - Status Retirada)</title>
+    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.7.1 - Melhorias Visuais)</title>
     
-    <!-- Scripts e Links Externos -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
-    <!-- jsPDF para Relatórios PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
     <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js" defer></script>
-    <!-- Icones (Lucide) -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Link para o arquivo de CSS local -->
     <link rel="stylesheet" href="style.css">
     
 </head>
 <body class="text-slate-700 antialiased">
 
-    <!-- 1. Header Institucional -->
     <header class="header-banner sticky top-0 z-50">
         <div class="container mx-auto px-4">
             <div class="logo-container">
-                <!-- [Imagem do Logo Prefeitura de São Luís] -->
                 <img src="https://www.saoluis.ma.gov.br/img/logo_mobile.png" alt="Logo Prefeitura de São Luís" class="logo-img" onerror="this.src='https://placehold.co/150x60/ffffff/1e40af?text=SEMCAS'; this.onerror=null;">
                 <div class="title-container">
                     <h1 class="main-title">CONTROLE DE ALMOXARIFADO</h1>
@@ -48,31 +32,25 @@
         </div>
     </header>
 
-    <!-- 2. Sub-Header de Controles -->
     <div class="bg-white shadow-sm border-b border-slate-200">
         <div class="container mx-auto px-4 py-3">
             <div class="flex justify-between items-center flex-wrap sub-header-controls">
                 <div class="flex items-center space-x-4 sub-header-info">
                     <div class="bg-blue-500 text-white p-3 rounded-lg hidden sm:block">
-                         <!-- [Ícone de Almoxarifado] -->
                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M19 16h-3m0 0 3-3 3 3m-3 7v-7"/><path d="M18 5V3"/><path d="M7 5V3"/><path d="M12 5V3"/></svg>
                     </div>
                     <div>
                         <h2 class="font-bold text-lg text-slate-800">Sistema de Almoxarifado</h2>
-                        <p class="text-sm text-slate-500">v.1.0 by Jurandy Santana</p> <!-- Versão Atualizada -->
-                    </div>
+                        <p class="text-sm text-slate-500">v.1.0 by Jurandy Santana</p> </div>
                 </div>
                 <div class="flex items-center space-x-4 text-sm">
-                    <!-- Status da Conexão com Firebase -->
                     <div id="connectionStatus" class="flex items-center gap-2"></div>
-                    <!-- Horário da Última Atualização -->
                     <p id="last-update-time" class="text-slate-500"></p> 
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 3. Sistema de Navegação -->
     <nav class="bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky z-40 top-[92px] md:top-[88px]">
         <div class="container mx-auto px-4">
             <div class="flex space-x-1 overflow-x-auto main-nav-container">
@@ -86,18 +64,14 @@
         </div>
     </nav>
 
-    <!-- 4. Conteúdo Principal -->
     <main class="container mx-auto p-4 sm:p-6 lg:p-8">
         
-        <!-- Conteúdo do Dashboard -->
         <div id="content-dashboard" class="fade-in">
-            <!-- Header do Dashboard com Navegação -->
             <div class="flex justify-between items-start mb-6 flex-wrap gap-4">
                  <div>
                     <h3 class="text-2xl font-bold text-slate-800">Visão Geral do Almoxarifado</h3>
                     <p class="text-sm text-slate-500 mt-1">A página atualiza automaticamente a cada 2 minutos.</p>
                  </div>
-                 <!-- Navegação interna do Dashboard -->
                  <div class="flex flex-wrap gap-2" id="dashboard-nav-controls">
                      <button class="dashboard-nav-btn active" data-view="geral">Visão Geral</button>
                      <button class="dashboard-nav-btn" data-view="agua">💧 Água</button>
@@ -106,13 +80,10 @@
                  </div>
             </div>
            
-            <!-- Container das visualizações do Dashboard -->
             <div class="dashboard-tv-view">
                 
-                <!-- VISÃO GERAL (NOVA) -->
                 <div id="dashboard-view-geral" class="fade-in">
                     
-                    <!-- (REQ 6.4) Cards de Estoque - Grid de 3 para 4 colunas -->
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                         <div class="card text-center">
                             <h3 class="font-semibold text-slate-800 mb-2">💧 Estoque de Água</h3>
@@ -124,25 +95,21 @@
                             <p id="dashboard-estoque-gas" class="card-value text-orange-600">0</p>
                             <p class="card-label">Botijões Disponíveis</p>
                         </div>
-                        <!-- (REQ 1) Card "Vazios Pendentes" alterado para "Materiais em Separação" -->
-                        <div class="card text-center">
+                        <div id="dashboard-card-separacao" class="card text-center clickable-card">
                             <h3 class="font-semibold text-slate-800 mb-2">Em Separação</h3>
                             <p id="dashboard-materiais-separacao-count" class="card-value text-yellow-600">0</p>
                             <p class="card-label">Registros pendentes</p>
                         </div>
-                        <!-- (REQ 6.4) Card "Disponível para Retirada" -->
-                        <div class="card text-center">
+                        <div id="dashboard-card-retirada" class="card text-center clickable-card">
                             <h3 class="font-semibold text-slate-800 mb-2">Disponível p/ Retirada</h3>
                             <p id="dashboard-materiais-retirada-count" class="card-value text-green-600">0</p>
                             <p class="card-label">Registros prontos</p>
                         </div>
                     </div>
 
-                    <!-- (REQ 6.5) Card de Materiais Pendentes (novo título) -->
                     <div class="card">
-                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Materiais Pendentes</h3>
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4 text-center">Materiais do Almoxarifado</h3>
                         <div id="dashboard-materiais-prontos" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                            <!-- Colunas (CT, SEDE, CRAS, CREAS, ABRIGO) serão geradas pelo JS -->
                             <div class="text-center p-10 col-span-full" id="loading-materiais-prontos">
                                 <div class="loading-spinner-small mx-auto mb-2"></div>
                                 <p class="text-sm text-slate-500">Carregando...</p>
@@ -151,10 +118,8 @@
                     </div>
                 </div>
 
-                <!-- VISÃO ÁGUA -->
                 <div id="dashboard-view-agua" class="hidden fade-in">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <!-- Cards de Resumo Água -->
                         <div class="card text-center">
                             <h3 class="font-semibold text-slate-800 mb-2">Total Pendente (Saldo)</h3>
                             <p id="summary-agua-pendente" class="card-value text-red-600">0</p>
@@ -171,7 +136,6 @@
                             <p class="card-label">Galões vazios</p>
                         </div>
                     </div>
-                    <!-- Gráfico de Água -->
                     <div class="card mt-6">
                         <h3 class="text-lg font-semibold text-slate-800 mb-4">Controle de Água (Últimos 30 dias)</h3>
                         <div class="chart-container">
@@ -181,10 +145,8 @@
                     </div>
                 </div>
                 
-                <!-- VISÃO GÁS -->
                 <div id="dashboard-view-gas" class="hidden fade-in">
                      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <!-- Cards de Resumo Gás -->
                         <div class="card text-center">
                             <h3 class="font-semibold text-slate-800 mb-2">Total Pendente (Saldo)</h3>
                             <p id="summary-gas-pendente" class="card-value text-red-600">0</p>
@@ -201,7 +163,6 @@
                             <p class="card-label">Botijões vazios</p>
                         </div>
                     </div>
-                    <!-- Gráfico de Gás -->
                     <div class="card mt-6">
                         <h3 class="text-lg font-semibold text-slate-800 mb-4">Controle de Gás (Últimos 30 dias)</h3>
                         <div class="chart-container">
@@ -211,9 +172,7 @@
                     </div>
                 </div>
                 
-                <!-- VISÃO MATERIAIS -->
                 <div id="dashboard-view-materiais" class="hidden fade-in">
-                    <!-- (REQ 6.6) Lista de Materiais -->
                     <div class="card">
                         <h3 class="text-lg font-semibold text-slate-800 mb-4">Materiais Pendentes</h3>
                         <div id="dashboard-materiais-list" class="space-y-3 dashboard-list">
@@ -227,23 +186,18 @@
             </div>
         </div>
 
-        <!-- Conteúdo Controle de Água -->
         <div id="content-agua" class="hidden fade-in">
-            <!-- (REQ 4) Sub-navegação -->
              <div class="flex flex-wrap gap-2 mb-6" id="sub-nav-agua">
                  <button class="sub-nav-btn active" data-subview="movimentacao-agua">Lançamentos / Status</button>
                  <button class="sub-nav-btn" data-subview="previsao-agua">Previsão</button>
              </div>
 
-            <!-- (REQ 4) Subview Movimentação -->
             <div id="subview-movimentacao-agua">
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     
-                    <!-- Card: Resumo do Estoque -->
                     <div class="lg:col-span-1 card bg-blue-50">
                         <h2 class="text-xl font-bold text-blue-800 mb-4">Estoque de Água</h2>
                         
-                        <!-- Form Estoque Inicial (Condicional) -->
                         <div id="form-inicial-agua-container" class="hidden bg-white p-4 rounded-md border border-blue-200 mb-4">
                             <h3 class="text-sm font-semibold mb-2 text-blue-700">Ponta-pé Inicial</h3>
                             <p class="text-xs text-slate-500 mb-3">Informe a quantidade inicial para começar.</p>
@@ -261,10 +215,8 @@
                             <div id="alert-inicial-agua" class="alert mt-3 text-xs p-2"></div>
                         </div>
 
-                        <!-- Botão para abrir form inicial (Condicional) -->
                         <button id="btn-abrir-inicial-agua" class="btn btn-secondary btn-sm w-full mb-4 hidden">Definir Estoque Inicial</button>
 
-                        <!-- Resumo Normal -->
                         <ul id="resumo-estoque-agua" class="space-y-3 text-sm hidden">
                             <li class="flex justify-between items-center">
                                 <span class="text-slate-600">Estoque Inicial:</span>
@@ -288,15 +240,12 @@
                         </div>
                     </div>
 
-                    <!-- Coluna de Lançamento (com abas) -->
                     <div class="lg:col-span-1 card">
-                        <!-- Abas de Saída/Entrada -->
                         <div class="flex border-b mb-4 -mx-6 px-2">
                             <button class="form-tab-btn active" data-form="saida-agua">💧 Saída (Unidades)</button>
                             <button class="form-tab-btn" data-form="entrada-agua">📥 Entrada (Estoque)</button>
                         </div>
 
-                        <!-- Form 1: Saída (Movimentação Unidades) -->
                         <form id="form-agua" class="">
                             <h2 class="text-xl font-bold text-slate-800 mb-4">Lançar Movimentação (Água)</h2>
                             <div class="mb-4">
@@ -334,7 +283,6 @@
                             <button type="submit" id="btn-submit-agua" class="btn btn-primary w-full">Salvar Movimentação</button>
                         </form>
 
-                        <!-- Form 2: Entrada (Estoque) -->
                         <form id="form-entrada-agua" class="hidden">
                             <h2 class="text-xl font-bold text-slate-800 mb-4">Dar Entrada no Estoque (Água)</h2>
                             <div class="mb-4">
@@ -359,9 +307,7 @@
                         <div id="alert-agua" class="alert mt-4"></div>
                     </div>
                     
-                    <!-- Coluna de Status e Histórico -->
                     <div class="lg:col-span-2 space-y-6">
-                        <!-- Card Status (Pendentes) -->
                         <div class="card">
                             <h2 class="text-xl font-bold text-slate-800 mb-4">Status de Galões (Saldo nas Unidades)</h2>
                             <p class="text-sm text-slate-500 mb-2">Lista de unidades e saldo de galões. Passe o mouse na linha para ver o último responsável.</p>
@@ -391,7 +337,6 @@
                             </div>
                         </div>
 
-                        <!-- Card: Histórico de Entradas -->
                          <div class="card">
                             <h2 class="text-xl font-bold text-slate-800 mb-4">Histórico de Entradas no Estoque (Água)</h2>
                             <div id="alert-historico-agua" class="alert mb-4"></div>
@@ -422,12 +367,8 @@
 
                     </div>
                 </div>
-            </div> <!-- Fim Subview Movimentação Água -->
+            </div> 
 
-            <!-- (REQ 4) Subview Previsão Água -->
-            <!-- ======================================================== -->
-            <!-- === INÍCIO: HTML PREVISÃO ÁGUA SUBSTITUÍDO (DO TXT) === -->
-            <!-- ======================================================== -->
             <div id="subview-previsao-agua" class="hidden">
                 <div class="card max-w-6xl mx-auto">
                     <h2 class="text-2xl font-bold text-slate-800 mb-2">
@@ -437,7 +378,6 @@
                         Calcule previsões precisas baseadas no histórico de consumo para planejar compras e garantir abastecimento suficiente.
                     </p>
 
-                    <!-- ETAPA 1: Selecionar Modo -->
                     <div class="mb-6">
                         <h3 class="font-semibold text-slate-700 mb-3">1. Selecione o modo de previsão:</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -473,7 +413,6 @@
                         </div>
                     </div>
 
-                    <!-- ETAPA 2: Configurações -->
                     <div id="config-previsao-agua" class="hidden mb-6">
                         <h3 class="font-semibold text-slate-700 mb-3">2. Configure sua previsão:</h3>
 
@@ -482,7 +421,6 @@
                             <select id="select-previsao-unidade-agua-v2" class="form-select"></select>
                         </div>
 
-                        <!-- (REQ 5.1) Select de tipo agora é dinâmico -->
                         <div id="select-tipo-container-agua" class="hidden mb-4">
                             <label for="select-previsao-tipo-agua" class="form-label">Selecione o Tipo:</label>
                             <select id="select-previsao-tipo-agua" class="form-select">
@@ -515,7 +453,6 @@
                         </div>
                     </div>
 
-                    <!-- ETAPA 3: Calcular -->
                     <div class="text-center mb-6">
                         <button id="btn-calcular-previsao-agua-v2" class="btn btn-primary btn-lg px-8" onclick="calcularPrevisaoInteligente('agua')">
                             <i data-lucide="calculator"></i>
@@ -523,7 +460,6 @@
                         </button>
                     </div>
 
-                    <!-- RESULTADOS -->
                     <div id="resultado-previsao-agua-v2" class="hidden">
                         <div class="previsao-card mb-6">
                             <h3 class="text-xl font-bold mb-4">📊 Resultados da Previsão</h3>
@@ -539,30 +475,21 @@
                     </div>
                 </div>
             </div>
-            <!-- ====================================================== -->
-            <!-- === FIM: HTML PREVISÃO ÁGUA SUBSTITUÍDO (DO TXT) === -->
-            <!-- ====================================================== -->
-            <!-- Fim Subview Previsão Água -->
 
-        </div> <!-- Fim Content Água -->
+        </div>
 
-        <!-- Conteúdo Controle de Gás -->
         <div id="content-gas" class="hidden fade-in">
-             <!-- (REQ 4) Sub-navegação -->
              <div class="flex flex-wrap gap-2 mb-6" id="sub-nav-gas">
                  <button class="sub-nav-btn active" data-subview="movimentacao-gas">Lançamentos / Status</button>
                  <button class="sub-nav-btn" data-subview="previsao-gas">Previsão</button>
              </div>
 
-            <!-- (REQ 4) Subview Movimentação Gás -->
             <div id="subview-movimentacao-gas">
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     
-                    <!-- Card: Resumo do Estoque Gás -->
                     <div class="lg:col-span-1 card bg-orange-50">
                         <h2 class="text-xl font-bold text-orange-800 mb-4">Estoque de Gás</h2>
                          
-                        <!-- Form Estoque Inicial (Condicional) -->
                         <div id="form-inicial-gas-container" class="hidden bg-white p-4 rounded-md border border-orange-200 mb-4">
                             <h3 class="text-sm font-semibold mb-2 text-orange-700">Ponta-pé Inicial</h3>
                             <p class="text-xs text-slate-500 mb-3">Informe a quantidade inicial para começar.</p>
@@ -580,10 +507,8 @@
                              <div id="alert-inicial-gas" class="alert mt-3 text-xs p-2"></div>
                         </div>
 
-                        <!-- Botão para abrir form inicial (Condicional) -->
                         <button id="btn-abrir-inicial-gas" class="btn btn-secondary btn-sm w-full mb-4 hidden">Definir Estoque Inicial</button>
                          
-                        <!-- Resumo Normal -->
                         <ul id="resumo-estoque-gas" class="space-y-3 text-sm hidden">
                             <li class="flex justify-between items-center">
                                 <span class="text-slate-600">Estoque Inicial:</span>
@@ -607,15 +532,12 @@
                         </div>
                     </div>
 
-                    <!-- Coluna de Lançamento (com abas) -->
                     <div class="lg:col-span-1 card">
-                        <!-- Abas de Saída/Entrada -->
                         <div class="flex border-b mb-4 -mx-6 px-2">
                             <button class="form-tab-btn active" data-form="saida-gas">🔥 Saída (Unidades)</button>
                             <button class="form-tab-btn" data-form="entrada-gas">📥 Entrada (Estoque)</button>
                         </div>
 
-                        <!-- Form 1: Saída (Movimentação Unidades) -->
                         <form id="form-gas" class="">
                             <h2 class="text-xl font-bold text-slate-800 mb-4">Lançar Movimentação (Gás)</h2>
                             <div class="mb-4">
@@ -653,7 +575,6 @@
                             <button type="submit" id="btn-submit-gas" class="btn btn-primary w-full">Salvar Movimentação</button>
                         </form>
 
-                        <!-- Form 2: Entrada (Estoque) -->
                         <form id="form-entrada-gas" class="hidden">
                             <h2 class="text-xl font-bold text-slate-800 mb-4">Dar Entrada no Estoque (Gás)</h2>
                             <div class="mb-4">
@@ -678,9 +599,7 @@
                         <div id="alert-gas" class="alert mt-4"></div>
                     </div>
                     
-                    <!-- Coluna de Status e Histórico -->
                     <div class="lg:col-span-2 space-y-6">
-                        <!-- Card Status Gás -->
                         <div class="card">
                             <h2 class="text-xl font-bold text-slate-800 mb-4">Status de Botijões (Saldo nas Unidades)</h2>
                             <p class="text-sm text-slate-500 mb-2">Lista de unidades e saldo de botijões. Passe o mouse na linha para ver o último responsável.</p>
@@ -710,7 +629,6 @@
                             </div>
                         </div>
 
-                        <!-- Card: Histórico de Entradas Gás -->
                          <div class="card">
                             <h2 class="text-xl font-bold text-slate-800 mb-4">Histórico de Entradas no Estoque (Gás)</h2>
                             <div id="alert-historico-gas" class="alert mb-4"></div>
@@ -741,12 +659,8 @@
 
                     </div>
                 </div>
-            </div> <!-- Fim Subview Movimentação Gás -->
+            </div> 
             
-            <!-- (REQ 4) Subview Previsão Gás -->
-            <!-- ======================================================= -->
-            <!-- === INÍCIO: HTML PREVISÃO GÁS SUBSTITUÍDO (DO TXT) === -->
-            <!-- ======================================================= -->
             <div id="subview-previsao-gas" class="hidden">
                 <div class="card max-w-6xl mx-auto">
                     <h2 class="text-2xl font-bold text-slate-800 mb-2">
@@ -799,7 +713,6 @@
                             <select id="select-previsao-unidade-gas-v2" class="form-select"></select>
                         </div>
 
-                        <!-- (REQ 5.1) Select de tipo agora é dinâmico -->
                         <div id="select-tipo-container-gas" class="hidden mb-4">
                             <label for="select-previsao-tipo-gas" class="form-label">Selecione o Tipo:</label>
                             <select id="select-previsao-tipo-gas" class="form-select">
@@ -854,17 +767,11 @@
                     </div>
                 </div>
             </div>
-            <!-- ===================================================== -->
-            <!-- === FIM: HTML PREVISÃO GÁS SUBSTITUÍDO (DO TXT) === -->
-            <!-- ===================================================== -->
-            <!-- Fim Subview Previsão Gás -->
 
-        </div> <!-- Fim Content Gás -->
+        </div>
 
-        <!-- Conteúdo Entrega de Materiais -->
         <div id="content-materiais" class="hidden fade-in">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Coluna de Lançamento -->
                 <div class="lg:col-span-1 card">
                     <h2 class="text-xl font-bold text-slate-800 mb-4">Registrar Separação de Material</h2>
                     <form id="form-materiais">
@@ -900,11 +807,16 @@
                     <div id="alert-materiais" class="alert mt-4"></div>
                 </div>
                 
-                <!-- (REQ 6.2) Coluna de Status (Título atualizado) -->
                 <div class="lg:col-span-2 card">
                     <h2 class="text-xl font-bold text-slate-800 mb-4">Status dos Materiais</h2>
                     <p class="text-sm text-slate-500 mb-4">Controle de materiais em separação, disponíveis para retirada e já entregues.</p>
                     <div id="alert-materiais-lista" class="alert mb-4"></div>
+                    
+                    <div class="mb-4">
+                        <label for="filtro-status-materiais" class="form-label text-xs">Buscar Status ou Unidade:</label>
+                        <input type="text" id="filtro-status-materiais" data-table="table-status-materiais" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Digite 'separacao', 'retirada' ou nome...">
+                    </div>
+
                     <div class="overflow-x-auto">
                         <table class="table w-full text-sm">
                             <thead>
@@ -925,13 +837,11 @@
             </div>
         </div>
 
-        <!-- Conteúdo Gestão de Unidades -->
         <div id="content-gestao" class="hidden fade-in">
             <div class="card max-w-4xl mx-auto">
                 <h2 class="text-xl font-bold text-slate-800 mb-4">Gestão de Unidades de Atendimento</h2>
                 <div id="alert-gestao" class="alert mb-4"></div>
 
-                <!-- Seção de Adicionar Novas Unidades -->
                 <div class="mb-8 p-4 border border-slate-200 rounded-lg bg-slate-50">
                      <h3 class="font-semibold text-slate-700 mb-2">Adicionar Novas Unidades</h3>
                      <p class="text-sm text-slate-500 mb-3">Cole aqui a lista de unidades (uma por linha) no formato: <strong>Tipo [TAB] Nome da Unidade</strong>. Exemplo:</p>
@@ -940,11 +850,9 @@
                      <button id="btn-bulk-add-unidades" class="btn btn-primary">Adicionar Unidades</button>
                 </div>
 
-                <!-- Tabela de Gestão Existente -->
                 <h3 class="font-semibold text-slate-700 mb-2">Habilitar Serviços por Unidade</h3>
                 <p class="text-sm text-slate-500 mb-4">Marque as caixas para habilitar/desabilitar serviços. Clique no lápis para editar o nome.</p>
                 
-                <!-- Filtros -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label for="filtro-unidade-nome" class="form-label text-xs">Filtrar por Nome:</label>
@@ -965,7 +873,7 @@
                                 <th class="text-center">💧 Água</th>
                                 <th class="text-center">🔥 Gás</th>
                                 <th class="text-center">🚚 Materiais</th>
-                                <th class="text-center">Ações</th> <!-- Colspan ajustado para Ações -->
+                                <th class="text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="table-gestao-unidades">
@@ -976,7 +884,6 @@
             </div>
         </div>
 
-        <!-- Conteúdo Gerar Relatório -->
         <div id="content-relatorio" class="hidden fade-in">
             <div class="card max-w-2xl mx-auto">
                 <h2 class="text-xl font-bold text-slate-800 mb-4">Gerar Relatório em PDF</h2>
@@ -1006,17 +913,13 @@
             </div>
         </div>
 
-
     </main>
 
-    <!-- 5. Rodapé -->
     <footer class="text-center mt-12 mb-6 text-sm text-slate-500">
         <p>Jurandy Santana</p>
     </footer>
     
-
-     <!-- Modal de Confirmação de Exclusão -->
-    <div id="confirm-delete-modal" class="modal">
+     <div id="confirm-delete-modal" class="modal">
       <div class="modal-content" style="max-width: 400px;">
         <div class="modal-header">
           <h2 class="modal-title text-red-600">Confirmar Exclusão</h2>
@@ -1039,7 +942,6 @@
       </div>
     </div>
 
-    <!-- Script Principal da Aplicação -->
     <script src="app.js" type="module" defer></script>
 </body>
 </html>
