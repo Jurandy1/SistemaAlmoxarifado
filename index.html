@@ -804,6 +804,12 @@
                              <textarea id="textarea-itens-materiais" class="form-textarea" placeholder="Alguma observação sobre esta separação... (Opcional)"></textarea>
                         </div>
 
+                        <div class="mb-4">
+                            <label for="input-arquivo-materiais" class="form-label">Anexar Arquivo (PDF ou Excel)</label>
+                            <input type="file" id="input-arquivo-materiais" class="form-input" accept=".pdf,.xls,.xlsx,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+                            <p class="text-xs text-slate-500 mt-1">Tamanho máximo: 10MB. Formatos: PDF, XLS, XLSX</p>
+                        </div>
+
                          <div class="mb-4">
                              <label for="input-responsavel-materiais" class="form-label">Responsável (Separação)</label>
                              <input type="text" id="input-responsavel-materiais" class="form-input" placeholder="Nome de quem separou" required>
@@ -851,7 +857,7 @@
                 <div class="mb-8 p-4 border border-slate-200 rounded-lg bg-slate-50">
                      <h3 class="font-semibold text-slate-700 mb-2">Adicionar Novas Unidades</h3>
                      <p class="text-sm text-slate-500 mb-3">Cole aqui a lista de unidades (uma por linha) no formato: <strong>Tipo [TAB] Nome da Unidade</strong>. Exemplo:</p>
-                     <pre class="text-xs bg-white p-2 rounded border border-slate-300 mb-3">CRAS	Anjo da Guarda<br>CREAS	Centro</pre>
+                     <pre class="text-xs bg-white p-2 rounded border border-slate-300 mb-3">CRAS        Anjo da Guarda<br>CREAS Centro</pre>
                      <textarea id="textarea-bulk-unidades" class="form-textarea mb-3" rows="5" placeholder="Cole os dados aqui..."></textarea>
                      <button id="btn-bulk-add-unidades" class="btn btn-primary">Adicionar Unidades</button>
                 </div>
@@ -944,6 +950,29 @@
         <div class="modal-footer space-x-2">
           <button id="btn-cancel-delete" class="btn-secondary">Cancelar</button>
           <button id="btn-confirm-delete" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">Confirmar Exclusão</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-definir-responsavel-separacao" class="modal">
+      <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+          <h2 class="modal-title">Definir Responsável pela Separação</h2>
+          <button class="modal-close" id="btn-fechar-modal-responsavel">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="text-sm text-slate-600 mb-4">Informe o nome da pessoa que vai separar este material. Após confirmar, o download do arquivo será liberado e o status mudará para "Em separação".</p>
+            <div class="mb-4">
+                <label for="input-nome-responsavel-separacao" class="form-label">Nome do Responsável</label>
+                <input type="text" id="input-nome-responsavel-separacao" class="form-input" placeholder="Digite o nome completo" required>
+            </div>
+            <p class="text-xs text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-200">
+                <strong>Atenção:</strong> O arquivo poderá ser baixado apenas 2 vezes após a liberação.
+            </p>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-cancelar-responsavel-separacao" class="btn btn-secondary">Cancelar</button>
+          <button id="btn-confirmar-responsavel-separacao" class="btn btn-primary">Confirmar e Liberar Download</button>
         </div>
       </div>
     </div>
