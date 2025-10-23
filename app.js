@@ -1509,8 +1509,20 @@ function renderDashboardMateriaisList() {
  * @param {string|null} filterStatus - O status para filtrar ('separacao', 'retirada') ou null para mostrar todos.
  */
 function renderDashboardMateriaisProntos(filterStatus = null) {
-    if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos || !dashboardMateriaisTitle || !btnClearDashboardFilter) return;
-    loadingMateriaisProntos.style.display = 'none'; 
+    // Verifica se os elementos essenciais existem
+    if (!dashboardMateriaisProntosContainer || !dashboardMateriaisTitle || !btnClearDashboardFilter) {
+        console.warn("Elementos do DOM para renderizar materiais do dashboard não encontrados.");
+        return;
+    }
+    
+    // Esconde o loader se ele ainda existir (embora a lógica agora seja substituir o conteúdo)
+    // loadingMateriaisProntos pode não ser mais necessário, mas manteremos a referência por enquanto
+    if (loadingMateriaisProntos) {
+        loadingMateriaisProntos.style.display = 'none'; // Garante que o loader inicial seja escondido
+    } else {
+         // Se loadingMateriaisProntos não existe mais, garante que o container está visível
+         dashboardMateriaisProntosContainer.innerHTML = ''; // Limpa o container para evitar duplicatas
+    }
     
     // Filtra os materiais ANTES de agrupar
     let pendentes = fb_materiais.filter(m => m.status === 'separacao' || m.status === 'retirada');
@@ -1523,64 +1535,73 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
         dashboardMateriaisTitle.textContent = 'Materiais do Almoxarifado';
     }
     
-    if (pendentes.length === 0) {
-        dashboardMateriaisProntosContainer.innerHTML = `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterStatus ? `com status "${filterStatus}"` : 'pendente'} encontrado.</p>`;
-        return;
-    }
-
-    const gruposTipoUnidade = pendentes.reduce((acc, m) => {
-        let tipoUnidade = (m.tipoUnidade || 'OUTROS').toUpperCase();
-        if (tipoUnidade === 'SEMCAS') tipoUnidade = 'SEDE'; 
-        
-        if (!acc[tipoUnidade]) acc[tipoUnidade] = [];
-        acc[tipoUnidade].push(m);
-        return acc;
-    }, {});
-
-    const ordemColunas = ['CT', 'SEDE', 'CRAS', 'CREAS', 'ABRIGO'];
-    Object.keys(gruposTipoUnidade).forEach(tipo => { if (!ordemColunas.includes(tipo)) ordemColunas.push(tipo); });
-
-    let html = '';
-    let colunasRenderizadas = 0;
+    // Prepara o HTML a ser inserido
+    let contentHtml = ''; 
     
-    ordemColunas.forEach(tipoUnidade => {
-        if (gruposTipoUnidade[tipoUnidade] && gruposTipoUnidade[tipoUnidade].length > 0) {
-            colunasRenderizadas++;
-            html += `<div class="materiais-prontos-col"><h4>${tipoUnidade}</h4><ul class="space-y-3">`; 
+    if (pendentes.length === 0) {
+        contentHtml = `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterStatus ? `com status "${filterStatus}"` : 'pendente'} encontrado.</p>`;
+    } else {
+        const gruposTipoUnidade = pendentes.reduce((acc, m) => {
+            let tipoUnidade = (m.tipoUnidade || 'OUTROS').toUpperCase();
+            if (tipoUnidade === 'SEMCAS') tipoUnidade = 'SEDE'; 
             
-            // Ordena dentro da coluna (opcional, pode manter a ordem original se preferir)
-            const materiaisOrdenados = gruposTipoUnidade[tipoUnidade].sort((a,b) => {
-                const statusOrder = { 'separacao': 1, 'retirada': 2 };
-                const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
-                if (statusCompare !== 0) return statusCompare;
-                return (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0);
-            });
+            if (!acc[tipoUnidade]) acc[tipoUnidade] = [];
+            acc[tipoUnidade].push(m);
+            return acc;
+        }, {});
 
-            materiaisOrdenados.forEach(m => {
-                const tiposMateriais = m.tipoMaterial || 'N/D';
-                let statusIndicator = '';
+        const ordemColunas = ['CT', 'SEDE', 'CRAS', 'CREAS', 'ABRIGO'];
+        Object.keys(gruposTipoUnidade).forEach(tipo => { if (!ordemColunas.includes(tipo)) ordemColunas.push(tipo); });
+
+        let colunasHtml = '';
+        let colunasRenderizadas = 0;
+        
+        ordemColunas.forEach(tipoUnidade => {
+            if (gruposTipoUnidade[tipoUnidade] && gruposTipoUnidade[tipoUnidade].length > 0) {
+                colunasRenderizadas++;
+                colunasHtml += `<div class="materiais-prontos-col"><h4>${tipoUnidade}</h4><ul class="space-y-3">`; 
                 
-                if (m.status === 'separacao') {
-                    statusIndicator = `<span class="status-indicator separando">⏳ Separando...</span>`;
-                } else if (m.status === 'retirada') {
-                    statusIndicator = `<span class="status-indicator pronto">✅ Pronto</span>`; // Texto simplificado
-                }
+                const materiaisOrdenados = gruposTipoUnidade[tipoUnidade].sort((a,b) => {
+                    const statusOrder = { 'separacao': 1, 'retirada': 2 };
+                    const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
+                    if (statusCompare !== 0) return statusCompare;
+                    return (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0);
+                });
 
-                html += `
-                    <li class="${m.status === 'retirada' ? 'item-retirada' : ''}">
-                        <strong>${m.unidadeNome}</strong><br>
-                        <span class="capitalize">(${tiposMateriais})</span>
-                        <div>${statusIndicator}</div>
-                    </li>`; 
-            });
-            
-            html += `</ul></div>`;
-        }
-    });
+                materiaisOrdenados.forEach(m => {
+                    const tiposMateriais = m.tipoMaterial || 'N/D';
+                    let statusIndicator = '';
+                    
+                    if (m.status === 'separacao') {
+                        statusIndicator = `<span class="status-indicator separando">⏳ Separando...</span>`;
+                    } else if (m.status === 'retirada') {
+                        statusIndicator = `<span class="status-indicator pronto">✅ Pronto</span>`;
+                    }
 
-    dashboardMateriaisProntosContainer.innerHTML = colunasRenderizadas > 0 ? html : `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterStatus ? `com status "${filterStatus}"` : 'pendente'} encontrado.</p>`;
-    lucide.createIcons(); 
+                    colunasHtml += `
+                        <li class="${m.status === 'retirada' ? 'item-retirada' : ''}">
+                            <strong>${m.unidadeNome}</strong><br>
+                            <span class="capitalize">(${tiposMateriais})</span>
+                            <div>${statusIndicator}</div>
+                        </li>`; 
+                });
+                
+                colunasHtml += `</ul></div>`;
+            }
+        });
+
+        contentHtml = colunasRenderizadas > 0 ? colunasHtml : `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterStatus ? `com status "${filterStatus}"` : 'pendente'} encontrado.</p>`;
+    }
+    
+    // Atualiza o conteúdo do container principal
+    dashboardMateriaisProntosContainer.innerHTML = contentHtml;
+    
+    // Recria ícones se necessário (após a atualização do innerHTML)
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons(); 
+    }
 }
+
 
 /**
  * (NOVO) Aplica o filtro de materiais no dashboard.
@@ -2144,7 +2165,8 @@ function initApp() {
     dashboardNavControls = document.getElementById('dashboard-nav-controls');
     summaryAguaPendente = document.getElementById('summary-agua-pendente'); summaryAguaEntregue = document.getElementById('summary-agua-entregue'); summaryAguaRecebido = document.getElementById('summary-agua-recebido');
     summaryGasPendente = document.getElementById('summary-gas-pendente'); summaryGasEntregue = document.getElementById('summary-gas-entregue'); summaryGasRecebido = document.getElementById('summary-gas-recebido');
-    dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos'); loadingMateriaisProntos = document.getElementById('loading-materiais-prontos');
+    dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos'); 
+    loadingMateriaisProntos = document.getElementById('loading-materiais-prontos'); // Referência ao DIV do loader
     dashboardMateriaisListContainer = document.getElementById('dashboard-materiais-list'); loadingMateriaisDashboard = document.getElementById('loading-materiais-dashboard');
     dashboardEstoqueAguaEl = document.getElementById('dashboard-estoque-agua'); dashboardEstoqueGasEl = document.getElementById('dashboard-estoque-gas'); dashboardMateriaisSeparacaoCountEl = document.getElementById('dashboard-materiais-separacao-count');
     dashboardMateriaisRetiradaCountEl = document.getElementById('dashboard-materiais-retirada-count');
