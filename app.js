@@ -38,19 +38,18 @@ let dashboardAguaChartInstance, dashboardGasChartInstance;
 let dashboardRefreshInterval = null;
 let deleteInfo = { id: null, type: null, collectionRef: null, details: null, isInicial: false }; 
 let initialMaterialFilter = null; // Variável para filtro inicial da aba Materiais
-let currentDashboardMaterialFilter = null; // (NOVO) Filtro ativo no dashboard
+let currentDashboardMaterialFilter = null; // Filtro ativo no dashboard
 
-// --- Referências de Elementos (DOM) ---
+// --- Referências de Elementos (DOM) - Globais (manter as que são usadas em múltiplas funções) ---
 let navButtons, contentPanes, connectionStatusEl, lastUpdateTimeEl;
 let dashboardNavControls;
 let summaryAguaPendente, summaryAguaEntregue, summaryAguaRecebido;
 let summaryGasPendente, summaryGasEntregue, summaryGasRecebido;
-let dashboardMateriaisProntosContainer, loadingMateriaisProntos;
+// Removidas referências específicas do dashboard de materiais daqui (serão buscadas na função)
 let dashboardMateriaisListContainer, loadingMateriaisDashboard;
 let dashboardEstoqueAguaEl, dashboardEstoqueGasEl, dashboardMateriaisSeparacaoCountEl;
 let dashboardMateriaisRetiradaCountEl;
-let btnClearDashboardFilter; // (NOVO) Botão para limpar filtro do dashboard
-let dashboardMateriaisTitle; // (NOVO) Referência ao título H3 dos materiais
+// btnClearDashboardFilter e dashboardMateriaisTitle também removidos daqui
 let formAgua, selectUnidadeAgua, selectTipoAgua, inputDataAgua, inputResponsavelAgua, btnSubmitAgua, alertAgua, tableStatusAgua, alertAguaLista;
 let inputQtdEntregueAgua, inputQtdRetornoAgua, formGroupQtdEntregueAgua, formGroupQtdRetornoAgua; 
 let formGas, selectUnidadeGas, selectTipoGas, inputDataGas, inputResponsavelGas, btnSubmitGas, alertGas, tableStatusGas, alertGasLista;
@@ -295,7 +294,12 @@ function clearAlmoxarifadoData() {
     
     [tableStatusAgua, tableStatusGas, tableStatusMateriais, tableGestaoUnidades, tableHistoricoAgua, tableHistoricoGas].forEach(tbody => { if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">Desconectado do Firebase</td></tr>'; });
     
-    [dashboardMateriaisListContainer, dashboardMateriaisProntosContainer].forEach(el => { if(el) el.innerHTML = '<p class="text-center py-4 text-red-500">Desconectado</p>'; });
+    // Tenta limpar containers do dashboard se existirem
+    const dashMateriaisList = document.getElementById('dashboard-materiais-list');
+    const dashMateriaisProntos = document.getElementById('dashboard-materiais-prontos');
+    if (dashMateriaisList) dashMateriaisList.innerHTML = '<p class="text-center py-4 text-red-500">Desconectado</p>';
+    if (dashMateriaisProntos) dashMateriaisProntos.innerHTML = '<p class="text-center py-4 text-red-500">Desconectado</p>';
+
     
     [dashboardAguaChartInstance, dashboardGasChartInstance, graficoPrevisao.agua, graficoPrevisao.gas].forEach(chartInstance => { 
         if (chartInstance) { 
@@ -322,8 +326,10 @@ function clearAlmoxarifadoData() {
     document.getElementById('filtro-status-gas')?.setAttribute('value', '');
     document.getElementById('filtro-historico-gas')?.setAttribute('value', '');
 
-    if (btnClearDashboardFilter) btnClearDashboardFilter.classList.add('hidden'); // Esconde botão de limpar filtro
-    if (dashboardMateriaisTitle) dashboardMateriaisTitle.textContent = 'Materiais do Almoxarifado'; // Reseta título
+    const btnClearDashFilter = document.getElementById('btn-clear-dashboard-filter');
+    if (btnClearDashFilter) btnClearDashFilter.classList.add('hidden'); // Esconde botão de limpar filtro
+    const dashMateriaisTitle = document.getElementById('dashboard-materiais-title');
+    if (dashMateriaisTitle) dashMateriaisTitle.textContent = 'Materiais do Almoxarifado'; // Reseta título
 
     console.log("Dados do Almoxarifado limpos devido à desconexão.");
 }
@@ -396,6 +402,7 @@ function populateTipoSelects(itemType) {
 
 
 // --- LÓGICA DE CONTROLE DE ÁGUA ---
+// ... (código da água inalterado) ...
 function toggleAguaFormInputs() {
     if (!selectTipoAgua) return; 
     const tipo = selectTipoAgua.value;
@@ -531,7 +538,9 @@ function renderAguaStatus() {
     }
 }
 
+
 // --- LÓGICA DE CONTROLE DE GÁS ---
+// ... (código do gás inalterado) ...
 function toggleGasFormInputs() {
     if (!selectTipoGas) return; 
     const tipo = selectTipoGas.value;
@@ -667,7 +676,9 @@ function renderGasStatus() {
     }
 }
 
+
 // --- LÓGICA DE PREVISÃO INTELIGENTE ---
+// ... (código da previsão inalterado) ...
 window.selecionarModoPrevisao = (tipoItem, modo) => {
     console.log(`Modo Previsão (${tipoItem}): ${modo}`);
     modoPrevisao[tipoItem] = modo;
@@ -938,6 +949,7 @@ function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
 
 
 // --- LÓGICA DE CONTROLE DE MATERIAIS ---
+// ... (código do handleMateriaisSubmit, renderMateriaisStatus, handleMarcarRetirada, handleMarcarEntregue inalterado) ...
 async function handleMateriaisSubmit(e) {
     e.preventDefault();
     if (!isAuthReady) { showAlert('alert-materiais', 'Erro: Não autenticado.', 'error'); return; }
@@ -1079,19 +1091,8 @@ async function handleMarcarEntregue(e) {
     const materialId = button.dataset.id;
     if (!isAuthReady || !materialId) return;
     
-    // (REQ 3) Correção de Bug: Substituído prompt() por um valor padrão.
-    // O prompt() pode falhar em iframes ou ser bloqueado.
-    // const responsavelEntrega = prompt("Nome do responsável pela entrega/retirada:");
-    // if (!responsavelEntrega) { 
-    //      showAlert('alert-materiais-lista', 'Nome do responsável é obrigatório para marcar como entregue.', 'warning');
-    //      return; 
-    // }
-    
-    // (REQ 3) Nova lógica: Tenta usar o responsável pela separação ou um placeholder
     const material = fb_materiais.find(m => m.id === materialId);
-    // Usa o responsável da separação, ou um texto padrão se não for encontrado
     const responsavelEntrega = material?.responsavelSeparacao || "Responsável (Retirada)"; 
-    // Fim da correção (REQ 3)
     
     button.disabled = true; button.innerHTML = '<div class="loading-spinner-small mx-auto" style="width: 16px; height: 16px; border-width: 2px;"></div>';
     
@@ -1100,7 +1101,7 @@ async function handleMarcarEntregue(e) {
         await updateDoc(docRef, { 
             status: 'entregue', 
             dataEntrega: serverTimestamp(), 
-            responsavelEntrega: capitalizeString(responsavelEntrega) // Usa o novo responsável
+            responsavelEntrega: capitalizeString(responsavelEntrega) 
         });
         showAlert('alert-materiais-lista', 'Material marcado como entregue!', 'success', 3000);
     } catch (error) { 
@@ -1111,7 +1112,9 @@ async function handleMarcarEntregue(e) {
     } 
 }
 
+
 // --- LÓGICA DE GESTÃO DE UNIDADES ---
+// ... (código da gestão de unidades inalterado) ...
 function renderGestaoUnidades() {
     if (!tableGestaoUnidades) return;
     
@@ -1322,7 +1325,9 @@ async function handleBulkAddUnidades() {
      }
 }
 
+
 // --- LÓGICA DO DASHBOARD ---
+// ... (código do switchDashboardView, renderDashboardVisaoGeralSummary, renderDashboardMateriaisCounts, filterLast30Days, getChartDataLast30Days, renderDashboardAguaChart, renderDashboardGasChart, renderDashboardAguaSummary, renderDashboardGasSummary, renderDashboardMateriaisList inalterado) ...
 function switchDashboardView(viewName) {
     document.querySelectorAll('#dashboard-nav-controls .dashboard-nav-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.view === viewName);
@@ -1504,35 +1509,46 @@ function renderDashboardMateriaisList() {
     }).join('');
 }
 
+
 /**
  * Renderiza as colunas de materiais pendentes no dashboard, com opção de filtro por status.
  * @param {string|null} filterStatus - O status para filtrar ('separacao', 'retirada') ou null para mostrar todos.
  */
 function renderDashboardMateriaisProntos(filterStatus = null) {
+    // CORREÇÃO: Busca os elementos dentro da função
+    const container = document.getElementById('dashboard-materiais-prontos');
+    const titleEl = document.getElementById('dashboard-materiais-title');
+    const clearButton = document.getElementById('btn-clear-dashboard-filter');
+    const loader = document.getElementById('loading-materiais-prontos'); // Loader original
+
     // Verifica se os elementos essenciais existem
-    if (!dashboardMateriaisProntosContainer || !dashboardMateriaisTitle || !btnClearDashboardFilter) {
-        console.warn("Elementos do DOM para renderizar materiais do dashboard não encontrados.");
+    if (!container || !titleEl || !clearButton) {
+        console.warn("Elementos do DOM para renderizar materiais do dashboard não encontrados ao executar a função.");
+        // Se o container não existe, não há onde colocar o loader ou a mensagem.
+        // Se ele existe mas os outros não, podemos limpar e mostrar erro no container.
+        if (container) {
+             container.innerHTML = '<p class="text-sm text-red-500 text-center py-4 col-span-full">Erro: Elementos da interface não encontrados.</p>';
+        }
         return;
     }
     
-    // Esconde o loader se ele ainda existir (embora a lógica agora seja substituir o conteúdo)
-    // loadingMateriaisProntos pode não ser mais necessário, mas manteremos a referência por enquanto
-    if (loadingMateriaisProntos) {
-        loadingMateriaisProntos.style.display = 'none'; // Garante que o loader inicial seja escondido
-    } else {
-         // Se loadingMateriaisProntos não existe mais, garante que o container está visível
-         dashboardMateriaisProntosContainer.innerHTML = ''; // Limpa o container para evitar duplicatas
+    // Mostra o loader interno (se existir) enquanto processa, ou limpa o container
+    if (loader) {
+         // Se o loader original ainda está lá (primeira carga talvez), remove-o
+         loader.style.display = 'none';
     }
-    
+    // Garante que o container esteja limpo antes de adicionar novo conteúdo
+    container.innerHTML = '<div class="text-center p-10 col-span-full"><div class="loading-spinner-small mx-auto mb-2"></div><p class="text-sm text-slate-500">Atualizando...</p></div>';
+
     // Filtra os materiais ANTES de agrupar
     let pendentes = fb_materiais.filter(m => m.status === 'separacao' || m.status === 'retirada');
     if (filterStatus) {
         pendentes = pendentes.filter(m => m.status === filterStatus);
-        btnClearDashboardFilter.classList.remove('hidden'); // Mostra o botão de limpar
-        dashboardMateriaisTitle.textContent = `Materiais ${filterStatus === 'separacao' ? 'em Separação' : 'Disponíveis p/ Retirada'}`;
+        clearButton.classList.remove('hidden'); // Mostra o botão de limpar
+        titleEl.textContent = `Materiais ${filterStatus === 'separacao' ? 'em Separação' : 'Disponíveis p/ Retirada'}`;
     } else {
-        btnClearDashboardFilter.classList.add('hidden'); // Esconde o botão de limpar
-        dashboardMateriaisTitle.textContent = 'Materiais do Almoxarifado';
+        clearButton.classList.add('hidden'); // Esconde o botão de limpar
+        titleEl.textContent = 'Materiais do Almoxarifado';
     }
     
     // Prepara o HTML a ser inserido
@@ -1593,8 +1609,8 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
         contentHtml = colunasRenderizadas > 0 ? colunasHtml : `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterStatus ? `com status "${filterStatus}"` : 'pendente'} encontrado.</p>`;
     }
     
-    // Atualiza o conteúdo do container principal
-    dashboardMateriaisProntosContainer.innerHTML = contentHtml;
+    // Atualiza o conteúdo do container principal DEPOIS de montar o HTML
+    container.innerHTML = contentHtml;
     
     // Recria ícones se necessário (após a atualização do innerHTML)
     if (typeof lucide !== 'undefined') {
@@ -1604,7 +1620,7 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
 
 
 /**
- * (NOVO) Aplica o filtro de materiais no dashboard.
+ * Aplica o filtro de materiais no dashboard.
  * @param {string|null} status - O status para filtrar ('separacao', 'retirada') ou null para limpar.
  */
 function filterDashboardMateriais(status) {
@@ -1617,12 +1633,19 @@ function filterDashboardMateriais(status) {
  */
 function autoScrollView(element) {
     if (!element) return;
+    // Adiciona verificação para garantir que o elemento está visível antes de rolar
+    if (element.offsetParent === null) return; // Não rola se o elemento estiver oculto (display: none ou em um pai oculto)
+
     if (element.scrollHeight > element.clientHeight) {
         const scrollOptions = { behavior: 'smooth' };
         element.scrollTo({ top: element.scrollHeight, ...scrollOptions });
         
         setTimeout(() => {
-            element.scrollTo({ top: 0, ...scrollOptions });
+            // Verifica novamente se o elemento ainda é o mesmo e está visível
+            const currentElement = document.getElementById('dashboard-materiais-prontos');
+            if (currentElement && currentElement.offsetParent !== null) {
+                currentElement.scrollTo({ top: 0, ...scrollOptions });
+            }
         }, 3000);
     }
 }
@@ -1644,7 +1667,9 @@ function startDashboardRefresh() {
         
         // Só faz auto-scroll se não houver filtro ativo
         if (!currentDashboardMaterialFilter) {
-            autoScrollView(dashboardMateriaisProntosContainer);
+            // Busca o elemento novamente antes de chamar autoScrollView
+            const container = document.getElementById('dashboard-materiais-prontos');
+            autoScrollView(container);
         }
 
     }, 120000);
@@ -1659,6 +1684,7 @@ function stopDashboardRefresh() {
 }
 
 // --- LÓGICA DE RELATÓRIO PDF ---
+// ... (código do relatório PDF inalterado) ...
 function handleGerarPdf() {
     if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined' || typeof window.jspdf.AutoTable === 'undefined') {
         showAlert('alert-relatorio', 'Erro: Bibliotecas PDF não carregadas. Tente recarregar a página.', 'error'); return;
@@ -1752,7 +1778,9 @@ function handleGerarPdf() {
     }
 }
 
+
 // --- LÓGICA DE EXCLUSÃO ---
+// ... (código da exclusão inalterado) ...
 async function openConfirmDeleteModal(id, type, details = null) {
     if (!id || !type) return; 
     
@@ -1871,7 +1899,9 @@ async function deleteUnitHistory(unidadeId) {
     }
 }
 
+
 // --- LÓGICA DE CONTROLE DE ESTOQUE (ENTRADA) ---
+// ... (código do estoque inalterado) ...
 async function handleInicialEstoqueSubmit(e) {
     e.preventDefault();
     const tipoEstoque = e.target.id.includes('agua') ? 'agua' : 'gas'; 
@@ -2158,6 +2188,7 @@ function switchTab(tabName) {
 }
 
 function initApp() {
+    // Atribuições globais mantidas (exceto as movidas para renderDashboardMateriaisProntos)
     navButtons = document.querySelectorAll('.nav-btn'); 
     contentPanes = document.querySelectorAll('main > div[id^="content-"]'); 
     connectionStatusEl = document.getElementById('connectionStatus'); 
@@ -2165,13 +2196,13 @@ function initApp() {
     dashboardNavControls = document.getElementById('dashboard-nav-controls');
     summaryAguaPendente = document.getElementById('summary-agua-pendente'); summaryAguaEntregue = document.getElementById('summary-agua-entregue'); summaryAguaRecebido = document.getElementById('summary-agua-recebido');
     summaryGasPendente = document.getElementById('summary-gas-pendente'); summaryGasEntregue = document.getElementById('summary-gas-entregue'); summaryGasRecebido = document.getElementById('summary-gas-recebido');
-    dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos'); 
-    loadingMateriaisProntos = document.getElementById('loading-materiais-prontos'); // Referência ao DIV do loader
+    // dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos'); // Removido daqui
+    // loadingMateriaisProntos = document.getElementById('loading-materiais-prontos'); // Removido daqui
     dashboardMateriaisListContainer = document.getElementById('dashboard-materiais-list'); loadingMateriaisDashboard = document.getElementById('loading-materiais-dashboard');
     dashboardEstoqueAguaEl = document.getElementById('dashboard-estoque-agua'); dashboardEstoqueGasEl = document.getElementById('dashboard-estoque-gas'); dashboardMateriaisSeparacaoCountEl = document.getElementById('dashboard-materiais-separacao-count');
     dashboardMateriaisRetiradaCountEl = document.getElementById('dashboard-materiais-retirada-count');
-    btnClearDashboardFilter = document.getElementById('btn-clear-dashboard-filter'); // (NOVO)
-    dashboardMateriaisTitle = document.getElementById('dashboard-materiais-title'); // (NOVO)
+    // btnClearDashboardFilter = document.getElementById('btn-clear-dashboard-filter'); // Removido daqui
+    // dashboardMateriaisTitle = document.getElementById('dashboard-materiais-title'); // Removido daqui
     formAgua = document.getElementById('form-agua'); selectUnidadeAgua = document.getElementById('select-unidade-agua'); selectTipoAgua = document.getElementById('select-tipo-agua'); inputDataAgua = document.getElementById('input-data-agua'); inputResponsavelAgua = document.getElementById('input-responsavel-agua'); btnSubmitAgua = document.getElementById('btn-submit-agua'); alertAgua = document.getElementById('alert-agua'); tableStatusAgua = document.getElementById('table-status-agua'); alertAguaLista = document.getElementById('alert-agua-lista');
     inputQtdEntregueAgua = document.getElementById('input-qtd-entregue-agua'); inputQtdRetornoAgua = document.getElementById('input-qtd-retorno-agua'); formGroupQtdEntregueAgua = document.getElementById('form-group-qtd-entregue-agua'); formGroupQtdRetornoAgua = document.getElementById('form-group-qtd-retorno-agua');
     formGas = document.getElementById('form-gas'); selectUnidadeGas = document.getElementById('select-unidade-gas'); selectTipoGas = document.getElementById('select-tipo-gas'); inputDataGas = document.getElementById('input-data-gas'); inputResponsavelGas = document.getElementById('input-responsavel-gas'); btnSubmitGas = document.getElementById('btn-submit-gas'); alertGas = document.getElementById('alert-gas'); tableStatusGas = document.getElementById('table-status-gas'); alertGasLista = document.getElementById('alert-gas-lista');
@@ -2245,21 +2276,20 @@ function initApp() {
     document.getElementById('sub-nav-agua')?.addEventListener('click', (e) => { const btn = e.target.closest('button.sub-nav-btn[data-subview]'); if (btn) switchSubTabView('agua', btn.dataset.subview); });
     document.getElementById('sub-nav-gas')?.addEventListener('click', (e) => { const btn = e.target.closest('button.sub-nav-btn[data-subview]'); if (btn) switchSubTabView('gas', btn.dataset.subview); });
 
-    // (ALTERADO) Remove event listeners antigos e adiciona os novos para filtrar no dashboard
+    // Adiciona listeners para filtrar no dashboard
     const cardSeparacao = document.getElementById('dashboard-card-separacao');
     const cardRetirada = document.getElementById('dashboard-card-retirada');
+    const btnClearFilter = document.getElementById('btn-clear-dashboard-filter'); // Busca o botão de limpar filtro aqui
     
     if (cardSeparacao) {
-        // cardSeparacao.removeEventListener('click', () => { initialMaterialFilter = 'separacao'; switchTab('materiais'); }); // Remove antigo
-        cardSeparacao.addEventListener('click', () => filterDashboardMateriais('separacao')); // Adiciona novo
+        cardSeparacao.addEventListener('click', () => filterDashboardMateriais('separacao')); 
     }
     if (cardRetirada) {
-        // cardRetirada.removeEventListener('click', () => { initialMaterialFilter = 'retirada'; switchTab('materiais'); }); // Remove antigo
-        cardRetirada.addEventListener('click', () => filterDashboardMateriais('retirada')); // Adiciona novo
+        cardRetirada.addEventListener('click', () => filterDashboardMateriais('retirada')); 
     }
     // Adiciona listener para o botão de limpar filtro
-    if (btnClearDashboardFilter) {
-        btnClearDashboardFilter.addEventListener('click', () => filterDashboardMateriais(null));
+    if (btnClearFilter) { // Verifica se o botão foi encontrado antes de adicionar listener
+        btnClearFilter.addEventListener('click', () => filterDashboardMateriais(null));
     }
 
 
