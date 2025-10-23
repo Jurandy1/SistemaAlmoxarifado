@@ -175,3 +175,4 @@ body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; /* bg-slate-
 .previsao-alerta { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 4px; margin-top: 1rem; }
 .exclusao-item { display: inline-flex; align-items: center; gap: 0.5rem; background: #fee2e2; padding: 0.5rem 0.75rem; border-radius: 6px; margin: 0.25rem; font-size: 0.875rem; }
 .exclusao-item button { background: #dc2626; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; }
+
