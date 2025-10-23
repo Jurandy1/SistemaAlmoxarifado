@@ -10,7 +10,9 @@ const userFallbackConfig = {
     apiKey: "AIzaSyD7VCxaHo8veaHnM8RwY60EX_DEh3hOVHk", 
     authDomain: "controle-almoxarifado-semcas.firebaseapp.com", 
     projectId: "controle-almoxarifado-semcas", 
-    storageBucket: "controle-almoxarifado-semcas.firebasestorage.app", 
+    // CORREÇÃO: Alterado de .firebasestorage.app para o formato padrão .appspot.com.
+    // O valor .firebasestorage.app é o host, não o nome do bucket esperado pelo SDK.
+    storageBucket: "controle-almoxarifado-semcas.appspot.com", 
     messagingSenderId: "916615427315", 
     appId: "1:916615427315:web:6823897ed065c50d413386" 
 };
@@ -2646,4 +2648,3 @@ document.addEventListener('DOMContentLoaded', () => {
     initFirebase(); 
     // <<< NÃO CHAMA setupApp aqui, espera o onAuthStateChanged >>>
 });
-
