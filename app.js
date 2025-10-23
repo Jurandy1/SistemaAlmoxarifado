@@ -76,9 +76,9 @@ let tipoSelecionadoPrevisao = { agua: null, gas: null };
 // --- FUNÇÕES DE UTILIDADE ---
 function showAlert(elementId, message, type = 'info', duration = 5000) {
     // Só tenta mostrar se domReady for true
-    if (!domReady) { console.warn(`showAlert(${elementId}) chamada antes do DOM pronto.`); return; }
+    // Removido check domReady daqui para permitir alertas de erro críticos antes
     const el = document.getElementById(elementId);
-    if (!el) { console.warn(`Elemento de alerta não encontrado: ${elementId}`); return; }
+    if (!el) { console.warn(`Elemento de alerta não encontrado: ${elementId}, Mensagem: ${message}`); return; }
     el.className = `alert alert-${type}`; 
     el.textContent = message;
     el.style.display = 'block';
@@ -170,8 +170,8 @@ async function initFirebase() {
         }
 
 
-        onAuthStateChanged(auth, (user) => {
-             // Garante que connectionStatusEl seja encontrado, mesmo que initApp atrase
+        onAuthStateChanged(auth, async (user) => { // <<< Adicionado async aqui
+             // Garante que connectionStatusEl seja encontrado
              if (!connectionStatusEl) connectionStatusEl = document.getElementById('connectionStatus'); 
 
             if (user) {
@@ -189,7 +189,14 @@ async function initFirebase() {
                 estoqueGasCollection = collection(db, `${basePath}/estoqueGas`);
                 
                 console.log("Caminho base das coleções:", basePath);
-                initFirestoreListeners();
+                
+                // <<< CHAMA setupApp SOMENTE APÓS AUTENTICAÇÃO BEM-SUCEDIDA >>>
+                if (!domReady) { // Evita chamar setupApp múltiplas vezes se o estado de auth mudar rapidamente
+                    console.log("Usuário autenticado, chamando setupApp...");
+                    setupApp(); 
+                }
+                
+                initFirestoreListeners(); // Inicia listeners após ter coleções definidas
                 
             } else {
                 isAuthReady = false;
@@ -197,11 +204,12 @@ async function initFirebase() {
                 console.log("Usuário deslogado.");
                 if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-red-500 rounded-full"></span> <span class="text-red-700">Desconectado</span>`;
                 clearAlmoxarifadoData();
+                 domReady = false; // <<< Resetar domReady ao deslogar
             }
-            // Chama updateLastUpdateTime apenas se domReady for true
-            if (domReady) updateLastUpdateTime(); 
+             // Não chama updateLastUpdateTime aqui, deixa para o setupApp ou listeners
         });
 
+        // Inicia o processo de autenticação
         if (initialAuthToken) {
             console.log("Tentando login com Custom Token...");
             await signInWithCustomToken(auth, initialAuthToken);
@@ -211,10 +219,10 @@ async function initFirebase() {
         }
 
     } catch (error) {
-        console.error("Erro ao inicializar Firebase:", error);
+        console.error("Erro CRÍTICO ao inicializar Firebase:", error);
          if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-red-500 rounded-full"></span> <span class="text-red-700">Erro Firebase</span>`;
-        // Mostra o alerta apenas se domReady for true (garante que o elemento existe)
-        if (domReady) showAlert('alert-agua', `Erro crítico na conexão com Firebase: ${error.message}. Recarregue a página.`, 'error', 60000);
+        // Tenta mostrar alerta mesmo sem domReady, mas pode falhar
+        showAlert('alert-agua', `Erro crítico na conexão com Firebase: ${error.message}. Recarregue a página.`, 'error', 60000);
     }
 }
 
@@ -224,91 +232,97 @@ function initFirestoreListeners() {
         console.warn("Firestore listeners não iniciados: Auth não pronto ou coleção inválida."); 
         return; 
     }
-    console.log("Iniciando listeners do Firestore...");
+    // Não precisa mais logar aqui, o onAuthStateChanged já loga
+    // console.log("Iniciando listeners do Firestore..."); 
 
     onSnapshot(query(unidadesCollection), (snapshot) => { 
         fb_unidades = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-        
-        if (domReady) {
-             populateUnidadeSelects(selectUnidadeAgua, 'atendeAgua');
-             populateUnidadeSelects(selectUnidadeGas, 'atendeGas');
-             populateUnidadeSelects(selectUnidadeMateriais, 'atendeMateriais');
-             populateUnidadeSelects(document.getElementById('select-previsao-unidade-agua-v2'), 'atendeAgua', false); 
-             populateUnidadeSelects(document.getElementById('select-previsao-unidade-gas-v2'), 'atendeGas', false); 
-             populateTipoSelects('agua');
-             populateTipoSelects('gas');
-             populateUnidadeSelects(document.getElementById('select-exclusao-agua'), 'atendeAgua', false, true, null); 
-             populateUnidadeSelects(document.getElementById('select-exclusao-gas'), 'atendeGas', false, true, null); 
-             renderGestaoUnidades(); 
-             renderAguaStatus(); 
-             renderGasStatus(); 
+        console.log("Unidades recebidas:", fb_unidades.length);
+        if (domReady) { // <<< Só atualiza a UI se o setupApp já rodou >>>
+            console.log("DOM pronto, atualizando selects e tabelas de unidades...");
+            populateUnidadeSelects(selectUnidadeAgua, 'atendeAgua');
+            populateUnidadeSelects(selectUnidadeGas, 'atendeGas');
+            populateUnidadeSelects(selectUnidadeMateriais, 'atendeMateriais');
+            populateUnidadeSelects(document.getElementById('select-previsao-unidade-agua-v2'), 'atendeAgua', false); 
+            populateUnidadeSelects(document.getElementById('select-previsao-unidade-gas-v2'), 'atendeGas', false); 
+            populateTipoSelects('agua');
+            populateTipoSelects('gas');
+            populateUnidadeSelects(document.getElementById('select-exclusao-agua'), 'atendeAgua', false, true, null); 
+            populateUnidadeSelects(document.getElementById('select-exclusao-gas'), 'atendeGas', false, true, null); 
+            renderGestaoUnidades(); 
+            renderAguaStatus(); 
+            renderGasStatus(); 
         } else {
-             console.warn("Listener de unidades: DOM não pronto para popular selects e renderizar tabelas.");
+             console.warn("Listener de unidades: DOM não pronto (domReady=false).");
         }
-        console.log("Unidades atualizadas:", fb_unidades.length);
     }, (error) => { console.error("Erro no listener de unidades:", error); if(domReady) showAlert('alert-gestao', `Erro ao carregar unidades: ${error.message}`, 'error'); });
 
     onSnapshot(query(aguaCollection), (snapshot) => {
         fb_agua_movimentacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("Mov. Água recebidas:", fb_agua_movimentacoes.length);
         if (domReady) {
-             renderAguaStatus(); 
-             renderDashboardAguaChart(); 
-             renderDashboardAguaSummary();
-             renderEstoqueAgua();
+            console.log("DOM pronto, atualizando UI de água...");
+            renderAguaStatus(); 
+            renderDashboardAguaChart(); 
+            renderDashboardAguaSummary();
+            renderEstoqueAgua();
         } else {
-             console.warn("Listener de água: DOM não pronto para renderizar.");
+             console.warn("Listener de água: DOM não pronto (domReady=false).");
         }
-        console.log("Mov. Água (Saídas) atualizadas:", fb_agua_movimentacoes.length);
     }, (error) => { console.error("Erro no listener de água:", error); if(domReady) showAlert('alert-agua-lista', `Erro ao carregar dados de água: ${error.message}`, 'error'); });
 
     onSnapshot(query(gasCollection), (snapshot) => {
         fb_gas_movimentacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("Mov. Gás recebidas:", fb_gas_movimentacoes.length);
          if (domReady) {
-             renderGasStatus(); 
-             renderDashboardGasChart(); 
-             renderDashboardGasSummary();
-             renderEstoqueGas();
+            console.log("DOM pronto, atualizando UI de gás...");
+            renderGasStatus(); 
+            renderDashboardGasChart(); 
+            renderDashboardGasSummary();
+            renderEstoqueGas();
          } else {
-              console.warn("Listener de gás: DOM não pronto para renderizar.");
+              console.warn("Listener de gás: DOM não pronto (domReady=false).");
          }
-        console.log("Mov. Gás (Saídas) atualizadas:", fb_gas_movimentacoes.length);
     }, (error) => { console.error("Erro no listener de gás:", error); if(domReady) showAlert('alert-gas-lista', `Erro ao carregar dados de gás: ${error.message}`, 'error'); });
 
     onSnapshot(query(materiaisCollection), (snapshot) => {
         fb_materiais = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("Materiais recebidos:", fb_materiais.length);
          if (domReady) {
-             renderMateriaisStatus(); 
-             renderDashboardMateriaisList();
-             renderDashboardMateriaisProntos(currentDashboardMaterialFilter); 
-             renderDashboardMateriaisCounts();
+            console.log("DOM pronto, atualizando UI de materiais...");
+            renderMateriaisStatus(); 
+            renderDashboardMateriaisList();
+            renderDashboardMateriaisProntos(currentDashboardMaterialFilter); 
+            renderDashboardMateriaisCounts();
          } else {
-             console.warn("Listener de materiais: DOM não pronto para renderizar.");
+             console.warn("Listener de materiais: DOM não pronto (domReady=false).");
          }
-        console.log("Materiais atualizados:", fb_materiais.length);
     }, (error) => { console.error("Erro no listener de materiais:", error); if(domReady) showAlert('alert-materiais-lista', `Erro ao carregar materiais: ${error.message}`, 'error'); });
 
     onSnapshot(query(estoqueAguaCollection), (snapshot) => {
         fb_estoque_agua = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         estoqueInicialDefinido.agua = fb_estoque_agua.some(e => e.tipo === 'inicial');
+        console.log("Estoque Água recebido:", fb_estoque_agua.length, "Inicial definido:", estoqueInicialDefinido.agua);
          if (domReady) {
-             renderEstoqueAgua();
-             renderHistoricoAgua();
+            console.log("DOM pronto, atualizando UI de estoque de água...");
+            renderEstoqueAgua();
+            renderHistoricoAgua();
          } else {
-              console.warn("Listener de estoque de água: DOM não pronto para renderizar.");
+              console.warn("Listener de estoque de água: DOM não pronto (domReady=false).");
          }
-        console.log("Estoque Água (Entradas) atualizado:", fb_estoque_agua.length, "Inicial definido:", estoqueInicialDefinido.agua);
     }, (error) => { console.error("Erro no listener de estoque água:", error); });
 
     onSnapshot(query(estoqueGasCollection), (snapshot) => {
         fb_estoque_gas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         estoqueInicialDefinido.gas = fb_estoque_gas.some(e => e.tipo === 'inicial');
+        console.log("Estoque Gás recebido:", fb_estoque_gas.length, "Inicial definido:", estoqueInicialDefinido.gas);
          if (domReady) {
-             renderEstoqueGas();
-             renderHistoricoGas();
+            console.log("DOM pronto, atualizando UI de estoque de gás...");
+            renderEstoqueGas();
+            renderHistoricoGas();
          } else {
-              console.warn("Listener de estoque de gás: DOM não pronto para renderizar.");
+              console.warn("Listener de estoque de gás: DOM não pronto (domReady=false).");
          }
-        console.log("Estoque Gás (Entradas) atualizado:", fb_estoque_gas.length, "Inicial definido:", estoqueInicialDefinido.gas);
     }, (error) => { console.error("Erro no listener de estoque gás:", error); });
 }
 
@@ -318,7 +332,7 @@ function clearAlmoxarifadoData() {
     estoqueInicialDefinido = { agua: false, gas: false };
     currentDashboardMaterialFilter = null; 
 
-    if(domReady) { // <<< Só limpa a UI se o DOM estiver pronto >>>
+    if(domReady) { 
         [selectUnidadeAgua, selectUnidadeGas, selectUnidadeMateriais, 
          document.getElementById('select-previsao-unidade-agua-v2'), 
          document.getElementById('select-previsao-unidade-gas-v2'),
@@ -362,7 +376,6 @@ function clearAlmoxarifadoData() {
         document.getElementById('filtro-status-gas')?.setAttribute('value', '');
         document.getElementById('filtro-historico-gas')?.setAttribute('value', '');
 
-        // Verifica se existem antes de tentar acessar classList
         if (btnClearDashboardFilter) btnClearDashboardFilter.classList.add('hidden'); 
         if (dashboardMateriaisTitle) dashboardMateriaisTitle.textContent = 'Materiais do Almoxarifado'; 
     }
@@ -378,7 +391,7 @@ function updateLastUpdateTime() {
 }
 
 function populateUnidadeSelects(selectEl, serviceField, includeAll = false, includeSelecione = true, filterType = null) {
-    if (!domReady || !selectEl) return; // Checa domReady aqui também
+    if (!domReady || !selectEl) return; 
 
     let unidadesFiltradas = fb_unidades.filter(u => {
         const atendeServico = serviceField ? (u[serviceField] ?? true) : true;
@@ -421,7 +434,7 @@ function populateUnidadeSelects(selectEl, serviceField, includeAll = false, incl
 }
 
 function populateTipoSelects(itemType) {
-    if (!domReady) return; // Checa domReady
+    if (!domReady) return; 
     const selectEl = document.getElementById(`select-previsao-tipo-${itemType}`);
     if (!selectEl) return;
 
@@ -1381,7 +1394,57 @@ async function handleBulkAddUnidades() {
 
 
 // --- LÓGICA DO DASHBOARD ---
-// ... (restante das funções com check domReady adicionado no início) ...
+
+// <<< Função getChartDataLast30Days RESTAURADA AQUI >>>
+// Prepara dados para os gráficos de linha (Água/Gás) dos últimos 30 dias
+function getChartDataLast30Days(movimentacoes) {
+    const labels = []; const entregasData = []; const retornosData = []; 
+    const dataMap = new Map(); // Mapa para acumular dados por dia
+    
+    // Cria entradas no mapa para os últimos 30 dias (garante que todos os dias apareçam)
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    for (let i = 29; i >= 0; i--) { 
+        const d = new Date(today); 
+        d.setDate(d.getDate() - i); 
+        const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; 
+        const dateLabel = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); 
+        labels.push(dateLabel); 
+        dataMap.set(dateKey, { entregas: 0, retornos: 0 }); // Inicializa contadores
+    }
+
+    // Filtra movimentações dos últimos 30 dias
+    const movs30Dias = filterLast30Days(movimentacoes);
+    
+    // Acumula quantidades por dia no mapa
+    movs30Dias.forEach(m => { 
+        const mDate = m.data.toDate(); 
+        mDate.setHours(0,0,0,0); // Normaliza para início do dia
+        const dateKey = `${mDate.getFullYear()}-${String(mDate.getMonth() + 1).padStart(2, '0')}-${String(mDate.getDate()).padStart(2, '0')}`; 
+        if (dataMap.has(dateKey)) { 
+            const dayData = dataMap.get(dateKey); 
+            if (m.tipo === 'entrega') dayData.entregas += m.quantidade; 
+            else if (m.tipo === 'retorno') dayData.retornos += m.quantidade; 
+        } 
+    });
+
+    // Extrai dados do mapa para arrays do Chart.js
+    dataMap.forEach(value => { 
+        entregasData.push(value.entregas); 
+        retornosData.push(value.retornos); 
+    });
+
+    // Retorna estrutura de dados esperada pelo Chart.js
+    return { 
+        labels, 
+        datasets: [ 
+            { label: 'Entregues (Cheios)', data: entregasData, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, tension: 0.1 }, 
+            { label: 'Recebidos (Vazios)', data: retornosData, backgroundColor: 'rgba(16, 185, 129, 0.7)', borderColor: 'rgba(16, 185, 129, 1)', borderWidth: 1, tension: 0.1 } 
+        ] 
+    };
+}
+
+
+// ... (restante das funções do dashboard com check domReady adicionado no início) ...
 function switchDashboardView(viewName) {
      if (!domReady) { console.warn("switchDashboardView chamada antes do DOM pronto."); return; } 
     document.querySelectorAll('#dashboard-nav-controls .dashboard-nav-btn').forEach(btn => {
@@ -1420,12 +1483,29 @@ function renderDashboardMateriaisCounts() {
     dashboardMateriaisRetiradaCountEl.textContent = retiradaCount;
 }
 
-// ... (filterLast30Days, getChartDataLast30Days - sem dependência direta do DOM, não precisam do check) ...
+// <<< Função filterLast30Days ESTAVA FALTANDO, RESTAURADA ABAIXO >>>
+function filterLast30Days(movimentacoes) {
+    const today = new Date(); 
+    today.setHours(23, 59, 59, 999); 
+    const thirtyDaysAgo = new Date(today); 
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30); 
+    thirtyDaysAgo.setHours(0, 0, 0, 0); 
+    
+    const thirtyDaysAgoTimestamp = thirtyDaysAgo.getTime();
+    const todayTimestamp = today.getTime();
+    
+    return movimentacoes.filter(m => {
+        if (!m.data || typeof m.data.toDate !== 'function') return false; 
+        const mTimestamp = m.data.toMillis();
+        return mTimestamp >= thirtyDaysAgoTimestamp && mTimestamp <= todayTimestamp;
+    });
+}
+
 
 function renderDashboardAguaChart() {
     if (!domReady) { return; } 
     const ctx = document.getElementById('dashboardAguaChart')?.getContext('2d'); if (!ctx) return; 
-    const data = getChartDataLast30Days(fb_agua_movimentacoes); 
+    const data = getChartDataLast30Days(fb_agua_movimentacoes); // <<< Agora a função existe
     if (dashboardAguaChartInstance) { 
         dashboardAguaChartInstance.data = data; 
         dashboardAguaChartInstance.update(); 
@@ -1437,7 +1517,7 @@ function renderDashboardAguaChart() {
 function renderDashboardGasChart() {
     if (!domReady) { return; } 
     const ctx = document.getElementById('dashboardGasChart')?.getContext('2d'); if (!ctx) return; 
-    const data = getChartDataLast30Days(fb_gas_movimentacoes); 
+    const data = getChartDataLast30Days(fb_gas_movimentacoes); // <<< Agora a função existe
     if (dashboardGasChartInstance) { 
         dashboardGasChartInstance.data = data; 
         dashboardGasChartInstance.update(); 
@@ -2141,7 +2221,20 @@ function switchSubTabView(tabPrefix, subViewName) {
 }
 
 function switchTab(tabName) {
-    if (!domReady) { console.warn("switchTab chamada antes do DOM pronto."); return; }
+    if (!domReady) { 
+        console.warn(`switchTab(${tabName}) chamada antes do DOM pronto.`); 
+        // Adia a chamada se o DOM não estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+             if (!domReady) { // Checa de novo, caso algo tenha falhado
+                  console.error("DOM ainda não pronto ao tentar executar switchTab adiado.");
+                  return;
+             }
+             console.log(`Executando switchTab(${tabName}) adiado...`);
+             switchTab(tabName);
+        });
+        return; 
+    }
+    console.log(`Executando switchTab(${tabName})...`);
 
     navButtons.forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
@@ -2161,6 +2254,7 @@ function switchTab(tabName) {
         filterDashboardMateriais(null); 
     }
     
+    // As chamadas de renderização aqui devem funcionar pois domReady é true
     if (tabName === 'gestao') { renderGestaoUnidades(); }
     if (tabName === 'agua') { 
         switchSubTabView('agua', 'movimentacao-agua'); 
@@ -2191,26 +2285,22 @@ function switchTab(tabName) {
     setTimeout(() => { if(typeof lucide !== 'undefined') lucide.createIcons(); }, 50); 
 }
 
-// <<< initApp REMOVIDA >>>
-
-// --- INICIALIZAÇÃO GERAL ---
-document.addEventListener('DOMContentLoaded', () => { 
-    console.log("DOM Carregado. Iniciando Firebase...");
-    initFirebase(); // Inicia Firebase primeiro
-
-    console.log("Buscando elementos do DOM e adicionando listeners...");
-    // <<< Busca elementos e adiciona listeners AQUI, após DOMContentLoaded >>>
+// <<< Nova função para configurar a UI após autenticação >>>
+function setupApp() {
+    console.log("Executando setupApp...");
+    
+    // <<< Busca elementos do DOM AQUI >>>
     navButtons = document.querySelectorAll('.nav-btn'); 
     contentPanes = document.querySelectorAll('main > div[id^="content-"]'); 
-    connectionStatusEl = document.getElementById('connectionStatus'); // Busca de novo aqui para garantir
+    connectionStatusEl = document.getElementById('connectionStatus'); 
     lastUpdateTimeEl = document.getElementById('last-update-time');
     dashboardNavControls = document.getElementById('dashboard-nav-controls');
     summaryAguaPendente = document.getElementById('summary-agua-pendente'); summaryAguaEntregue = document.getElementById('summary-agua-entregue'); summaryAguaRecebido = document.getElementById('summary-agua-recebido');
     summaryGasPendente = document.getElementById('summary-gas-pendente'); summaryGasEntregue = document.getElementById('summary-gas-entregue'); summaryGasRecebido = document.getElementById('summary-gas-recebido');
     dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos'); 
     loadingMateriaisProntos = document.getElementById('loading-materiais-prontos'); 
-    btnClearDashboardFilter = document.getElementById('btn-clear-dashboard-filter'); // <<< Pode ser null
-    dashboardMateriaisTitle = document.getElementById('dashboard-materiais-title'); // <<< Pode ser null
+    btnClearDashboardFilter = document.getElementById('btn-clear-dashboard-filter'); 
+    dashboardMateriaisTitle = document.getElementById('dashboard-materiais-title'); 
     dashboardMateriaisListContainer = document.getElementById('dashboard-materiais-list'); loadingMateriaisDashboard = document.getElementById('loading-materiais-dashboard');
     dashboardEstoqueAguaEl = document.getElementById('dashboard-estoque-agua'); dashboardEstoqueGasEl = document.getElementById('dashboard-estoque-gas'); dashboardMateriaisSeparacaoCountEl = document.getElementById('dashboard-materiais-separacao-count');
     dashboardMateriaisRetiradaCountEl = document.getElementById('dashboard-materiais-retirada-count');
@@ -2231,19 +2321,15 @@ document.addEventListener('DOMContentLoaded', () => {
     formEntradaGas = document.getElementById('form-entrada-gas'); inputDataEntradaGas = document.getElementById('input-data-entrada-gas'); btnSubmitEntradaGas = document.getElementById('btn-submit-entrada-gas');
     formInicialGasContainer = document.getElementById('form-inicial-gas-container'); formInicialGas = document.getElementById('form-inicial-gas'); inputInicialQtdGas = document.getElementById('input-inicial-qtd-gas'); inputInicialResponsavelGas = document.getElementById('input-inicial-responsavel-gas'); btnSubmitInicialGas = document.getElementById('btn-submit-inicial-gas'); alertInicialGas = document.getElementById('alert-inicial-gas'); btnAbrirInicialGas = document.getElementById('btn-abrir-inicial-gas');
     tableHistoricoGas = document.getElementById('table-historico-gas'); alertHistoricoGas = document.getElementById('alert-historico-gas');
-    
-    // <<< VERIFICAÇÃO CRÍTICA SUAVIZADA >>>
-    // Apenas container e loader são absolutamente necessários para a renderização inicial dos materiais
+
+    // <<< VERIFICAÇÃO CRÍTICA >>>
     if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos) {
-        console.error("ERRO CRÍTICO: Container ou loader do dashboard de materiais NÃO encontrados após DOMContentLoaded!");
-        if(alertAgua) showAlert('alert-agua', 'Erro crítico ao carregar interface (elementos essenciais não encontrados). Recarregue.', 'error', 60000);
-        domReady = false; // Impede o resto da inicialização
+        console.error("ERRO CRÍTICO: Container ou loader do dashboard de materiais NÃO encontrados DENTRO de setupApp!");
+        showAlert('alert-agua', 'Erro crítico ao carregar interface. Recarregue a página (Erro Setup).', 'error', 60000);
+        domReady = false; 
         return; 
     } else {
-        console.log("Elementos essenciais do dashboard (container, loader) encontrados.");
-        // Log extra para verificar se os elementos OPCIONAIS foram encontrados
-        console.log("btnClearDashboardFilter:", btnClearDashboardFilter); // Pode ser null
-        console.log("dashboardMateriaisTitle:", dashboardMateriaisTitle); // Pode ser null
+        console.log("Elementos essenciais (container, loader) encontrados DENTRO de setupApp.");
     }
     
     const todayStr = getTodayDateString();
@@ -2304,7 +2390,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const cardSeparacao = document.getElementById('dashboard-card-separacao');
     const cardRetirada = document.getElementById('dashboard-card-retirada');
-    const btnClearFilter = btnClearDashboardFilter; // A variável já foi buscada, pode ser null
+    const btnClearFilter = btnClearDashboardFilter; 
     
     if (cardSeparacao) {
         cardSeparacao.addEventListener('click', () => filterDashboardMateriais('separacao')); 
@@ -2312,7 +2398,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cardRetirada) {
         cardRetirada.addEventListener('click', () => filterDashboardMateriais('retirada')); 
     }
-    // Adiciona listener apenas se o botão existir
     if (btnClearFilter) { 
         btnClearFilter.addEventListener('click', () => filterDashboardMateriais(null));
     }
@@ -2320,21 +2405,41 @@ document.addEventListener('DOMContentLoaded', () => {
     if(typeof lucide !== 'undefined') lucide.createIcons();
     toggleAguaFormInputs(); toggleGasFormInputs();
 
-    // <<< MARCA domReady como TRUE após buscar elementos e adicionar listeners >>>
-    console.log("DOM pronto e listeners adicionados! Marcando domReady = true");
+    // <<< MARCA domReady como TRUE >>>
+    console.log("setupApp concluído! Marcando domReady = true");
     domReady = true; 
 
     // Chama funções que podem depender de dados do Firebase (listeners podem ter rodado antes)
-    console.log("Chamando funções de renderização inicial...");
-    updateLastUpdateTime(); // Atualiza hora
-    // Chama a primeira renderização dos materiais, caso o listener já tenha dados
+    console.log("Chamando funções de renderização inicial pós-setupApp...");
+    updateLastUpdateTime(); 
+    // Chama a primeira renderização dos materiais
     renderDashboardMateriaisProntos(currentDashboardMaterialFilter); 
-    
-    // <<< CHAMA switchTab por último, com um pequeno delay >>>
-    console.log("Agendando switchTab('dashboard') após domReady...");
-    setTimeout(() => {
-        console.log("Executando switchTab('dashboard') agendado.");
-        switchTab('dashboard'); 
-    }, 10); // Pequeno delay (10ms) para garantir que tudo esteja pronto
+    // Chama outras renderizações que podem ter dados dos listeners
+    renderAguaStatus();
+    renderGasStatus();
+    renderMateriaisStatus();
+    renderEstoqueAgua();
+    renderHistoricoAgua();
+    renderEstoqueGas();
+    renderHistoricoGas();
+    renderDashboardAguaChart();
+    renderDashboardGasChart();
+    renderDashboardAguaSummary();
+    renderDashboardGasSummary();
+    renderDashboardMateriaisList();
+    renderDashboardMateriaisCounts();
+
+
+    // <<< CHAMA switchTab por último >>>
+    console.log("Chamando switchTab('dashboard') após setupApp...");
+    switchTab('dashboard'); 
+}
+
+
+// --- INICIALIZAÇÃO GERAL ---
+document.addEventListener('DOMContentLoaded', () => { 
+    console.log("DOM Carregado. Iniciando Firebase...");
+    initFirebase(); 
+    // <<< NÃO CHAMA setupApp aqui, espera o onAuthStateChanged >>>
 });
 
