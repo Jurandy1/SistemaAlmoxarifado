@@ -1072,11 +1072,19 @@ async function handleMarcarEntregue(e) {
     const materialId = button.dataset.id;
     if (!isAuthReady || !materialId) return;
     
-    const responsavelEntrega = prompt("Nome do responsável pela entrega/retirada:");
-    if (!responsavelEntrega) { 
-         showAlert('alert-materiais-lista', 'Nome do responsável é obrigatório para marcar como entregue.', 'warning');
-         return; 
-    }
+    // (REQ 3) Correção de Bug: Substituído prompt() por um valor padrão.
+    // O prompt() pode falhar em iframes ou ser bloqueado.
+    // const responsavelEntrega = prompt("Nome do responsável pela entrega/retirada:");
+    // if (!responsavelEntrega) { 
+    //      showAlert('alert-materiais-lista', 'Nome do responsável é obrigatório para marcar como entregue.', 'warning');
+    //      return; 
+    // }
+    
+    // (REQ 3) Nova lógica: Tenta usar o responsável pela separação ou um placeholder
+    const material = fb_materiais.find(m => m.id === materialId);
+    // Usa o responsável da separação, ou um texto padrão se não for encontrado
+    const responsavelEntrega = material?.responsavelSeparacao || "Responsável (Retirada)"; 
+    // Fim da correção (REQ 3)
     
     button.disabled = true; button.innerHTML = '<div class="loading-spinner-small mx-auto" style="width: 16px; height: 16px; border-width: 2px;"></div>';
     
@@ -1085,7 +1093,7 @@ async function handleMarcarEntregue(e) {
         await updateDoc(docRef, { 
             status: 'entregue', 
             dataEntrega: serverTimestamp(), 
-            responsavelEntrega: capitalizeString(responsavelEntrega) 
+            responsavelEntrega: capitalizeString(responsavelEntrega) // Usa o novo responsável
         });
         showAlert('alert-materiais-lista', 'Material marcado como entregue!', 'success', 3000);
     } catch (error) { 
@@ -1491,6 +1499,7 @@ function renderDashboardMateriaisList() {
 
 /**
  * (REQ 4.1 & REQ 6.1) Renderiza as colunas de materiais pendentes com indicadores de status e atraso.
+ * (REQ 2) Texto "M (Atrasado)" removido a pedido do usuário.
  */
 function renderDashboardMateriaisProntos() {
     if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos) return;
@@ -1541,8 +1550,10 @@ function renderDashboardMateriaisProntos() {
                     const isLate = diffHours > 2;
                     
                     statusIndicator = `<span class="status-indicator separando">⏳ Separando...</span>`;
+                    
+                    // (REQ 2) Removido "M (Atrasado)" a pedido do usuário.
                     if (isLate) {
-                        statusIndicator += `<span class="status-indicator late" title="Separação iniciada há mais de 2 horas"> M (Atrasado)</span>`;
+                        // statusIndicator += `<span class="status-indicator late" title="Separação iniciada há mais de 2 horas"> M (Atrasado)</span>`;
                     }
                 } else if (m.status === 'retirada') {
                     statusIndicator = `<span class="status-indicator pronto">✅ Pronto para Retirada</span>`;
