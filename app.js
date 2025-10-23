@@ -40,16 +40,16 @@ let deleteInfo = { id: null, type: null, collectionRef: null, details: null, isI
 let initialMaterialFilter = null; // Variável para filtro inicial da aba Materiais
 let currentDashboardMaterialFilter = null; // Filtro ativo no dashboard
 
-// --- Referências de Elementos (DOM) - Globais (manter as que são usadas em múltiplas funções) ---
+// --- Referências de Elementos (DOM) - Globais ---
 let navButtons, contentPanes, connectionStatusEl, lastUpdateTimeEl;
 let dashboardNavControls;
 let summaryAguaPendente, summaryAguaEntregue, summaryAguaRecebido;
 let summaryGasPendente, summaryGasEntregue, summaryGasRecebido;
-// Removidas referências específicas do dashboard de materiais daqui (serão buscadas na função)
+// ** RESTAURADO: Variáveis globais para elementos do dashboard de materiais **
+let dashboardMateriaisProntosContainer, loadingMateriaisProntos, btnClearDashboardFilter, dashboardMateriaisTitle; 
 let dashboardMateriaisListContainer, loadingMateriaisDashboard;
 let dashboardEstoqueAguaEl, dashboardEstoqueGasEl, dashboardMateriaisSeparacaoCountEl;
 let dashboardMateriaisRetiradaCountEl;
-// btnClearDashboardFilter e dashboardMateriaisTitle também removidos daqui
 let formAgua, selectUnidadeAgua, selectTipoAgua, inputDataAgua, inputResponsavelAgua, btnSubmitAgua, alertAgua, tableStatusAgua, alertAguaLista;
 let inputQtdEntregueAgua, inputQtdRetornoAgua, formGroupQtdEntregueAgua, formGroupQtdRetornoAgua; 
 let formGas, selectUnidadeGas, selectTipoGas, inputDataGas, inputResponsavelGas, btnSubmitGas, alertGas, tableStatusGas, alertGasLista;
@@ -298,7 +298,10 @@ function clearAlmoxarifadoData() {
     const dashMateriaisList = document.getElementById('dashboard-materiais-list');
     const dashMateriaisProntos = document.getElementById('dashboard-materiais-prontos');
     if (dashMateriaisList) dashMateriaisList.innerHTML = '<p class="text-center py-4 text-red-500">Desconectado</p>';
-    if (dashMateriaisProntos) dashMateriaisProntos.innerHTML = '<p class="text-center py-4 text-red-500">Desconectado</p>';
+    // ** CORREÇÃO: Coloca loader ao limpar por desconexão **
+    if (dashMateriaisProntos) {
+         dashMateriaisProntos.innerHTML = '<div class="text-center p-10 col-span-full" id="loading-materiais-prontos"><div class="loading-spinner-small mx-auto mb-2"></div><p class="text-sm text-slate-500">Carregando...</p></div>'; 
+    }
 
     
     [dashboardAguaChartInstance, dashboardGasChartInstance, graficoPrevisao.agua, graficoPrevisao.gas].forEach(chartInstance => { 
@@ -326,10 +329,9 @@ function clearAlmoxarifadoData() {
     document.getElementById('filtro-status-gas')?.setAttribute('value', '');
     document.getElementById('filtro-historico-gas')?.setAttribute('value', '');
 
-    const btnClearDashFilter = document.getElementById('btn-clear-dashboard-filter');
-    if (btnClearDashFilter) btnClearDashFilter.classList.add('hidden'); // Esconde botão de limpar filtro
-    const dashMateriaisTitle = document.getElementById('dashboard-materiais-title');
-    if (dashMateriaisTitle) dashMateriaisTitle.textContent = 'Materiais do Almoxarifado'; // Reseta título
+    // Usa as variáveis globais que agora são atribuídas em initApp
+    if (btnClearDashboardFilter) btnClearDashboardFilter.classList.add('hidden'); 
+    if (dashboardMateriaisTitle) dashboardMateriaisTitle.textContent = 'Materiais do Almoxarifado'; 
 
     console.log("Dados do Almoxarifado limpos devido à desconexão.");
 }
@@ -1515,24 +1517,25 @@ function renderDashboardMateriaisList() {
  * @param {string|null} filterStatus - O status para filtrar ('separacao', 'retirada') ou null para mostrar todos.
  */
 function renderDashboardMateriaisProntos(filterStatus = null) {
-    // CORREÇÃO: Busca os elementos dentro da função
-    const container = document.getElementById('dashboard-materiais-prontos');
-    const titleEl = document.getElementById('dashboard-materiais-title');
-    const clearButton = document.getElementById('btn-clear-dashboard-filter');
-    const loaderOriginal = document.getElementById('loading-materiais-prontos'); // Loader original
+    // ** CORREÇÃO: Usar as variáveis globais que são definidas em initApp **
+    const container = dashboardMateriaisProntosContainer;
+    const titleEl = dashboardMateriaisTitle;
+    const clearButton = btnClearDashboardFilter;
+    const loaderOriginal = loadingMateriaisProntos; // Referência ao loader original no HTML
 
-    // *** CORREÇÃO: Adicionada verificação robusta no início ***
+    // *** CORREÇÃO: Verificação se as variáveis globais já foram atribuídas ***
     if (!container || !titleEl || !clearButton) {
-        // Se a função for chamada antes do DOM estar pronto, apenas saia.
-        // Os listeners do Firebase/interações do usuário chamarão novamente mais tarde.
-        console.warn("renderDashboardMateriaisProntos chamada antes do DOM estar pronto. Aguardando...");
+        // Se a função for chamada antes de initApp terminar, as variáveis serão nulas.
+        // Registra o aviso e sai para esperar a próxima chamada (via listener ou interação).
+        console.warn("renderDashboardMateriaisProntos chamada antes dos elementos serem encontrados por initApp. Aguardando...");
         return; 
     }
     
-    // Esconde o loader original (se ainda existir)
-    if (loaderOriginal) {
+    // Esconde o loader original (se ainda existir e for visível)
+    if (loaderOriginal && loaderOriginal.style.display !== 'none') {
          loaderOriginal.style.display = 'none'; 
     }
+    
     // Mostra um loader temporário dentro do container principal enquanto processa
     container.innerHTML = '<div class="text-center p-10 col-span-full"><div class="loading-spinner-small mx-auto mb-2"></div><p class="text-sm text-slate-500">Atualizando...</p></div>';
 
@@ -1608,9 +1611,9 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     // Atualiza o conteúdo do container principal DEPOIS de montar o HTML
     // Usar setTimeout 0 para garantir que o DOM seja atualizado após o processamento atual
     setTimeout(() => {
-        const currentContainer = document.getElementById('dashboard-materiais-prontos');
-        if(currentContainer) { // Verifica se o container ainda existe
-             currentContainer.innerHTML = contentHtml;
+        // ** CORREÇÃO: Usar a variável global container que já foi verificada **
+        if(container) { 
+             container.innerHTML = contentHtml;
              // Recria ícones se necessário (após a atualização do innerHTML)
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons(); 
@@ -1643,7 +1646,8 @@ function autoScrollView(element) {
         
         setTimeout(() => {
             // Verifica novamente se o elemento ainda é o mesmo e está visível
-            const currentElement = document.getElementById('dashboard-materiais-prontos');
+            // ** CORREÇÃO: Usar a variável global correta **
+            const currentElement = dashboardMateriaisProntosContainer; 
             if (currentElement && currentElement.offsetParent !== null) {
                 currentElement.scrollTo({ top: 0, ...scrollOptions });
             }
@@ -1668,9 +1672,8 @@ function startDashboardRefresh() {
         
         // Só faz auto-scroll se não houver filtro ativo
         if (!currentDashboardMaterialFilter) {
-            // Busca o elemento novamente antes de chamar autoScrollView
-            const container = document.getElementById('dashboard-materiais-prontos');
-            autoScrollView(container);
+            // ** CORREÇÃO: Usar a variável global correta **
+            autoScrollView(dashboardMateriaisProntosContainer); 
         }
 
     }, 120000);
@@ -2189,7 +2192,7 @@ function switchTab(tabName) {
 }
 
 function initApp() {
-    // Atribuições globais mantidas (exceto as movidas para renderDashboardMateriaisProntos)
+    // ** RESTAURADO: Atribuições globais, incluindo as do dashboard **
     navButtons = document.querySelectorAll('.nav-btn'); 
     contentPanes = document.querySelectorAll('main > div[id^="content-"]'); 
     connectionStatusEl = document.getElementById('connectionStatus'); 
@@ -2197,13 +2200,13 @@ function initApp() {
     dashboardNavControls = document.getElementById('dashboard-nav-controls');
     summaryAguaPendente = document.getElementById('summary-agua-pendente'); summaryAguaEntregue = document.getElementById('summary-agua-entregue'); summaryAguaRecebido = document.getElementById('summary-agua-recebido');
     summaryGasPendente = document.getElementById('summary-gas-pendente'); summaryGasEntregue = document.getElementById('summary-gas-entregue'); summaryGasRecebido = document.getElementById('summary-gas-recebido');
-    // dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos'); // Removido daqui
-    // loadingMateriaisProntos = document.getElementById('loading-materiais-prontos'); // Removido daqui
+    dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos'); 
+    loadingMateriaisProntos = document.getElementById('loading-materiais-prontos'); 
+    btnClearDashboardFilter = document.getElementById('btn-clear-dashboard-filter'); 
+    dashboardMateriaisTitle = document.getElementById('dashboard-materiais-title'); 
     dashboardMateriaisListContainer = document.getElementById('dashboard-materiais-list'); loadingMateriaisDashboard = document.getElementById('loading-materiais-dashboard');
     dashboardEstoqueAguaEl = document.getElementById('dashboard-estoque-agua'); dashboardEstoqueGasEl = document.getElementById('dashboard-estoque-gas'); dashboardMateriaisSeparacaoCountEl = document.getElementById('dashboard-materiais-separacao-count');
     dashboardMateriaisRetiradaCountEl = document.getElementById('dashboard-materiais-retirada-count');
-    // btnClearDashboardFilter = document.getElementById('btn-clear-dashboard-filter'); // Removido daqui
-    // dashboardMateriaisTitle = document.getElementById('dashboard-materiais-title'); // Removido daqui
     formAgua = document.getElementById('form-agua'); selectUnidadeAgua = document.getElementById('select-unidade-agua'); selectTipoAgua = document.getElementById('select-tipo-agua'); inputDataAgua = document.getElementById('input-data-agua'); inputResponsavelAgua = document.getElementById('input-responsavel-agua'); btnSubmitAgua = document.getElementById('btn-submit-agua'); alertAgua = document.getElementById('alert-agua'); tableStatusAgua = document.getElementById('table-status-agua'); alertAguaLista = document.getElementById('alert-agua-lista');
     inputQtdEntregueAgua = document.getElementById('input-qtd-entregue-agua'); inputQtdRetornoAgua = document.getElementById('input-qtd-retorno-agua'); formGroupQtdEntregueAgua = document.getElementById('form-group-qtd-entregue-agua'); formGroupQtdRetornoAgua = document.getElementById('form-group-qtd-retorno-agua');
     formGas = document.getElementById('form-gas'); selectUnidadeGas = document.getElementById('select-unidade-gas'); selectTipoGas = document.getElementById('select-tipo-gas'); inputDataGas = document.getElementById('input-data-gas'); inputResponsavelGas = document.getElementById('input-responsavel-gas'); btnSubmitGas = document.getElementById('btn-submit-gas'); alertGas = document.getElementById('alert-gas'); tableStatusGas = document.getElementById('table-status-gas'); alertGasLista = document.getElementById('alert-gas-lista');
@@ -2280,7 +2283,8 @@ function initApp() {
     // Adiciona listeners para filtrar no dashboard
     const cardSeparacao = document.getElementById('dashboard-card-separacao');
     const cardRetirada = document.getElementById('dashboard-card-retirada');
-    const btnClearFilter = document.getElementById('btn-clear-dashboard-filter'); // Busca o botão de limpar filtro aqui
+    // ** CORREÇÃO: Busca o botão de limpar filtro usando a variável global **
+    const btnClearFilter = btnClearDashboardFilter; 
     
     if (cardSeparacao) {
         cardSeparacao.addEventListener('click', () => filterDashboardMateriais('separacao')); 
@@ -2300,8 +2304,8 @@ function initApp() {
 
 // --- INICIALIZAÇÃO GERAL ---
 document.addEventListener('DOMContentLoaded', () => { 
-    initApp();
+    initApp(); // ** Garante que initApp execute primeiro **
     initFirebase();
-    switchTab('dashboard');
+    switchTab('dashboard'); // Chama depois que initApp definiu as variáveis globais
 });
 
