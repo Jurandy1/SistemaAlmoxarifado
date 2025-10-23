@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- 
-      v.6.4 - Mudanças solicitadas
-      - Adicionado filtros por Nome e Tipo na aba "Gestão de Unidades".
-      - Adicionada opção de remover unidades na aba "Gestão de Unidades".
+      v.6.5 - Mudanças solicitadas
+      - (REQ 1) Dashboard: Trocado card "Vazios Pendentes" por "Materiais em Separação".
+      - (REQ 2) Filtros: Adicionada busca nas tabelas de Status e Histórico (Água e Gás).
     -->
-    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.6.4 - Gestão v2)</title>
+    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.6.5 - Filtros)</title>
     
     <!-- Scripts e Links -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -22,7 +22,7 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family/Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Estilos -->
     <style>
@@ -63,6 +63,7 @@
         .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; background: white; transition: all 0.2s ease; }
         .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--secondary-blue); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); }
         .form-textarea { min-height: 80px; }
+        .form-input-sm { padding: 0.5rem 0.75rem; /* Ajuste para inputs menores, como filtros */ }
         
         /* Abas dos Formulários de Entrada/Saída */
         .form-tab-btn { flex: 1; padding: 0.75rem 0.5rem; border: none; background: none; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.2s ease; font-weight: 600; color: #64748b; font-size: 0.875rem; text-align: center; }
@@ -177,7 +178,7 @@
                     </div>
                     <div>
                         <h2 class="font-bold text-lg text-slate-800">Sistema de Almoxarifado</h2>
-                        <p class="text-sm text-slate-500">v.6.4 (Firebase + Gestão v2)</p> <!-- Versão Atualizada -->
+                        <p class="text-sm text-slate-500">v.6.5 (Firebase + Filtros)</p> <!-- Versão Atualizada -->
                     </div>
                 </div>
                 <div class="flex items-center space-x-4 text-sm">
@@ -242,10 +243,11 @@
                             <p id="dashboard-estoque-gas" class="card-value text-orange-600">0</p>
                             <p class="card-label">Botijões Disponíveis</p>
                         </div>
+                        <!-- (REQ 1) Card "Vazios Pendentes" alterado para "Materiais em Separação" -->
                         <div class="card text-center">
-                            <h3 class="font-semibold text-slate-800 mb-2"> Vazios Pendentes</h3>
-                            <p id="dashboard-pendente-total" class="card-value text-red-600">0</p>
-                            <p class="card-label">Total Faltando (Unidades)</p>
+                            <h3 class="font-semibold text-slate-800 mb-2">Materiais em Separação</h3>
+                            <p id="dashboard-materiais-separacao-count" class="card-value text-yellow-600">0</p>
+                            <p class="card-label">Registros pendentes</p>
                         </div>
                     </div>
 
@@ -471,8 +473,15 @@
                     <!-- Card Status (Pendentes) -->
                     <div class="card">
                         <h2 class="text-xl font-bold text-slate-800 mb-4">Status de Galões (Saldo nas Unidades)</h2>
-                        <p class="text-sm text-slate-500 mb-4">Lista de unidades e saldo de galões. Passe o mouse na linha para ver o último responsável.</p>
+                        <p class="text-sm text-slate-500 mb-2">Lista de unidades e saldo de galões. Passe o mouse na linha para ver o último responsável.</p>
                         <div id="alert-agua-lista" class="alert mb-4"></div>
+                        
+                        <!-- (REQ 2) Filtro Tabela Status (Água) -->
+                        <div class="mb-4">
+                            <label for="filtro-status-agua" class="form-label text-xs">Buscar Unidade:</label>
+                            <input type="text" id="filtro-status-agua" data-table="table-status-agua" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Digite o nome da unidade...">
+                        </div>
+
                         <div class="overflow-x-auto">
                             <table class="table w-full text-sm">
                                 <thead>
@@ -518,6 +527,13 @@
                      <div class="card">
                         <h2 class="text-xl font-bold text-slate-800 mb-4">Histórico de Entradas no Estoque (Água)</h2>
                         <div id="alert-historico-agua" class="alert mb-4"></div>
+                        
+                        <!-- (REQ 2) Filtro Tabela Histórico (Água) -->
+                        <div class="mb-4">
+                            <label for="filtro-historico-agua" class="form-label text-xs">Buscar no Histórico:</label>
+                            <input type="text" id="filtro-historico-agua" data-table="table-historico-agua" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Buscar por data, responsável, NF...">
+                        </div>
+
                         <div class="overflow-x-auto max-h-96">
                             <table class="table w-full text-sm">
                                 <thead>
@@ -673,8 +689,15 @@
                     <!-- Card Status Gás -->
                     <div class="card">
                         <h2 class="text-xl font-bold text-slate-800 mb-4">Status de Botijões (Saldo nas Unidades)</h2>
-                        <p class="text-sm text-slate-500 mb-4">Lista de unidades e saldo de botijões. Passe o mouse na linha para ver o último responsável.</p>
+                        <p class="text-sm text-slate-500 mb-2">Lista de unidades e saldo de botijões. Passe o mouse na linha para ver o último responsável.</p>
                         <div id="alert-gas-lista" class="alert mb-4"></div>
+
+                        <!-- (REQ 2) Filtro Tabela Status (Gás) -->
+                        <div class="mb-4">
+                            <label for="filtro-status-gas" class="form-label text-xs">Buscar Unidade:</label>
+                            <input type="text" id="filtro-status-gas" data-table="table-status-gas" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Digite o nome da unidade...">
+                        </div>
+                        
                         <div class="overflow-x-auto">
                             <table class="table w-full text-sm">
                                 <thead>
@@ -720,6 +743,13 @@
                      <div class="card">
                         <h2 class="text-xl font-bold text-slate-800 mb-4">Histórico de Entradas no Estoque (Gás)</h2>
                         <div id="alert-historico-gas" class="alert mb-4"></div>
+                        
+                        <!-- (REQ 2) Filtro Tabela Histórico (Gás) -->
+                        <div class="mb-4">
+                            <label for="filtro-historico-gas" class="form-label text-xs">Buscar no Histórico:</label>
+                            <input type="text" id="filtro-historico-gas" data-table="table-historico-gas" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Buscar por data, responsável, NF...">
+                        </div>
+
                         <div class="overflow-x-auto max-h-96">
                             <table class="table w-full text-sm">
                                 <thead>
@@ -894,7 +924,7 @@
 
     <!-- 5. Rodapé -->
     <footer class="text-center mt-12 mb-6 text-sm text-slate-500">
-        <p>Painel de Controle de Almoxarifado - SEMCAS (v.6.4)</p>
+        <p>Painel de Controle de Almoxarifado - SEMCAS (v.6.5)</p>
     </footer>
     
 
@@ -972,7 +1002,7 @@
         let summaryGasPendente, summaryGasEntregue, summaryGasRecebido;
         let dashboardMateriaisProntosContainer, loadingMateriaisProntos;
         let dashboardMateriaisListContainer, loadingMateriaisDashboard;
-        let dashboardEstoqueAguaEl, dashboardEstoqueGasEl, dashboardPendenteTotalEl; 
+        let dashboardEstoqueAguaEl, dashboardEstoqueGasEl, dashboardMateriaisSeparacaoCountEl; // (REQ 1) Alterado
         // Água
         let formAgua, selectUnidadeAgua, selectTipoAgua, inputDataAgua, inputResponsavelAgua, btnSubmitAgua, alertAgua, tableStatusAgua, alertAguaLista;
         let inputQtdEntregueAgua, inputQtdRetornoAgua, formGroupQtdEntregueAgua, formGroupQtdRetornoAgua; 
@@ -1076,6 +1106,32 @@
             if (!str) return '';
             return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
         }
+        
+        /**
+         * (REQ 2) Filtra as linhas de uma tabela (tbody) com base em um texto de busca.
+         */
+        function filterTable(inputEl, tableBodyId) {
+            const searchTerm = normalizeString(inputEl.value);
+            const tableBody = document.getElementById(tableBodyId);
+            if (!tableBody) return;
+
+            const rows = tableBody.querySelectorAll('tr');
+            
+            // Ignora a linha de "loading" ou "empty"
+            if (rows.length === 1 && (rows[0].querySelector('.loading-spinner-small') || rows[0].textContent.includes('Nenhum'))) {
+                return;
+            }
+
+            rows.forEach(row => {
+                // Não filtra linhas que são apenas placeholders
+                if (row.querySelectorAll('td').length > 1) { 
+                    const rowText = normalizeString(row.textContent);
+                    const isMatch = rowText.includes(searchTerm);
+                    row.style.display = isMatch ? '' : 'none';
+                }
+            });
+        }
+
 
         // --- INICIALIZAÇÃO E AUTENTICAÇÃO FIREBASE ---
         
@@ -1191,6 +1247,7 @@
                 renderMateriaisStatus(); 
                 renderDashboardMateriaisList();
                 renderDashboardMateriaisProntos(); 
+                renderDashboardMateriaisSeparacaoCount(); // (REQ 1) Atualiza novo card
                 console.log("Materiais atualizados:", fb_materiais.length);
             }, (error) => { console.error("Erro no listener de materiais:", error); showAlert('alert-materiais-lista', `Erro ao carregar materiais: ${error.message}`, 'error'); });
         
@@ -1240,11 +1297,17 @@
             // Limpa cards do dashboard geral
             if (dashboardEstoqueAguaEl) dashboardEstoqueAguaEl.textContent = '0';
             if (dashboardEstoqueGasEl) dashboardEstoqueGasEl.textContent = '0';
-            if (dashboardPendenteTotalEl) dashboardPendenteTotalEl.textContent = '0';
+            if (dashboardMateriaisSeparacaoCountEl) dashboardMateriaisSeparacaoCountEl.textContent = '0'; // (REQ 1)
 
             // Limpa filtros de gestão
             if (filtroUnidadeNome) filtroUnidadeNome.value = '';
             if (filtroUnidadeTipo) filtroUnidadeTipo.value = '';
+            
+            // (REQ 2) Limpa filtros das tabelas
+            document.getElementById('filtro-status-agua')?.setAttribute('value', '');
+            document.getElementById('filtro-historico-agua')?.setAttribute('value', '');
+            document.getElementById('filtro-status-gas')?.setAttribute('value', '');
+            document.getElementById('filtro-historico-gas')?.setAttribute('value', '');
 
             console.log("Dados do Almoxarifado limpos devido à desconexão.");
         }
@@ -1469,6 +1532,12 @@
                 </tr>
             `}).join('');
              lucide.createIcons();
+             
+            // (REQ 2) Re-aplica o filtro
+            const filtroStatusAguaEl = document.getElementById('filtro-status-agua');
+            if (filtroStatusAguaEl && filtroStatusAguaEl.value) {
+                filterTable(filtroStatusAguaEl, 'table-status-agua');
+            }
         }
         
         // --- LÓGICA DE CONTROLE DE GÁS (SAÍDA) ---
@@ -1642,6 +1711,12 @@
                 </tr>
             `}).join('');
              lucide.createIcons();
+             
+            // (REQ 2) Re-aplica o filtro
+            const filtroStatusGasEl = document.getElementById('filtro-status-gas');
+            if (filtroStatusGasEl && filtroStatusGasEl.value) {
+                filterTable(filtroStatusGasEl, 'table-status-gas');
+            }
         }
 
         // --- LÓGICA DE PREVISÃO (ÁGUA E GÁS) ---
@@ -2003,11 +2078,21 @@
             if (dashboardEstoqueGasEl) {
                 dashboardEstoqueGasEl.textContent = estoqueGasAtualEl?.textContent || '0';
             }
-            if (dashboardPendenteTotalEl) {
-                const pendenteAgua = parseInt(summaryAguaPendente?.textContent || '0') || 0;
-                const pendenteGas = parseInt(summaryGasPendente?.textContent || '0') || 0;
-                dashboardPendenteTotalEl.textContent = (pendenteAgua + pendenteGas);
-            }
+            // (REQ 1) O card de pendente total foi removido/alterado
+            // if (dashboardPendenteTotalEl) {
+            //     const pendenteAgua = parseInt(summaryAguaPendente?.textContent || '0') || 0;
+            //     const pendenteGas = parseInt(summaryGasPendente?.textContent || '0') || 0;
+            //     dashboardPendenteTotalEl.textContent = (pendenteAgua + pendenteGas);
+            // }
+        }
+        
+        /**
+         * (REQ 1) Atualiza o card de contagem de materiais em separação no dashboard geral.
+         */
+        function renderDashboardMateriaisSeparacaoCount() {
+            if (!dashboardMateriaisSeparacaoCountEl) return;
+            const pendentesCount = fb_materiais.filter(m => m.status === 'separacao').length;
+            dashboardMateriaisSeparacaoCountEl.textContent = pendentesCount;
         }
 
 
@@ -2259,7 +2344,8 @@
                 renderDashboardGasSummary();
                 renderDashboardMateriaisList();
                 renderDashboardMateriaisProntos();
-                renderDashboardVisaoGeralSummary(); 
+                renderDashboardVisaoGeralSummary();
+                renderDashboardMateriaisSeparacaoCount(); // (REQ 1)
                 updateLastUpdateTime(); 
             }, 120000); 
         }
@@ -2486,6 +2572,7 @@
                 if (deleteInfo.type === 'materiais') { 
                     renderDashboardMateriaisList(); 
                     renderDashboardMateriaisProntos(); 
+                    renderDashboardMateriaisSeparacaoCount(); // (REQ 1)
                 }
                 // Atualiza os cards da visão geral
                 if (deleteInfo.type.includes('agua') || deleteInfo.type.includes('gas')) {
@@ -2805,6 +2892,12 @@
                 </tr>
             `}).join('');
             lucide.createIcons();
+            
+            // (REQ 2) Re-aplica o filtro
+            const filtroHistoricoAguaEl = document.getElementById('filtro-historico-agua');
+            if (filtroHistoricoAguaEl && filtroHistoricoAguaEl.value) {
+                filterTable(filtroHistoricoAguaEl, 'table-historico-agua');
+            }
         }
 
         /**
@@ -2836,6 +2929,12 @@
                 </tr>
             `}).join('');
             lucide.createIcons();
+            
+            // (REQ 2) Re-aplica o filtro
+            const filtroHistoricoGasEl = document.getElementById('filtro-historico-gas');
+            if (filtroHistoricoGasEl && filtroHistoricoGasEl.value) {
+                filterTable(filtroHistoricoGasEl, 'table-historico-gas');
+            }
         }
 
 
@@ -2910,7 +3009,7 @@
             loadingMateriaisDashboard = document.getElementById('loading-materiais-dashboard');
             dashboardEstoqueAguaEl = document.getElementById('dashboard-estoque-agua');
             dashboardEstoqueGasEl = document.getElementById('dashboard-estoque-gas');
-            dashboardPendenteTotalEl = document.getElementById('dashboard-pendente-total');
+            dashboardMateriaisSeparacaoCountEl = document.getElementById('dashboard-materiais-separacao-count'); // (REQ 1)
 
             // Água (Saída)
             formAgua = document.getElementById('form-agua'); 
@@ -3117,6 +3216,12 @@
             if (formInicialAgua) formInicialAgua.addEventListener('submit', handleInicialEstoqueSubmit);
             if (formInicialGas) formInicialGas.addEventListener('submit', handleInicialEstoqueSubmit);
 
+            // (REQ 2) Listeners para Filtros de Tabela (Água e Gás)
+            document.getElementById('filtro-status-agua')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-agua'));
+            document.getElementById('filtro-historico-agua')?.addEventListener('input', (e) => filterTable(e.target, 'table-historico-agua'));
+            document.getElementById('filtro-status-gas')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-gas'));
+            document.getElementById('filtro-historico-gas')?.addEventListener('input', (e) => filterTable(e.target, 'table-historico-gas'));
+
 
             if(typeof lucide !== 'undefined') lucide.createIcons();
             
@@ -3134,4 +3239,3 @@
     </script>
 </body>
 </html>
-
