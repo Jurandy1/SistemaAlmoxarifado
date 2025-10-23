@@ -1,7 +1,8 @@
 // --- IMPORTS DO FIREBASE ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, Timestamp, serverTimestamp, setLogLevel, setDoc, getDocs, where, limit, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
+import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, Timestamp, serverTimestamp, setLogLevel, setDoc, getDocs, where, limit, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js"; 
 
 // --- CONFIGURAÇÃO E VARIÁVEIS GLOBAIS ---
 
@@ -22,7 +23,7 @@ const appId = rawAppId.replace(/[\/.]/g, '-');
 
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-let app, auth, db, userId;
+let app, auth, db, storage, userId;
 let isAuthReady = false;
 let domReady = false; // <<< BANDEIRA: Indica se o DOM está pronto e elementos encontrados
 
@@ -39,7 +40,8 @@ let dashboardAguaChartInstance, dashboardGasChartInstance;
 let dashboardRefreshInterval = null;
 let deleteInfo = { id: null, type: null, collectionRef: null, details: null, isInicial: false }; 
 let initialMaterialFilter = null; 
-let currentDashboardMaterialFilter = null; 
+let currentDashboardMaterialFilter = null;
+let materialAtualParaLiberacao = null; 
 
 // --- Referências de Elementos (DOM) - Globais (declaradas, mas atribuídas depois) ---
 let navButtons, contentPanes, connectionStatusEl, lastUpdateTimeEl;
@@ -54,7 +56,8 @@ let formAgua, selectUnidadeAgua, selectTipoAgua, inputDataAgua, inputResponsavel
 let inputQtdEntregueAgua, inputQtdRetornoAgua, formGroupQtdEntregueAgua, formGroupQtdRetornoAgua; 
 let formGas, selectUnidadeGas, selectTipoGas, inputDataGas, inputResponsavelGas, btnSubmitGas, alertGas, tableStatusGas, alertGasLista;
 let inputQtdEntregueGas, inputQtdRetornoGas, formGroupQtdEntregueGas, formGroupQtdRetornoGas; 
-let formMateriais, selectUnidadeMateriais, selectTipoMateriais, inputDataSeparacao, textareaItensMateriais, inputResponsavelMateriais, btnSubmitMateriais, alertMateriais, tableStatusMateriais, alertMateriaisLista;
+let formMateriais, selectUnidadeMateriais, selectTipoMateriais, inputDataSeparacao, textareaItensMateriais, inputResponsavelMateriais, btnSubmitMateriais, alertMateriais, tableStatusMateriais, alertMateriaisLista, inputArquivoMateriais;
+let modalDefinirResponsavelSeparacao, inputNomeResponsavelSeparacao, btnConfirmarResponsavelSeparacao, btnCancelarResponsavelSeparacao;
 let tableGestaoUnidades, alertGestao, textareaBulkUnidades, btnBulkAddUnidades;
 let filtroUnidadeNome, filtroUnidadeTipo; 
 let relatorioTipo, relatorioDataInicio, relatorioDataFim, btnGerarPdf, alertRelatorio;
@@ -160,6 +163,7 @@ async function initFirebase() {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
+        storage = getStorage(app);
         
         // Tentativa de buscar o elemento de status logo cedo
         connectionStatusEl = document.getElementById('connectionStatus'); 
@@ -1030,20 +1034,78 @@ async function handleMateriaisSubmit(e) {
      if (!unidadeId || !tipoMaterial || !dataSeparacao || !responsavelSeparacao) {
         showAlert('alert-materiais', 'Dados inválidos. Verifique unidade, tipo, data e Responsável (Separação).', 'warning'); return;
     }
+
+    // Validar arquivo (se presente)
+    const arquivo = inputArquivoMateriais.files[0];
+    if (arquivo) {
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        const allowedTypes = ['application/pdf', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+        
+        if (arquivo.size > maxSize) {
+            showAlert('alert-materiais', 'Arquivo muito grande! Tamanho máximo: 10MB', 'warning');
+            return;
+        }
+        
+        if (!allowedTypes.includes(arquivo.type) && !arquivo.name.match(/\.(pdf|xls|xlsx)$/i)) {
+            showAlert('alert-materiais', 'Tipo de arquivo inválido! Use PDF, XLS ou XLSX.', 'warning');
+            return;
+        }
+    }
     
-    btnSubmitMateriais.disabled = true; btnSubmitMateriais.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+    btnSubmitMateriais.disabled = true; btnSubmitMateriais.innerHTML = '<div class="loading-spinner-small mx-auto"></div> Salvando...';
     
     try {
-        await addDoc(materiaisCollection, { 
+        let arquivoData = null;
+        
+        // Se há arquivo, fazer upload primeiro
+        if (arquivo) {
+            const timestamp = Date.now();
+            const nomeArquivoSanitizado = arquivo.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+            const storagePath = `materiais/${timestamp}_${nomeArquivoSanitizado}`;
+            const storageRef = ref(storage, storagePath);
+            
+            btnSubmitMateriais.innerHTML = '<div class="loading-spinner-small mx-auto"></div> Fazendo upload...';
+            
+            const uploadTask = uploadBytesResumable(storageRef, arquivo);
+            
+            await new Promise((resolve, reject) => {
+                uploadTask.on('state_changed',
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        btnSubmitMateriais.innerHTML = `<div class="loading-spinner-small mx-auto"></div> Upload ${Math.round(progress)}%`;
+                    },
+                    (error) => reject(error),
+                    () => resolve()
+                );
+            });
+            
+            arquivoData = {
+                arquivoNomeOriginal: arquivo.name,
+                storagePath: storagePath,
+                arquivoMimeType: arquivo.type,
+                arquivoTamanho: arquivo.size,
+                downloadDisponivel: false,
+                downloadCount: 0,
+                downloadLimite: 2,
+                responsavelPelaSeparacao: null
+            };
+        }
+        
+        btnSubmitMateriais.innerHTML = '<div class="loading-spinner-small mx-auto"></div> Salvando...';
+        
+        const docData = { 
             unidadeId, unidadeNome, tipoUnidade, tipoMaterial, 
             dataSeparacao, itens, status: 'separacao', 
             dataRetirada: null, 
             dataEntrega: null, responsavelSeparacao, 
             responsavelRetirada: null, 
             responsavelEntrega: null, 
-            registradoEm: serverTimestamp() 
-        });
-        showAlert('alert-materiais', 'Separação registrada!', 'success');
+            registradoEm: serverTimestamp(),
+            ...(arquivoData || {})
+        };
+        
+        await addDoc(materiaisCollection, docData);
+        showAlert('alert-materiais', arquivo ? 'Separação registrada com arquivo anexado!' : 'Separação registrada!', 'success');
         formMateriais.reset(); 
         inputDataSeparacao.value = getTodayDateString(); 
     } catch (error) { 
@@ -1052,6 +1114,106 @@ async function handleMateriaisSubmit(e) {
     } finally { 
         btnSubmitMateriais.disabled = false; 
         btnSubmitMateriais.textContent = 'Registrar Separação'; 
+    }
+}
+
+// Função para abrir modal e definir responsável pela separação
+function abrirModalDefinirResponsavel(materialId) {
+    if (!modalDefinirResponsavelSeparacao || !inputNomeResponsavelSeparacao) return;
+    
+    materialAtualParaLiberacao = materialId;
+    inputNomeResponsavelSeparacao.value = '';
+    modalDefinirResponsavelSeparacao.style.display = 'block';
+}
+
+// Função para fechar modal
+function fecharModalResponsavel() {
+    if (!modalDefinirResponsavelSeparacao) return;
+    modalDefinirResponsavelSeparacao.style.display = 'none';
+    materialAtualParaLiberacao = null;
+    if (inputNomeResponsavelSeparacao) inputNomeResponsavelSeparacao.value = '';
+}
+
+// Função para confirmar responsável e liberar download
+async function confirmarResponsavelSeparacao() {
+    if (!materialAtualParaLiberacao || !inputNomeResponsavelSeparacao) return;
+    
+    const nomeResponsavel = capitalizeString(inputNomeResponsavelSeparacao.value.trim());
+    if (!nomeResponsavel) {
+        showAlert('alert-materiais', 'Digite o nome do responsável!', 'warning');
+        return;
+    }
+    
+    btnConfirmarResponsavelSeparacao.disabled = true;
+    btnConfirmarResponsavelSeparacao.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+    
+    try {
+        const docRef = doc(materiaisCollection, materialAtualParaLiberacao);
+        await updateDoc(docRef, {
+            responsavelPelaSeparacao: nomeResponsavel,
+            downloadDisponivel: true,
+            status: 'separacao'
+        });
+        
+        showAlert('alert-materiais', 'Responsável definido! Download liberado para o arquivo.', 'success');
+        fecharModalResponsavel();
+    } catch (error) {
+        console.error('Erro ao definir responsável:', error);
+        showAlert('alert-materiais', `Erro: ${error.message}`, 'error');
+    } finally {
+        btnConfirmarResponsavelSeparacao.disabled = false;
+        btnConfirmarResponsavelSeparacao.textContent = 'Confirmar e Liberar Download';
+    }
+}
+
+// Função para fazer download do arquivo com controle de limite
+async function baixarArquivoMaterial(materialId) {
+    const material = fb_materiais.find(m => m.id === materialId);
+    if (!material || !material.storagePath) {
+        showAlert('alert-materiais', 'Arquivo não encontrado!', 'error');
+        return;
+    }
+    
+    if (!material.downloadDisponivel) {
+        showAlert('alert-materiais', 'Download não liberado! Defina o responsável pela separação primeiro.', 'warning');
+        return;
+    }
+    
+    if (material.downloadCount >= material.downloadLimite) {
+        showAlert('alert-materiais', 'Limite de downloads atingido! Este arquivo já foi baixado 2 vezes.', 'warning');
+        return;
+    }
+    
+    try {
+        // Obter URL de download
+        const storageRef = ref(storage, material.storagePath);
+        const downloadURL = await getDownloadURL(storageRef);
+        
+        // Incrementar contador de downloads
+        const docRef = doc(materiaisCollection, materialId);
+        const novoCount = (material.downloadCount || 0) + 1;
+        await updateDoc(docRef, {
+            downloadCount: novoCount
+        });
+        
+        // Fazer download
+        const a = document.createElement('a');
+        a.href = downloadURL;
+        a.download = material.arquivoNomeOriginal || 'arquivo';
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        const restantes = material.downloadLimite - novoCount;
+        if (restantes > 0) {
+            showAlert('alert-materiais', `Arquivo baixado! Restam ${restantes} download(s).`, 'success');
+        } else {
+            showAlert('alert-materiais', 'Arquivo baixado! Limite de downloads atingido.', 'info');
+        }
+    } catch (error) {
+        console.error('Erro ao baixar arquivo:', error);
+        showAlert('alert-materiais', `Erro ao baixar: ${error.message}`, 'error');
     }
 }
 
@@ -1086,9 +1248,47 @@ function renderMateriaisStatus() {
             statusClass = 'badge-yellow';
             statusText = 'Em Separação';
             dataStatusText = ''; 
-            acoesHtml = `
-                <button class="btn-info btn-retirada text-xs py-1 px-2" data-id="${m.id}">Disponível p/ Retirada</button>
-            `;
+            
+            // Se tem arquivo anexado
+            if (m.storagePath) {
+                const temArquivo = true;
+                const downloadLiberado = m.downloadDisponivel === true;
+                const downloadCount = m.downloadCount || 0;
+                const downloadLimite = m.downloadLimite || 2;
+                const downloadEsgotado = downloadCount >= downloadLimite;
+                
+                if (!downloadLiberado) {
+                    // Arquivo anexado mas ainda não liberado
+                    acoesHtml = `
+                        <button class="btn btn-primary text-xs py-1 px-2" onclick="abrirModalDefinirResponsavel('${m.id}')" title="Definir responsável e liberar download">
+                            📄 Definir Responsável
+                        </button>
+                        <button class="btn-info btn-retirada text-xs py-1 px-2" data-id="${m.id}">Disponível p/ Retirada</button>
+                    `;
+                } else if (downloadEsgotado) {
+                    // Download já esgotado
+                    acoesHtml = `
+                        <button class="btn btn-secondary text-xs py-1 px-2" disabled title="Limite de downloads atingido">
+                            📄 Download Esgotado (${downloadCount}/${downloadLimite})
+                        </button>
+                        <button class="btn-info btn-retirada text-xs py-1 px-2" data-id="${m.id}">Disponível p/ Retirada</button>
+                    `;
+                } else {
+                    // Download disponível
+                    const restantes = downloadLimite - downloadCount;
+                    acoesHtml = `
+                        <button class="btn btn-success text-xs py-1 px-2" onclick="baixarArquivoMaterial('${m.id}')" title="Baixar arquivo (${restantes} download(s) restante(s))">
+                            📥 Baixar (${restantes}/${downloadLimite})
+                        </button>
+                        <button class="btn-info btn-retirada text-xs py-1 px-2" data-id="${m.id}">Disponível p/ Retirada</button>
+                    `;
+                }
+            } else {
+                // Sem arquivo anexado
+                acoesHtml = `
+                    <button class="btn-info btn-retirada text-xs py-1 px-2" data-id="${m.id}">Disponível p/ Retirada</button>
+                `;
+            }
         } else if (m.status === 'retirada') {
             statusClass = 'badge-green';
             statusText = 'Disponível p/ Retirada';
@@ -2308,7 +2508,8 @@ function setupApp() {
     inputQtdEntregueAgua = document.getElementById('input-qtd-entregue-agua'); inputQtdRetornoAgua = document.getElementById('input-qtd-retorno-agua'); formGroupQtdEntregueAgua = document.getElementById('form-group-qtd-entregue-agua'); formGroupQtdRetornoAgua = document.getElementById('form-group-qtd-retorno-agua');
     formGas = document.getElementById('form-gas'); selectUnidadeGas = document.getElementById('select-unidade-gas'); selectTipoGas = document.getElementById('select-tipo-gas'); inputDataGas = document.getElementById('input-data-gas'); inputResponsavelGas = document.getElementById('input-responsavel-gas'); btnSubmitGas = document.getElementById('btn-submit-gas'); alertGas = document.getElementById('alert-gas'); tableStatusGas = document.getElementById('table-status-gas'); alertGasLista = document.getElementById('alert-gas-lista');
     inputQtdEntregueGas = document.getElementById('input-qtd-entregue-gas'); inputQtdRetornoGas = document.getElementById('input-qtd-retorno-gas'); formGroupQtdEntregueGas = document.getElementById('form-group-qtd-entregue-gas'); formGroupQtdRetornoGas = document.getElementById('form-group-qtd-retorno-gas');
-    formMateriais = document.getElementById('form-materiais'); selectUnidadeMateriais = document.getElementById('select-unidade-materiais'); selectTipoMateriais = document.getElementById('select-tipo-materiais'); inputDataSeparacao = document.getElementById('input-data-separacao'); textareaItensMateriais = document.getElementById('textarea-itens-materiais'); inputResponsavelMateriais = document.getElementById('input-responsavel-materiais'); btnSubmitMateriais = document.getElementById('btn-submit-materiais'); alertMateriais = document.getElementById('alert-materiais'); tableStatusMateriais = document.getElementById('table-status-materiais'); alertMateriaisLista = document.getElementById('alert-materiais-lista');
+    formMateriais = document.getElementById('form-materiais'); selectUnidadeMateriais = document.getElementById('select-unidade-materiais'); selectTipoMateriais = document.getElementById('select-tipo-materiais'); inputDataSeparacao = document.getElementById('input-data-separacao'); textareaItensMateriais = document.getElementById('textarea-itens-materiais'); inputArquivoMateriais = document.getElementById('input-arquivo-materiais'); inputResponsavelMateriais = document.getElementById('input-responsavel-materiais'); btnSubmitMateriais = document.getElementById('btn-submit-materiais'); alertMateriais = document.getElementById('alert-materiais'); tableStatusMateriais = document.getElementById('table-status-materiais'); alertMateriaisLista = document.getElementById('alert-materiais-lista');
+    modalDefinirResponsavelSeparacao = document.getElementById('modal-definir-responsavel-separacao'); inputNomeResponsavelSeparacao = document.getElementById('input-nome-responsavel-separacao'); btnConfirmarResponsavelSeparacao = document.getElementById('btn-confirmar-responsavel-separacao'); btnCancelarResponsavelSeparacao = document.getElementById('btn-cancelar-responsavel-separacao');
     tableGestaoUnidades = document.getElementById('table-gestao-unidades'); alertGestao = document.getElementById('alert-gestao'); textareaBulkUnidades = document.getElementById('textarea-bulk-unidades'); btnBulkAddUnidades = document.getElementById('btn-bulk-add-unidades');
     filtroUnidadeNome = document.getElementById('filtro-unidade-nome'); filtroUnidadeTipo = document.getElementById('filtro-unidade-tipo'); 
     relatorioTipo = document.getElementById('relatorio-tipo'); relatorioDataInicio = document.getElementById('relatorio-data-inicio'); relatorioDataFim = document.getElementById('relatorio-data-fim'); btnGerarPdf = document.getElementById('btn-gerar-pdf'); alertRelatorio = document.getElementById('alert-relatorio');
@@ -2370,6 +2571,9 @@ function setupApp() {
     if (btnGerarPdf) btnGerarPdf.addEventListener('click', handleGerarPdf);
     if (btnCancelDelete) btnCancelDelete.addEventListener('click', () => confirmDeleteModal.style.display = 'none');
     if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', executeDelete);
+    if (btnCancelarResponsavelSeparacao) btnCancelarResponsavelSeparacao.addEventListener('click', fecharModalResponsavel);
+    if (btnConfirmarResponsavelSeparacao) btnConfirmarResponsavelSeparacao.addEventListener('click', confirmarResponsavelSeparacao);
+    if (document.getElementById('btn-fechar-modal-responsavel')) document.getElementById('btn-fechar-modal-responsavel').addEventListener('click', fecharModalResponsavel);
     document.querySelectorAll('.form-tab-btn[data-form="saida-agua"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('saida-agua')));
     document.querySelectorAll('.form-tab-btn[data-form="entrada-agua"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('entrada-agua')));
     document.querySelectorAll('.form-tab-btn[data-form="saida-gas"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('saida-gas')));
