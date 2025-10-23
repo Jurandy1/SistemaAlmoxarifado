@@ -362,6 +362,7 @@ function clearAlmoxarifadoData() {
         document.getElementById('filtro-status-gas')?.setAttribute('value', '');
         document.getElementById('filtro-historico-gas')?.setAttribute('value', '');
 
+        // Verifica se existem antes de tentar acessar classList
         if (btnClearDashboardFilter) btnClearDashboardFilter.classList.add('hidden'); 
         if (dashboardMateriaisTitle) dashboardMateriaisTitle.textContent = 'Materiais do Almoxarifado'; 
     }
@@ -1521,18 +1522,17 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     }
 
     const container = dashboardMateriaisProntosContainer;
-    const titleEl = dashboardMateriaisTitle;
-    const clearButton = btnClearDashboardFilter;
+    const titleEl = dashboardMateriaisTitle; // <<< Pode ser null
+    const clearButton = btnClearDashboardFilter; // <<< Pode ser null
     const loaderOriginal = loadingMateriaisProntos; 
 
-     if (!container || !titleEl || !clearButton) {
-        console.error("Elementos essenciais do Dashboard Materiais Prontos não encontrados!");
-        // Mostra o loader original se o container principal não for achado
-        if (loaderOriginal) loaderOriginal.style.display = 'block'; 
+     // Apenas container e loader são essenciais para a função rodar minimamente
+     if (!container || !loaderOriginal) {
+        console.error("Elementos CRÍTICOS (container ou loader) do Dashboard Materiais Prontos não encontrados!");
         return; 
     }
     
-    if (loaderOriginal && loaderOriginal.style.display !== 'none') {
+    if (loaderOriginal.style.display !== 'none') {
          loaderOriginal.style.display = 'none'; 
     }
     
@@ -1541,11 +1541,13 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     let pendentes = fb_materiais.filter(m => m.status === 'separacao' || m.status === 'retirada');
     if (filterStatus) {
         pendentes = pendentes.filter(m => m.status === filterStatus);
-        clearButton.classList.remove('hidden'); 
-        titleEl.textContent = `Materiais ${filterStatus === 'separacao' ? 'em Separação' : 'Disponíveis p/ Retirada'}`;
+        // Só manipula se existir
+        if (clearButton) clearButton.classList.remove('hidden'); 
+        if (titleEl) titleEl.textContent = `Materiais ${filterStatus === 'separacao' ? 'em Separação' : 'Disponíveis p/ Retirada'}`;
     } else {
-        clearButton.classList.add('hidden'); 
-        titleEl.textContent = 'Materiais do Almoxarifado';
+        // Só manipula se existir
+        if (clearButton) clearButton.classList.add('hidden'); 
+        if (titleEl) titleEl.textContent = 'Materiais do Almoxarifado';
     }
     
     let contentHtml = ''; 
@@ -2017,12 +2019,12 @@ function renderEstoqueAgua() {
     if (loadingEstoqueAguaEl) loadingEstoqueAguaEl.style.display = 'none'; 
     
     if (estoqueInicialDefinido.agua) {
-        btnAbrirInicialAgua.classList.add('hidden'); 
-        formInicialAguaContainer.classList.add('hidden'); 
-        resumoEstoqueAguaEl.classList.remove('hidden'); 
+        if(btnAbrirInicialAgua) btnAbrirInicialAgua.classList.add('hidden'); 
+        if(formInicialAguaContainer) formInicialAguaContainer.classList.add('hidden'); 
+        if(resumoEstoqueAguaEl) resumoEstoqueAguaEl.classList.remove('hidden'); 
     } else { 
-        btnAbrirInicialAgua.classList.remove('hidden'); 
-        resumoEstoqueAguaEl.classList.add('hidden'); 
+        if(btnAbrirInicialAgua) btnAbrirInicialAgua.classList.remove('hidden'); 
+        if(resumoEstoqueAguaEl) resumoEstoqueAguaEl.classList.add('hidden'); 
     }
 
     const estoqueInicial = fb_estoque_agua.filter(e => e.tipo === 'inicial').reduce((sum, e) => sum + e.quantidade, 0);
@@ -2044,12 +2046,12 @@ function renderEstoqueGas() {
     if (loadingEstoqueGasEl) loadingEstoqueGasEl.style.display = 'none';
     
     if (estoqueInicialDefinido.gas) {
-        btnAbrirInicialGas.classList.add('hidden'); 
-        formInicialGasContainer.classList.add('hidden'); 
-        resumoEstoqueGasEl.classList.remove('hidden');
+        if(btnAbrirInicialGas) btnAbrirInicialGas.classList.add('hidden'); 
+        if(formInicialGasContainer) formInicialGasContainer.classList.add('hidden'); 
+        if(resumoEstoqueGasEl) resumoEstoqueGasEl.classList.remove('hidden');
     } else { 
-        btnAbrirInicialGas.classList.remove('hidden'); 
-        resumoEstoqueGasEl.classList.add('hidden'); 
+        if(btnAbrirInicialGas) btnAbrirInicialGas.classList.remove('hidden'); 
+        if(resumoEstoqueGasEl) resumoEstoqueGasEl.classList.add('hidden'); 
     }
 
     const estoqueInicial = fb_estoque_gas.filter(e => e.tipo === 'inicial').reduce((sum, e) => sum + e.quantidade, 0);
@@ -2207,8 +2209,8 @@ document.addEventListener('DOMContentLoaded', () => {
     summaryGasPendente = document.getElementById('summary-gas-pendente'); summaryGasEntregue = document.getElementById('summary-gas-entregue'); summaryGasRecebido = document.getElementById('summary-gas-recebido');
     dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos'); 
     loadingMateriaisProntos = document.getElementById('loading-materiais-prontos'); 
-    btnClearDashboardFilter = document.getElementById('btn-clear-dashboard-filter'); 
-    dashboardMateriaisTitle = document.getElementById('dashboard-materiais-title'); 
+    btnClearDashboardFilter = document.getElementById('btn-clear-dashboard-filter'); // <<< Pode ser null
+    dashboardMateriaisTitle = document.getElementById('dashboard-materiais-title'); // <<< Pode ser null
     dashboardMateriaisListContainer = document.getElementById('dashboard-materiais-list'); loadingMateriaisDashboard = document.getElementById('loading-materiais-dashboard');
     dashboardEstoqueAguaEl = document.getElementById('dashboard-estoque-agua'); dashboardEstoqueGasEl = document.getElementById('dashboard-estoque-gas'); dashboardMateriaisSeparacaoCountEl = document.getElementById('dashboard-materiais-separacao-count');
     dashboardMateriaisRetiradaCountEl = document.getElementById('dashboard-materiais-retirada-count');
@@ -2230,20 +2232,18 @@ document.addEventListener('DOMContentLoaded', () => {
     formInicialGasContainer = document.getElementById('form-inicial-gas-container'); formInicialGas = document.getElementById('form-inicial-gas'); inputInicialQtdGas = document.getElementById('input-inicial-qtd-gas'); inputInicialResponsavelGas = document.getElementById('input-inicial-responsavel-gas'); btnSubmitInicialGas = document.getElementById('btn-submit-inicial-gas'); alertInicialGas = document.getElementById('alert-inicial-gas'); btnAbrirInicialGas = document.getElementById('btn-abrir-inicial-gas');
     tableHistoricoGas = document.getElementById('table-historico-gas'); alertHistoricoGas = document.getElementById('alert-historico-gas');
     
-    // <<< VERIFICAÇÃO CRÍTICA >>>
-    if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos /* || !btnClearDashboardFilter || !dashboardMateriaisTitle */) {
-        // Removi a checagem de btnClear e title, pois não são estritamente *essenciais* para a renderização inicial
-        console.error("ERRO CRÍTICO: Elementos essenciais do dashboard (container ou loader) NÃO encontrados após DOMContentLoaded!");
-        if(alertAgua) showAlert('alert-agua', 'Erro crítico ao carregar a interface (elementos não encontrados). Recarregue a página.', 'error', 60000);
-        domReady = false; 
+    // <<< VERIFICAÇÃO CRÍTICA SUAVIZADA >>>
+    // Apenas container e loader são absolutamente necessários para a renderização inicial dos materiais
+    if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos) {
+        console.error("ERRO CRÍTICO: Container ou loader do dashboard de materiais NÃO encontrados após DOMContentLoaded!");
+        if(alertAgua) showAlert('alert-agua', 'Erro crítico ao carregar interface (elementos essenciais não encontrados). Recarregue.', 'error', 60000);
+        domReady = false; // Impede o resto da inicialização
         return; 
     } else {
-        console.log("Elementos essenciais do dashboard encontrados no DOMContentLoaded.");
-        // Log extra para verificar se os elementos foram encontrados corretamente
-        console.log("dashboardMateriaisProntosContainer:", dashboardMateriaisProntosContainer);
-        console.log("loadingMateriaisProntos:", loadingMateriaisProntos);
-        // console.log("btnClearDashboardFilter:", btnClearDashboardFilter);
-        // console.log("dashboardMateriaisTitle:", dashboardMateriaisTitle);
+        console.log("Elementos essenciais do dashboard (container, loader) encontrados.");
+        // Log extra para verificar se os elementos OPCIONAIS foram encontrados
+        console.log("btnClearDashboardFilter:", btnClearDashboardFilter); // Pode ser null
+        console.log("dashboardMateriaisTitle:", dashboardMateriaisTitle); // Pode ser null
     }
     
     const todayStr = getTodayDateString();
@@ -2251,6 +2251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(input) input.value = todayStr;
     });
 
+    // --- Adiciona Event Listeners ---
     navButtons.forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
     if (dashboardNavControls) dashboardNavControls.addEventListener('click', (e) => { const btn = e.target.closest('button.dashboard-nav-btn[data-view]'); if (btn) switchDashboardView(btn.dataset.view); });
     if (formAgua) formAgua.addEventListener('submit', handleAguaSubmit); 
@@ -2289,8 +2290,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.form-tab-btn[data-form="entrada-gas"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('entrada-gas')));
     if (formEntradaAgua) formEntradaAgua.addEventListener('submit', handleEntradaEstoqueSubmit);
     if (formEntradaGas) formEntradaGas.addEventListener('submit', handleEntradaEstoqueSubmit);
-    if (btnAbrirInicialAgua) btnAbrirInicialAgua.addEventListener('click', () => { formInicialAguaContainer.classList.remove('hidden'); btnAbrirInicialAgua.classList.add('hidden'); });
-    if (btnAbrirInicialGas) btnAbrirInicialGas.addEventListener('click', () => { formInicialGasContainer.classList.remove('hidden'); btnAbrirInicialGas.classList.add('hidden'); });
+    if (btnAbrirInicialAgua) btnAbrirInicialAgua.addEventListener('click', () => { if(formInicialAguaContainer) formInicialAguaContainer.classList.remove('hidden'); if(btnAbrirInicialAgua) btnAbrirInicialAgua.classList.add('hidden'); });
+    if (btnAbrirInicialGas) btnAbrirInicialGas.addEventListener('click', () => { if(formInicialGasContainer) formInicialGasContainer.classList.remove('hidden'); if(btnAbrirInicialGas) btnAbrirInicialGas.classList.add('hidden'); });
     if (formInicialAgua) formInicialAgua.addEventListener('submit', handleInicialEstoqueSubmit);
     if (formInicialGas) formInicialGas.addEventListener('submit', handleInicialEstoqueSubmit);
     document.getElementById('filtro-status-agua')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-agua'));
@@ -2303,7 +2304,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const cardSeparacao = document.getElementById('dashboard-card-separacao');
     const cardRetirada = document.getElementById('dashboard-card-retirada');
-    const btnClearFilter = btnClearDashboardFilter; 
+    const btnClearFilter = btnClearDashboardFilter; // A variável já foi buscada, pode ser null
     
     if (cardSeparacao) {
         cardSeparacao.addEventListener('click', () => filterDashboardMateriais('separacao')); 
@@ -2311,6 +2312,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cardRetirada) {
         cardRetirada.addEventListener('click', () => filterDashboardMateriais('retirada')); 
     }
+    // Adiciona listener apenas se o botão existir
     if (btnClearFilter) { 
         btnClearFilter.addEventListener('click', () => filterDashboardMateriais(null));
     }
