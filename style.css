@@ -387,6 +387,7 @@ body {
 
 /* Modal Styles */
 .modal {
+    /* CORREÇÃO: Removido display: flex; daqui */
     display: none; /* Hidden by default */
     position: fixed; /* Stay in place */
     z-index: 1000; /* Sit on top */
@@ -396,14 +397,20 @@ body {
     height: 100%; /* Full height */
     overflow: auto; /* Enable scroll if needed */
     background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
-    display: flex; /* Use flexbox for centering */
-    align-items: center; /* Center vertically */
-    justify-content: center; /* Center horizontally */
+    /* display: flex; <<< REMOVIDO */
+    align-items: center; /* Center vertically (funciona com display: block/flex quando visível) */
+    justify-content: center; /* Center horizontally (funciona com display: block/flex quando visível) */
 }
+
+/* Adicionado display: flex; quando o modal estiver visível (style.display = 'block' no JS) */
+.modal[style*="display: block"] {
+    display: flex;
+}
+
 
 .modal-content {
     background-color: #fefefe;
-    margin: auto; /* Removed from here, handled by flexbox */
+    margin: auto; /* Centraliza horizontalmente (redundante com flex, mas seguro) */
     padding: 2rem;
     border: 1px solid #888;
     width: 90%;
@@ -663,3 +670,4 @@ body {
     .lg\:col-span-2 { grid-column: span 2 / span 2; }
     .lg\:col-span-3 { grid-column: span 3 / span 3; }
 }
+
