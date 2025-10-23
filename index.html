@@ -11,7 +11,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
     <!-- jsPDF para Relatórios PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf-autotable.umd.min.js" defer></script>
+    <!-- CORREÇÃO: Alterado o link do jspdf-autotable para uma fonte alternativa (unpkg) para corrigir o erro de MIME type -->
+    <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js" defer></script>
     <!-- Icones (Lucide) -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
@@ -638,7 +639,7 @@
         // --- IMPORTS DO FIREBASE ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, Timestamp, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- CONFIGURAÇÃO E VARIÁVEIS GLOBAIS ---
         const userFallbackConfig = { apiKey: "AIzaSyD7VCxaHo8veaHnM8RwY60EX_DEh3hOVHk", authDomain: "controle-almoxarifado-semcas.firebaseapp.com", projectId: "controle-almoxarifado-semcas", storageBucket: "controle-almoxarifado-semcas.firebasestorage.app", messagingSenderId: "916615427315", appId: "1:916615427315:web:6823897ed065c50d413386" };
@@ -740,6 +741,8 @@
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
+                // Adiciona log detalhado do Firestore
+                setLogLevel('Debug');
                 
                 connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-yellow-400 rounded-full animate-pulse"></span> <span>Autenticando...</span>`;
 
@@ -747,6 +750,7 @@
                     if (user) {
                         isAuthReady = true;
                         userId = user.uid;
+                        console.log("Autenticado com UID:", userId, "Anônimo:", user.isAnonymous);
                         connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-green-500 rounded-full"></span> <span class="text-green-700">Conectado</span>`;
                         
                         // Define os caminhos das coleções
@@ -755,11 +759,14 @@
                         gasCollection = collection(db, `artifacts/${appId}/public/data/controleGas`);
                         materiaisCollection = collection(db, `artifacts/${appId}/public/data/controleMateriais`);
                         
+                        console.log("Caminho das coleções:", `artifacts/${appId}/public/data/unidades`);
+                        
                         initFirestoreListeners();
                         
                     } else {
                         isAuthReady = false;
                         userId = null; 
+                        console.log("Usuário deslogado.");
                         connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-red-500 rounded-full"></span> <span class="text-red-700">Desconectado</span>`;
                         clearAlmoxarifadoData(); 
                     }
@@ -767,8 +774,10 @@
                 });
 
                 if (initialAuthToken) {
+                    console.log("Tentando login com Custom Token...");
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
+                    console.log("Tentando login anônimo...");
                     await signInAnonymously(auth);
                 }
 
@@ -1459,12 +1468,15 @@
 
         // --- LÓGICA DE RELATÓRIO PDF (NOVA) ---
         function handleGerarPdf() {
-            const { jsPDF } = window.jspdf;
-            const autoTable = window.jspdf.AutoTable;
-            if (!jsPDF || !autoTable) {
+            // Verifica se as libs estão carregadas
+            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined' || typeof window.jspdf.AutoTable === 'undefined') {
                 showAlert('alert-relatorio', 'Erro: Bibliotecas PDF não carregadas. Tente recarregar a página.', 'error');
+                console.error("jsPDF ou jsPDF.AutoTable não encontrados no window.jspdf:", window.jspdf);
                 return;
             }
+            
+            const { jsPDF } = window.jspdf;
+            const autoTable = window.jspdf.AutoTable;
 
             const tipo = relatorioTipo.value;
             const dataInicioStr = relatorioDataInicio.value;
@@ -1733,4 +1745,3 @@
     </script>
 </body>
 </html>
-
