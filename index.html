@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.7.3 - Fluxo Separador)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js" defer></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Imports do Firebase (Módulo) -->
+    <script type="module">
+        // Imports principais (já existentes no app.js, mas necessários aqui para referência modular)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // NOVO: Import do Firebase Storage
+        import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        // Import principal do App
+        import "./app.js";
+    </script>
+    
+</head>
+<body class="text-slate-700 antialiased">
+
+    <header class="header-banner sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <!-- Estrutura da logo simplificada: -->
+            <div class="flex items-center flex-wrap gap-4">
+                <!-- A imagem da logo está correta aqui -->
+                <img src="SaoLuis.png" alt="Logo SEMCAS São Luís" class="logo-img" onerror="this.src='https://placehold.co/150x60/ffffff/1e40af?text=SEMCAS'; this.onerror=null;">
+                <div class="title-container">
+                    <h1 class="main-title">CONTROLE DE ALMOXARIFADO</h1>
+                    <p class="sub-title">SEMCAS - Secretaria Municipal da Criança e Assistência Social</p>
+                </div>
+            </div>
+            <!-- Fim da estrutura da logo simplificada -->
+        </div>
+    </header>
+
+    <div class="bg-white shadow-sm border-b border-slate-200">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center flex-wrap sub-header-controls">
+                <div class="flex items-center space-x-4 sub-header-info">
+                    <div class="bg-blue-500 text-white p-3 rounded-lg hidden sm:block">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M19 16h-3m0 0 3-3 3 3m-3 7v-7"/><path d="M18 5V3"/><path d="M7 5V3"/><path d="M12 5V3"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-lg text-slate-800">Sistema de Almoxarifado</h2>
+                        <p class="text-sm text-slate-500 mt-1">v.1.2 by Jurandy Santana</p> </div>
+                </div>
+                <div class="flex items-center space-x-4 text-sm">
+                    <div id="connectionStatus" class="flex items-center gap-2"></div>
+                    <p id="last-update-time" class="text-slate-500"></p> 
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky z-40 top-[92px] md:top-[88px]">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-1 overflow-x-auto main-nav-container">
+                <button class="nav-btn active" data-tab="dashboard">📊 Dashboard</button>
+                <button class="nav-btn" data-tab="agua">💧 Controle de Água</button>
+                <button class="nav-btn" data-tab="gas">🔥 Controle de Gás</button>
+                <button class="nav-btn" data-tab="materiais">🚚 Entrega de Materiais</button>
+                <button class="nav-btn" data-tab="gestao">⚙️ Gestão de Unidades</button>
+                <button class="nav-btn" data-tab="relatorio">📄 Gerar Relatório</button> 
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <!-- Conteúdo do Dashboard -->
+        <div id="content-dashboard" class="fade-in">
+             <div class="flex justify-between items-start mb-6 flex-wrap gap-4">
+                 <div>
+                    <h3 class="text-2xl font-bold text-slate-800">Visão Geral do Almoxarifado</h3>
+                    <p class="text-sm text-slate-500 mt-1">A página atualiza automaticamente a cada 2 minutos.</p>
+                 </div>
+                 <div class="flex flex-wrap gap-2" id="dashboard-nav-controls">
+                     <button class="dashboard-nav-btn active" data-view="geral">Visão Geral</button>
+                     <button class="dashboard-nav-btn" data-view="agua">💧 Água</button>
+                     <button class="dashboard-nav-btn" data-view="gas">🔥 Gás</button>
+                     <button class="dashboard-nav-btn" data-view="materiais">🚚 Materiais</button>
+                 </div>
+            </div>
+           
+            <div class="dashboard-tv-view">
+                
+                <div id="dashboard-view-geral" class="fade-in">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                        <div class="card text-center">
+                            <h3 class="font-semibold text-slate-800 mb-2">💧 Estoque de Água</h3>
+                            <p id="dashboard-estoque-agua" class="card-value text-blue-600">0</p>
+                            <p class="card-label">Galões Disponíveis</p>
+                        </div>
+                        <div class="card text-center">
+                            <h3 class="font-semibold text-slate-800 mb-2">🔥 Estoque de Gás</h3>
+                            <p id="dashboard-estoque-gas" class="card-value text-orange-600">0</p>
+                            <p class="card-label">Botijões Disponíveis</p>
+                        </div>
+                        <div id="dashboard-card-separacao" class="card text-center clickable-card">
+                            <h3 class="font-semibold text-slate-800 mb-2">Em Separação</h3>
+                            <p id="dashboard-materiais-separacao-count" class="card-value text-yellow-600">0</p>
+                            <p class="card-label">Registros pendentes</p>
+                        </div>
+                        <div id="dashboard-card-retirada" class="card text-center clickable-card">
+                            <h3 class="font-semibold text-slate-800 mb-2">Disponível p/ Retirada</h3>
+                            <p id="dashboard-materiais-retirada-count" class="card-value text-green-600">0</p>
+                            <p class="card-label">Registros prontos</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 id="dashboard-materiais-title" class="text-lg font-semibold text-slate-800 text-center">Materiais do Almoxarifado</h3>
+                            <button id="btn-clear-dashboard-filter" class="btn btn-secondary btn-sm hidden">
+                                <i data-lucide="x" class="w-4 h-4 mr-1"></i>
+                                Limpar Filtro
+                            </button>
+                        </div>
+                        <div id="dashboard-materiais-prontos" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                            <div class="text-center p-10 col-span-full" id="loading-materiais-prontos">
+                                <div class="loading-spinner-small mx-auto mb-2"></div>
+                                <p class="text-sm text-slate-500">Carregando...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dashboard-view-agua" class="hidden fade-in">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="card text-center">
+                            <h3 class="font-semibold text-slate-800 mb-2">Total Pendente (Saldo)</h3>
+                            <p id="summary-agua-pendente" class="card-value text-red-600">0</p>
+                            <p class="card-label">Galões com as unidades</p>
+                        </div>
+                        <div class="card text-center">
+                            <h3 class="font-semibold text-slate-800 mb-2">Entregues (Últimos 30 dias)</h3>
+                            <p id="summary-agua-entregue" class="card-value text-blue-600">0</p>
+                            <p class="card-label">Galões cheios</p>
+                        </div>
+                         <div class="card text-center">
+                            <h3 class="font-semibold text-slate-800 mb-2">Recebidos (Últimos 30 dias)</h3>
+                            <p id="summary-agua-recebido" class="card-value text-green-600">0</p>
+                            <p class="card-label">Galões vazios</p>
+                        </div>
+                    </div>
+                    <div class="card mt-6">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Controle de Água (Últimos 30 dias)</h3>
+                        <div class="chart-container">
+                            <canvas id="dashboardAguaChart"></canvas>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2 text-center">Entregues vs Recebidos</p>
+                    </div>
+                </div>
+                
+                <div id="dashboard-view-gas" class="hidden fade-in">
+                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="card text-center">
+                            <h3 class="font-semibold text-slate-800 mb-2">Total Pendente (Saldo)</h3>
+                            <p id="summary-gas-pendente" class="card-value text-red-600">0</p>
+                            <p class="card-label">Botijões com as unidades</p>
+                        </div>
+                        <div class="card text-center">
+                            <h3 class="font-semibold text-slate-800 mb-2">Entregues (Últimos 30 dias)</h3>
+                            <p id="summary-gas-entregue" class="card-value text-blue-600">0</p>
+                            <p class="card-label">Botijões cheios</p>
+                        </div>
+                         <div class="card text-center">
+                            <h3 class="font-semibold text-slate-800 mb-2">Recebidos (Últimos 30 dias)</h3>
+                            <p id="summary-gas-recebido" class="card-value text-green-600">0</p>
+                            <p class="card-label">Botijões vazios</p>
+                        </div>
+                    </div>
+                    <div class="card mt-6">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Controle de Gás (Últimos 30 dias)</h3>
+                        <div class="chart-container">
+                            <canvas id="dashboardGasChart"></canvas>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2 text-center">Entregues vs Recebidos</p>
+                    </div>
+                </div>
+                
+                <div id="dashboard-view-materiais" class="hidden fade-in">
+                    <div class="card">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Materiais Pendentes</h3>
+                        <div id="dashboard-materiais-list" class="space-y-3 dashboard-list">
+                             <div class="text-center p-10" id="loading-materiais-dashboard">
+                                <div class="loading-spinner-small mx-auto mb-2"></div>
+                                <p class="text-sm text-slate-500">Carregando...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conteúdo do Controle de Água -->
+        <div id="content-agua" class="hidden fade-in">
+             <div class="flex flex-wrap gap-2 mb-6" id="sub-nav-agua">
+                 <button class="sub-nav-btn active" data-subview="movimentacao-agua">Lançamentos / Status</button>
+                 <button class="sub-nav-btn" data-subview="previsao-agua">Previsão</button>
+             </div>
+
+            <div id="subview-movimentacao-agua">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    
+                    <div class="lg:col-span-1 card bg-blue-50">
+                        <h2 class="text-xl font-bold text-blue-800 mb-4">Estoque de Água</h2>
+                        
+                        <div id="form-inicial-agua-container" class="hidden bg-white p-4 rounded-md border border-blue-200 mb-4">
+                            <h3 class="text-sm font-semibold mb-2 text-blue-700">Ponta-pé Inicial</h3>
+                            <p class="text-xs text-slate-500 mb-3">Informe a quantidade inicial para começar.</p>
+                            <form id="form-inicial-agua">
+                                <div class="mb-2">
+                                    <label for="input-inicial-qtd-agua" class="form-label text-xs">Qtd. Inicial</label>
+                                    <input type="number" id="input-inicial-qtd-agua" class="form-input form-input-sm py-1 px-2 text-sm" min="0" value="0" required>
+                                </div>
+                                <div class="mb-3">
+                                     <label for="input-inicial-responsavel-agua" class="form-label text-xs">Responsável</label>
+                                     <input type="text" id="input-inicial-responsavel-agua" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Seu nome" required>
+                                </div>
+                                <button type="submit" id="btn-submit-inicial-agua" class="btn btn-primary btn-sm w-full">Salvar Inicial</button>
+                            </form>
+                            <div id="alert-inicial-agua" class="alert mt-3 text-xs p-2"></div>
+                        </div>
+
+                        <button id="btn-abrir-inicial-agua" class="btn btn-secondary btn-sm w-full mb-4 hidden">Definir Estoque Inicial</button>
+
+                        <ul id="resumo-estoque-agua" class="space-y-3 text-sm hidden">
+                            <li class="flex justify-between items-center">
+                                <span class="text-slate-600">Estoque Inicial:</span>
+                                <strong id="estoque-agua-inicial" class="text-lg">0</strong>
+                            </li>
+                            <li class="flex justify-between items-center">
+                                <span class="text-slate-600">Total de Entradas:</span>
+                                <strong id="estoque-agua-entradas" class="text-lg text-green-600">+0</strong>
+                            </li>
+                            <li class="flex justify-between items-center">
+                                <span class="text-slate-600">Total de Saídas:</span>
+                                <strong id="estoque-agua-saidas" class="text-lg text-red-600">-0</strong>
+                            </li>
+                            <li class="flex justify-between items-center text-lg font-bold border-t pt-2 mt-2 border-blue-200">
+                                <span class="text-blue-900">Disponível:</span>
+                                <strong id="estoque-agua-atual" class="text-2xl text-blue-900">0</strong>
+                            </li>
+                        </ul>
+                        <div id="loading-estoque-agua" class="text-center py-4">
+                            <div class="loading-spinner-small mx-auto"></div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-1 card">
+                        <div class="flex border-b mb-4 -mx-6 px-2">
+                            <button class="form-tab-btn active" data-form="saida-agua">💧 Saída (Unidades)</button>
+                            <button class="form-tab-btn" data-form="entrada-agua">📥 Entrada (Estoque)</button>
+                        </div>
+
+                        <form id="form-agua" class="">
+                            <h2 class="text-xl font-bold text-slate-800 mb-4">Lançar Movimentação (Água)</h2>
+                            <div class="mb-4">
+                                <label for="select-unidade-agua" class="form-label">Unidade (Apenas habilitadas)</label>
+                                <select id="select-unidade-agua" class="form-select" required></select>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="select-tipo-agua" class="form-label">Tipo de Movimentação</label>
+                                <select id="select-tipo-agua" class="form-select" required>
+                                    <option value="troca">Troca (Entregar Cheio / Receber Vazio)</option>
+                                    <option value="entrega">Apenas Saída (Entregar Cheio)</option>
+                                    <option value="retorno">Apenas Retorno (Receber Vazio)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-4" id="form-group-qtd-entregue-agua">
+                                <label for="input-qtd-entregue-agua" class="form-label">Qtd. Entregue (Cheio)</label>
+                                <input type="number" id="input-qtd-entregue-agua" class="form-input" min="0" value="0" required>
+                            </div>
+
+                            <div class="mb-4 hidden" id="form-group-qtd-retorno-agua">
+                                <label for="input-qtd-retorno-agua" class="form-label">Qtd. Recebida (Vazio)</label>
+                                <input type="number" id="input-qtd-retorno-agua" class="form-input" min="0" value="0" required>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="input-data-agua" class="form-label">Data</label>
+                                <input type="date" id="input-data-agua" class="form-input" required>
+                            </div>
+                            <div class="mb-4">
+                                 <label for="input-responsavel-agua" class="form-label">Responsável (Unidade)</label>
+                                 <input type="text" id="input-responsavel-agua" class="form-input" placeholder="Nome de quem recebeu/entregou" required>
+                            </div>
+                            <button type="submit" id="btn-submit-agua" class="btn btn-primary w-full">Salvar Movimentação</button>
+                        </form>
+
+                        <form id="form-entrada-agua" class="hidden">
+                            <h2 class="text-xl font-bold text-slate-800 mb-4">Dar Entrada no Estoque (Água)</h2>
+                            <div class="mb-4">
+                                <label for="input-qtd-entrada-agua" class="form-label">Quantidade</label>
+                                <input type="number" id="input-qtd-entrada-agua" class="form-input" min="1" value="1" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="input-data-entrada-agua" class="form-label">Data da Entrada</label>
+                                <input type="date" id="input-data-entrada-agua" class="form-input" required>
+                            </div>
+                            <div class="mb-4">
+                                 <label for="input-responsavel-entrada-agua" class="form-label">Recebido por (Almoxarifado)</label>
+                                 <input type="text" id="input-responsavel-entrada-agua" class="form-input" placeholder="Nome de quem recebeu" required>
+                            </div>
+                             <div class="mb-4">
+                                 <label for="input-nf-entrada-agua" class="form-label">Nota Fiscal (Opcional)</label>
+                                 <input type="text" id="input-nf-entrada-agua" class="form-input" placeholder="Nº da Nota Fiscal">
+                            </div>
+                            <button type="submit" id="btn-submit-entrada-agua" class="btn btn-primary w-full">Salvar Entrada</button>
+                        </form>
+
+                        <div id="alert-agua" class="alert mt-4"></div>
+                    </div>
+                    
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="card">
+                            <h2 class="text-xl font-bold text-slate-800 mb-4">Status de Galões (Saldo nas Unidades)</h2>
+                            <p class="text-sm text-slate-500 mb-2">Lista de unidades e saldo de galões. Passe o mouse na linha para ver o último responsável.</p>
+                            <div id="alert-agua-lista" class="alert mb-4"></div>
+                            
+                            <div class="mb-4">
+                                <label for="filtro-status-agua" class="form-label text-xs">Buscar Unidade:</label>
+                                <input type="text" id="filtro-status-agua" data-table="table-status-agua" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Digite o nome da unidade...">
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="table w-full text-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Unidade</th>
+                                            <th>Tipo</th>
+                                            <th>Entregues</th>
+                                            <th>Recebidos</th>
+                                            <th>Saldo (Vazios)</th> 
+                                            <th>Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-status-agua">
+                                        <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                         <div class="card">
+                            <h2 class="text-xl font-bold text-slate-800 mb-4">Histórico de Entradas no Estoque (Água)</h2>
+                            <div id="alert-historico-agua" class="alert mb-4"></div>
+                            
+                            <div class="mb-4">
+                                <label for="filtro-historico-agua" class="form-label text-xs">Buscar no Histórico:</label>
+                                <input type="text" id="filtro-historico-agua" data-table="table-historico-agua" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Buscar por data, responsável, NF...">
+                            </div>
+
+                            <div class="overflow-x-auto max-h-96">
+                                <table class="table w-full text-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Tipo</th>
+                                            <th>Qtd.</th>
+                                            <th>Responsável</th>
+                                            <th>NF</th>
+                                            <th>Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-historico-agua">
+                                        <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div> 
+
+            <div id="subview-previsao-agua" class="hidden">
+                <div class="card max-w-6xl mx-auto">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">
+                        🔮 Previsão Inteligente de Consumo - Água
+                    </h2>
+                    <p class="text-sm text-slate-500 mb-6">
+                        Calcule previsões precisas baseadas no histórico de consumo para planejar compras e garantir abastecimento suficiente.
+                    </p>
+
+                    <div class="mb-6">
+                        <h3 class="font-semibold text-slate-700 mb-3">1. Selecione o modo de previsão:</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="previsao-option-card" data-modo="unidade-especifica" onclick="selecionarModoPrevisao('agua', 'unidade-especifica')">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="bg-blue-100 p-2 rounded-full">
+                                        <i data-lucide="building" class="text-blue-600"></i>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800">Unidade Específica</h4>
+                                </div>
+                                <p class="text-sm text-slate-600">Previsão detalhada para uma unidade individual</p>
+                            </div>
+
+                            <div class="previsao-option-card" data-modo="por-tipo" onclick="selecionarModoPrevisao('agua', 'por-tipo')">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="bg-green-100 p-2 rounded-full">
+                                        <i data-lucide="layers" class="text-green-600"></i>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800">Por Tipo</h4>
+                                </div>
+                                <p class="text-sm text-slate-600">Previsão para todas as unidades de um tipo</p>
+                            </div>
+
+                            <div class="previsao-option-card" data-modo="completo" onclick="selecionarModoPrevisao('agua', 'completo')">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="bg-purple-100 p-2 rounded-full">
+                                        <i data-lucide="globe" class="text-purple-600"></i>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800">Completo</h4>
+                                </div>
+                                <p class="text-sm text-slate-600">Previsão total para todas as unidades</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="config-previsao-agua" class="hidden mb-6">
+                        <h3 class="font-semibold text-slate-700 mb-3">2. Configure sua previsão:</h3>
+
+                        <div id="select-unidade-container-agua" class="hidden mb-4">
+                            <label for="select-previsao-unidade-agua-v2" class="form-label">Selecione a Unidade:</label>
+                            <select id="select-previsao-unidade-agua-v2" class="form-select"></select>
+                        </div>
+
+                        <div id="select-tipo-container-agua" class="hidden mb-4">
+                            <label for="select-previsao-tipo-agua" class="form-label">Selecione o Tipo:</label>
+                            <select id="select-previsao-tipo-agua" class="form-select">
+                                <option value="">-- Carregando tipos... --</option> 
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="dias-previsao-agua" class="form-label">Período da Previsão (dias):</label>
+                                <input type="number" id="dias-previsao-agua" class="form-input" min="1" value="7">
+                            </div>
+                            <div>
+                                <label for="margem-seguranca-agua" class="form-label">Margem de Segurança (%):</label>
+                                <input type="number" id="margem-seguranca-agua" class="form-input" min="0" max="100" value="15">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Excluir Unidades do Cálculo (opcional)</label>
+                            <div id="exclusao-container-agua" class="mb-2">
+                                <select id="select-exclusao-agua" class="form-select mb-2">
+                                    <option value="">-- Selecione para excluir --</option>
+                                </select>
+                                <button type="button" onclick="adicionarExclusao('agua')" class="btn btn-secondary btn-sm">
+                                    + Adicionar Exclusão
+                                </button>
+                            </div>
+                            <div id="lista-exclusoes-agua" class="flex flex-wrap gap-2 mt-2"></div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mb-6">
+                        <button id="btn-calcular-previsao-agua-v2" class="btn btn-primary btn-lg px-8" onclick="calcularPrevisaoInteligente('agua')">
+                            <i data-lucide="calculator"></i>
+                            Calcular Previsão
+                        </button>
+                    </div>
+
+                    <div id="resultado-previsao-agua-v2" class="hidden">
+                        <div class="previsao-card mb-6">
+                            <h3 class="text-xl font-bold mb-4">📊 Resultados da Previsão</h3>
+                            <div id="resultado-content-agua"></div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <h4 class="font-semibold text-slate-700 mb-3">📈 Tendência de Consumo</h4>
+                            <canvas id="grafico-previsao-agua" style="height: 200px;"></canvas>
+                        </div>
+
+                        <div id="alertas-previsao-agua" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Conteúdo do Controle de Gás -->
+        <div id="content-gas" class="hidden fade-in">
+             <div class="flex flex-wrap gap-2 mb-6" id="sub-nav-gas">
+                 <button class="sub-nav-btn active" data-subview="movimentacao-gas">Lançamentos / Status</button>
+                 <button class="sub-nav-btn" data-subview="previsao-gas">Previsão</button>
+             </div>
+
+            <div id="subview-movimentacao-gas">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    
+                    <div class="lg:col-span-1 card bg-orange-50">
+                        <h2 class="text-xl font-bold text-orange-800 mb-4">Estoque de Gás</h2>
+                         
+                        <div id="form-inicial-gas-container" class="hidden bg-white p-4 rounded-md border border-orange-200 mb-4">
+                            <h3 class="text-sm font-semibold mb-2 text-orange-700">Ponta-pé Inicial</h3>
+                            <p class="text-xs text-slate-500 mb-3">Informe a quantidade inicial para começar.</p>
+                            <form id="form-inicial-gas">
+                                <div class="mb-2">
+                                    <label for="input-inicial-qtd-gas" class="form-label text-xs">Qtd. Inicial</label>
+                                    <input type="number" id="input-inicial-qtd-gas" class="form-input form-input-sm py-1 px-2 text-sm" min="0" value="0" required>
+                                </div>
+                                <div class="mb-3">
+                                     <label for="input-inicial-responsavel-gas" class="form-label text-xs">Responsável</label>
+                                     <input type="text" id="input-inicial-responsavel-gas" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Seu nome" required>
+                                </div>
+                                <button type="submit" id="btn-submit-inicial-gas" class="btn btn-primary btn-sm w-full">Salvar Inicial</button>
+                            </form>
+                             <div id="alert-inicial-gas" class="alert mt-3 text-xs p-2"></div>
+                        </div>
+
+                        <button id="btn-abrir-inicial-gas" class="btn btn-secondary btn-sm w-full mb-4 hidden">Definir Estoque Inicial</button>
+                         
+                        <ul id="resumo-estoque-gas" class="space-y-3 text-sm hidden">
+                            <li class="flex justify-between items-center">
+                                <span class="text-slate-600">Estoque Inicial:</span>
+                                <strong id="estoque-gas-inicial" class="text-lg">0</strong>
+                            </li>
+                            <li class="flex justify-between items-center">
+                                <span class="text-slate-600">Total de Entradas:</span>
+                                <strong id="estoque-gas-entradas" class="text-lg text-green-600">+0</strong>
+                            </li>
+                            <li class="flex justify-between items-center">
+                                <span class="text-slate-600">Total de Saídas:</span>
+                                <strong id="estoque-gas-saidas" class="text-lg text-red-600">-0</strong>
+                            </li>
+                            <li class="flex justify-between items-center text-lg font-bold border-t pt-2 mt-2 border-orange-200">
+                                <span class="text-orange-900">Disponível:</span>
+                                <strong id="estoque-gas-atual" class="text-2xl text-orange-900">0</strong>
+                            </li>
+                        </ul>
+                        <div id="loading-estoque-gas" class="text-center py-4">
+                            <div class="loading-spinner-small mx-auto"></div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-1 card">
+                        <div class="flex border-b mb-4 -mx-6 px-2">
+                            <button class="form-tab-btn active" data-form="saida-gas">🔥 Saída (Unidades)</button>
+                            <button class="form-tab-btn" data-form="entrada-gas">📥 Entrada (Estoque)</button>
+                        </div>
+
+                        <form id="form-gas" class="">
+                            <h2 class="text-xl font-bold text-slate-800 mb-4">Lançar Movimentação (Gás)</h2>
+                            <div class="mb-4">
+                                <label for="select-unidade-gas" class="form-label">Unidade (Apenas habilitadas)</label>
+                                <select id="select-unidade-gas" class="form-select" required></select>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="select-tipo-gas" class="form-label">Tipo de Movimentação</label>
+                                <select id="select-tipo-gas" class="form-select" required>
+                                    <option value="troca">Troca (Entregar Cheio / Receber Vazio)</option>
+                                    <option value="entrega">Apenas Saída (Entregar Cheio)</option>
+                                    <option value="retorno">Apenas Retorno (Receber Vazio)</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-4" id="form-group-qtd-entregue-gas">
+                                <label for="input-qtd-entregue-gas" class="form-label">Qtd. Entregue (Cheio)</label>
+                                <input type="number" id="input-qtd-entregue-gas" class="form-input" min="0" value="0" required>
+                            </div>
+                            
+                            <div class="mb-4 hidden" id="form-group-qtd-retorno-gas">
+                                <label for="input-qtd-retorno-gas" class="form-label">Qtd. Recebida (Vazio)</label>
+                                <input type="number" id="input-qtd-retorno-gas" class="form-input" min="0" value="0" required>
+                            </div>
+                            
+                             <div class="mb-4">
+                                <label for="input-data-gas" class="form-label">Data</label>
+                                <input type="date" id="input-data-gas" class="form-input" required>
+                            </div>
+                             <div class="mb-4">
+                                 <label for="input-responsavel-gas" class="form-label">Responsável (Unidade)</label>
+                                 <input type="text" id="input-responsavel-gas" class="form-input" placeholder="Nome de quem recebeu/entregou" required>
+                            </div>
+                            <button type="submit" id="btn-submit-gas" class="btn btn-primary w-full">Salvar Movimentação</button>
+                        </form>
+
+                        <form id="form-entrada-gas" class="hidden">
+                            <h2 class="text-xl font-bold text-slate-800 mb-4">Dar Entrada no Estoque (Gás)</h2>
+                            <div class="mb-4">
+                                <label for="input-qtd-entrada-gas" class="form-label">Quantidade</label>
+                                <input type="number" id="input-qtd-entrada-gas" class="form-input" min="1" value="1" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="input-data-entrada-gas" class="form-label">Data da Entrada</label>
+                                <input type="date" id="input-data-entrada-gas" class="form-input" required>
+                            </div>
+                            <div class="mb-4">
+                                 <label for="input-responsavel-entrada-gas" class="form-label">Recebido por (Almoxarifado)</label>
+                                 <input type="text" id="input-responsavel-entrada-gas" class="form-input" placeholder="Nome de quem recebeu" required>
+                            </div>
+                             <div class="mb-4">
+                                 <label for="input-nf-entrada-gas" class="form-label">Nota Fiscal (Opcional)</label>
+                                 <input type="text" id="input-nf-entrada-gas" class="form-input" placeholder="Nº da Nota Fiscal">
+                            </div>
+                            <button type="submit" id="btn-submit-entrada-gas" class="btn btn-primary w-full">Salvar Entrada</button>
+                        </form>
+
+                        <div id="alert-gas" class="alert mt-4"></div>
+                    </div>
+                    
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="card">
+                            <h2 class="text-xl font-bold text-slate-800 mb-4">Status de Botijões (Saldo nas Unidades)</h2>
+                            <p class="text-sm text-slate-500 mb-2">Lista de unidades e saldo de botijões. Passe o mouse na linha para ver o último responsável.</p>
+                            <div id="alert-gas-lista" class="alert mb-4"></div>
+
+                            <div class="mb-4">
+                                <label for="filtro-status-gas" class="form-label text-xs">Buscar Unidade:</label>
+                                <input type="text" id="filtro-status-gas" data-table="table-status-gas" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Digite o nome da unidade...">
+                            </div>
+                            
+                            <div class="overflow-x-auto">
+                                <table class="table w-full text-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Unidade</th>
+                                            <th>Tipo</th>
+                                            <th>Entregues</th>
+                                            <th>Recebidos</th>
+                                            <th>Saldo (Vazios)</th> 
+                                            <th>Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-status-gas">
+                                        <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                         <div class="card">
+                            <h2 class="text-xl font-bold text-slate-800 mb-4">Histórico de Entradas no Estoque (Gás)</h2>
+                            <div id="alert-historico-gas" class="alert mb-4"></div>
+                            
+                            <div class="mb-4">
+                                <label for="filtro-historico-gas" class="form-label text-xs">Buscar no Histórico:</label>
+                                <input type="text" id="filtro-historico-gas" data-table="table-historico-gas" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Buscar por data, responsável, NF...">
+                            </div>
+
+                            <div class="overflow-x-auto max-h-96">
+                                <table class="table w-full text-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Tipo</th>
+                                            <th>Qtd.</th>
+                                            <th>Responsável</th>
+                                            <th>NF</th>
+                                            <th>Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-historico-gas">
+                                        <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div> 
+            
+            <div id="subview-previsao-gas" class="hidden">
+                <div class="card max-w-6xl mx-auto">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">
+                        🔮 Previsão Inteligente de Consumo - Gás
+                    </h2>
+                    <p class="text-sm text-slate-500 mb-6">
+                        Calcule previsões precisas baseadas no histórico de consumo para planejar compras e garantir abastecimento suficiente.
+                    </p>
+
+                    <div class="mb-6">
+                        <h3 class="font-semibold text-slate-700 mb-3">1. Selecione o modo de previsão:</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="previsao-option-card" data-modo="unidade-especifica" onclick="selecionarModoPrevisao('gas', 'unidade-especifica')">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="bg-blue-100 p-2 rounded-full">
+                                        <i data-lucide="building" class="text-blue-600"></i>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800">Unidade Específica</h4>
+                                </div>
+                                <p class="text-sm text-slate-600">Previsão detalhada para uma unidade individual</p>
+                            </div>
+
+                            <div class="previsao-option-card" data-modo="por-tipo" onclick="selecionarModoPrevisao('gas', 'por-tipo')">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="bg-green-100 p-2 rounded-full">
+                                        <i data-lucide="layers" class="text-green-600"></i>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800">Por Tipo</h4>
+                                </div>
+                                <p class="text-sm text-slate-600">Previsão para todas as unidades de um tipo</p>
+                            </div>
+
+                            <div class="previsao-option-card" data-modo="completo" onclick="selecionarModoPrevisao('gas', 'completo')">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="bg-purple-100 p-2 rounded-full">
+                                        <i data-lucide="globe" class="text-purple-600"></i>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800">Completo</h4>
+                                </div>
+                                <p class="text-sm text-slate-600">Previsão total para todas as unidades</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="config-previsao-gas" class="hidden mb-6">
+                        <h3 class="font-semibold text-slate-700 mb-3">2. Configure sua previsão:</h3>
+
+                        <div id="select-unidade-container-gas" class="hidden mb-4">
+                            <label for="select-previsao-unidade-gas-v2" class="form-label">Selecione a Unidade:</label>
+                            <select id="select-previsao-unidade-gas-v2" class="form-select"></select>
+                        </div>
+
+                        <div id="select-tipo-container-gas" class="hidden mb-4">
+                            <label for="select-previsao-tipo-gas" class="form-label">Selecione o Tipo:</label>
+                            <select id="select-previsao-tipo-gas" class="form-select">
+                               <option value="">-- Carregando tipos... --</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="dias-previsao-gas" class="form-label">Período da Previsão (dias):</label>
+                                <input type="number" id="dias-previsao-gas" class="form-input" min="1" value="7">
+                            </div>
+                            <div>
+                                <label for="margem-seguranca-gas" class="form-label">Margem de Segurança (%):</label>
+                                <input type="number" id="margem-seguranca-gas" class="form-input" min="0" max="100" value="15">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Excluir Unidades do Cálculo (opcional)</label>
+                            <div id="exclusao-container-gas" class="mb-2">
+                                <select id="select-exclusao-gas" class="form-select mb-2">
+                                    <option value="">-- Selecione para excluir --</option>
+                                </select>
+                                <button type="button" onclick="adicionarExclusao('gas')" class="btn btn-secondary btn-sm">
+                                    + Adicionar Exclusão
+                                </button>
+                            </div>
+                            <div id="lista-exclusoes-gas" class="flex flex-wrap gap-2 mt-2"></div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mb-6">
+                        <button id="btn-calcular-previsao-gas-v2" class="btn btn-primary btn-lg px-8" onclick="calcularPrevisaoInteligente('gas')">
+                            <i data-lucide="calculator"></i>
+                            Calcular Previsão
+                        </button>
+                    </div>
+
+                    <div id="resultado-previsao-gas-v2" class="hidden">
+                        <div class="previsao-card mb-6">
+                            <h3 class="text-xl font-bold mb-4">📊 Resultados da Previsão</h3>
+                            <div id="resultado-content-gas"></div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <h4 class="font-semibold text-slate-700 mb-3">📈 Tendência de Consumo</h4>
+                            <canvas id="grafico-previsao-gas" style="height: 200px;"></canvas>
+                        </div>
+
+                        <div id="alertas-previsao-gas" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Conteúdo da Entrega de Materiais -->
+        <div id="content-materiais" class="hidden fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-1 card">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4">Registrar Requisição de Material</h2>
+                    <form id="form-materiais">
+                        <div class="mb-4">
+                            <label for="select-unidade-materiais" class="form-label">Unidade (Apenas habilitadas)</label>
+                            <select id="select-unidade-materiais" class="form-select" required></select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="select-tipo-materiais" class="form-label">Tipo de Material</label>
+                            <select id="select-tipo-materiais" class="form-select" required>
+                                <option value="alimento">Alimento</option>
+                                <option value="expediente">Expediente</option>
+                                <option value="limpeza">Limpeza</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="input-data-separacao" class="form-label">Data da Requisição</label>
+                            <input type="date" id="input-data-separacao" class="form-input" required>
+                        </div>
+                        
+                        <!-- NOVO CAMPO DE UPLOAD -->
+                        <div class="mb-4">
+                            <label for="input-arquivo-materiais" class="form-label">Anexar Pedido (PDF ou Excel)</label>
+                            <input type="file" id="input-arquivo-materiais" class="form-input text-sm" accept=".pdf,.xlsx,.xls">
+                            <p class="text-xs text-slate-500 mt-1">Opcional. Anexe o arquivo do pedido.</p>
+                        </div>
+                        
+                        <div class="mb-4">
+                             <label for="textarea-itens-materiais" class="form-label">Observação:</label>
+                             <textarea id="textarea-itens-materiais" class="form-textarea" placeholder="Alguma observação sobre esta requisição... (Opcional)"></textarea>
+                        </div>
+
+                         <div class="mb-4">
+                             <!-- LABEL ATUALIZADO -->
+                             <label for="input-responsavel-materiais" class="form-label">Responsável pelo Lançamento</label>
+                             <input type="text" id="input-responsavel-materiais" class="form-input" placeholder="Nome de quem lançou" required>
+                        </div>
+                        <button type="submit" id="btn-submit-materiais" class="btn btn-primary w-full">Registrar Requisição</button>
+                    </form>
+                    <div id="alert-materiais" class="alert mt-4"></div>
+                </div>
+                
+                <div class="lg:col-span-2 card">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4">Status dos Materiais</h2>
+                    <p class="text-sm text-slate-500 mb-4">Controle de materiais requisitados, em separação, disponíveis e entregues.</p>
+                    <div id="alert-materiais-lista" class="alert mb-4"></div>
+                    
+                    <div class="mb-4">
+                        <label for="filtro-status-materiais" class="form-label text-xs">Buscar Status ou Unidade:</label>
+                        <input type="text" id="filtro-status-materiais" data-table="table-status-materiais" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Digite 'requisitado', 'separacao' ou nome...">
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="table w-full text-sm">
+                            <thead>
+                                <tr>
+                                    <th>Unidade</th>
+                                    <th>Tipo</th>
+                                    <th>Data Requisição</th>
+                                    <th>Status</th>
+                                    <!-- Coluna de Ações atualizada -->
+                                    <th class="text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-status-materiais">
+                               <tr><td colspan="5" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conteúdo da Gestão de Unidades -->
+        <div id="content-gestao" class="hidden fade-in">
+            <div class="card max-w-4xl mx-auto">
+                <h2 class="text-xl font-bold text-slate-800 mb-4">Gestão de Unidades de Atendimento</h2>
+                <div id="alert-gestao" class="alert mb-4"></div>
+
+                <div class="mb-8 p-4 border border-slate-200 rounded-lg bg-slate-50">
+                     <h3 class="font-semibold text-slate-700 mb-2">Adicionar Novas Unidades</h3>
+                     <p class="text-sm text-slate-500 mb-3">Cole aqui a lista de unidades (uma por linha) no formato: <strong>Tipo [TAB] Nome da Unidade</strong>. Exemplo:</p>
+                     <pre class="text-xs bg-white p-2 rounded border border-slate-300 mb-3">CRAS	Anjo da Guarda<br>CREAS	Centro</pre>
+                     <textarea id="textarea-bulk-unidades" class="form-textarea mb-3" rows="5" placeholder="Cole os dados aqui..."></textarea>
+                     <button id="btn-bulk-add-unidades" class="btn btn-primary">Adicionar Unidades</button>
+                </div>
+
+                <h3 class="font-semibold text-slate-700 mb-2">Habilitar Serviços por Unidade</h3>
+                <p class="text-sm text-slate-500 mb-4">Marque as caixas para habilitar/desabilitar serviços. Clique no lápis para editar o nome.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="filtro-unidade-nome" class="form-label text-xs">Filtrar por Nome:</label>
+                        <input type="text" id="filtro-unidade-nome" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Digite parte do nome...">
+                    </div>
+                    <div>
+                        <label for="filtro-unidade-tipo" class="form-label text-xs">Filtrar por Tipo:</label>
+                        <input type="text" id="filtro-unidade-tipo" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Digite o tipo (ex: CRAS)...">
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="table w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th>Unidade</th>
+                                <th>Tipo</th>
+                                <th class="text-center">💧 Água</th>
+                                <th class="text-center">🔥 Gás</th>
+                                <th class="text-center">🚚 Materiais</th>
+                                <th class="text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-gestao-unidades">
+                             <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr> 
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conteúdo do Relatório -->
+        <div id="content-relatorio" class="hidden fade-in">
+            <div class="card max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold text-slate-800 mb-4">Gerar Relatório em PDF</h2>
+                <p class="text-sm text-slate-500 mb-6">Selecione o tipo de relatório e o período desejado. O relatório será gerado e baixado automaticamente.</p>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="relatorio-tipo" class="form-label">Tipo de Relatório</label>
+                        <select id="relatorio-tipo" class="form-select">
+                            <option value="agua">💧 Fornecimento de Água</option>
+                            <option value="gas">🔥 Fornecimento de Gás</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="relatorio-data-inicio" class="form-label">Data Início</label>
+                            <input type="date" id="relatorio-data-inicio" class="form-input" required>
+                        </div>
+                        <div>
+                            <label for="relatorio-data-fim" class="form-label">Data Fim</label>
+                            <input type="date" id="relatorio-data-fim" class="form-input" required>
+                        </div>
+                    </div>
+                    <button id="btn-gerar-pdf" class="btn btn-primary w-full">Gerar Relatório PDF</button>
+                </div>
+                <div id="alert-relatorio" class="alert mt-4"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="text-center mt-12 mb-6 text-sm text-slate-500">
+        <p>Jurandy Santana</p>
+    </footer>
+    
+    <!-- Modal de Confirmação de Exclusão -->
+     <div id="confirm-delete-modal" class="modal">
+      <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+          <h2 class="modal-title text-red-600">Confirmar Exclusão</h2>
+          <button class="modal-close" onclick="document.getElementById('confirm-delete-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Tem certeza que deseja remover este item? Esta ação não pode ser desfeita.</p>
+             <p class="text-sm mt-2 text-yellow-700 bg-yellow-100 p-2 rounded border border-yellow-300" id="delete-warning-unidade" style="display: none;">
+                <strong>Atenção:</strong> Remover uma unidade também removerá todo o histórico de movimentações (água, gás, materiais) associado a ela.
+            </p>
+             <p class="text-sm mt-2 text-red-700 bg-red-100 p-2 rounded border border-red-300" id="delete-warning-inicial" style="display: none;">
+                <strong>Atenção:</strong> Você está prestes a remover o lançamento de Estoque Inicial. Isso recalculará todo o saldo de estoque!
+            </p>
+            <p id="delete-details" class="text-sm text-slate-600 mt-2"></p>
+        </div>
+        <div class="modal-footer space-x-2">
+          <button id="btn-cancel-delete" class="btn-secondary">Cancelar</button>
+          <button id="btn-confirm-delete" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">Confirmar Exclusão</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOVO: Modal para Inserir Nome do Separador -->
+    <div id="separador-modal" class="modal">
+      <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+          <h2 class="modal-title">Iniciar Separação</h2>
+          <button class="modal-close" onclick="document.getElementById('separador-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="mb-4 text-sm">Informe seu nome para registrar quem está separando este material e liberar o download/impressão do pedido.</p>
+            <div>
+                 <label for="input-separador-nome" class="form-label">Nome do Separador:</label>
+                 <input type="text" id="input-separador-nome" class="form-input" placeholder="Digite seu nome completo" required>
+                 <input type="hidden" id="separador-material-id"> 
+            </div>
+             <div id="alert-separador" class="alert mt-3 text-xs p-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="document.getElementById('separador-modal').style.display='none'">Cancelar</button>
+          <button id="btn-salvar-separador" class="btn btn-primary">Salvar Nome e Liberar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 
+      O script app.js é carregado via import no <head>
+      <script src="app.js" type="module" defer></script> 
+    -->
+</body>
+</html>
