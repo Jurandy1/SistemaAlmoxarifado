@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.7.1 - Melhorias Visuais)</title>
+    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.7.2 - Uploads)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
@@ -16,6 +16,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="style.css">
+
+    <!-- Imports do Firebase (Módulo) -->
+    <script type="module">
+        // Imports principais (já existentes no app.js, mas necessários aqui para referência modular)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // NOVO: Import do Firebase Storage
+        import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        // Import principal do App
+        import "./app.js";
+    </script>
     
 </head>
 <body class="text-slate-700 antialiased">
@@ -41,7 +55,7 @@
                     </div>
                     <div>
                         <h2 class="font-bold text-lg text-slate-800">Sistema de Almoxarifado</h2>
-                        <p class="text-sm text-slate-500">v.1.0 by Jurandy Santana</p> </div>
+                        <p class="text-sm text-slate-500">v.1.1 by Jurandy Santana</p> </div>
                 </div>
                 <div class="flex items-center space-x-4 text-sm">
                     <div id="connectionStatus" class="flex items-center gap-2"></div>
@@ -799,6 +813,13 @@
                             <input type="date" id="input-data-separacao" class="form-input" required>
                         </div>
                         
+                        <!-- NOVO CAMPO DE UPLOAD -->
+                        <div class="mb-4">
+                            <label for="input-arquivo-materiais" class="form-label">Anexar Pedido (PDF ou Excel)</label>
+                            <input type="file" id="input-arquivo-materiais" class="form-input text-sm" accept=".pdf,.xlsx,.xls">
+                            <p class="text-xs text-slate-500 mt-1">Opcional. Anexe o arquivo do pedido.</p>
+                        </div>
+                        
                         <div class="mb-4">
                              <label for="textarea-itens-materiais" class="form-label">Observação:</label>
                              <textarea id="textarea-itens-materiais" class="form-textarea" placeholder="Alguma observação sobre esta separação... (Opcional)"></textarea>
@@ -831,7 +852,8 @@
                                     <th>Tipo</th>
                                     <th>Data Separação</th>
                                     <th>Status</th>
-                                    <th class="text-right">Ações</th>
+                                    <!-- Coluna de Ações atualizada -->
+                                    <th class="text-center">Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="table-status-materiais">
@@ -948,6 +970,9 @@
       </div>
     </div>
 
-    <script src="app.js" type="module" defer></script>
+    <!-- 
+      O script app.js é carregado via import no <head>
+      <script src="app.js" type="module" defer></script> 
+    -->
 </body>
 </html>
