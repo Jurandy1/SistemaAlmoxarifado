@@ -22,14 +22,19 @@
 // que será chamada pelo app.js quando o DOM e o Firebase estiverem prontos.
 function initAgua() {
     console.log("Inicializando módulo de Água...");
-    // Adiciona listeners específicos de Água
-    if (formAgua) formAgua.addEventListener('submit', handleAguaSubmit); 
-    if (selectTipoAgua) selectTipoAgua.addEventListener('change', toggleAguaFormInputs);
-    if (formEntradaAgua) formEntradaAgua.addEventListener('submit', handleEntradaEstoqueSubmit);
-    if (btnAbrirInicialAgua) btnAbrirInicialAgua.addEventListener('click', () => { if(formInicialAguaContainer) formInicialAguaContainer.classList.remove('hidden'); if(btnAbrirInicialAgua) btnAbrirInicialAgua.classList.add('hidden'); });
-    if (formInicialAgua) formInicialAgua.addEventListener('submit', handleInicialEstoqueSubmit);
-    document.getElementById('filtro-status-agua')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-agua'));
-    document.getElementById('filtro-historico-agua')?.addEventListener('input', (e) => filterTable(e.target, 'table-historico-agua'));
+    
+    // **CORREÇÃO DE ESCOPO**: Usa window.formAgua, window.handleAguaSubmit, etc.
+    if (window.formAgua) window.formAgua.addEventListener('submit', handleAguaSubmit); 
+    if (window.selectTipoAgua) window.selectTipoAgua.addEventListener('change', toggleAguaFormInputs);
+    if (window.formEntradaAgua) window.formEntradaAgua.addEventListener('submit', handleEntradaEstoqueSubmit);
+    if (window.btnAbrirInicialAgua) window.btnAbrirInicialAgua.addEventListener('click', () => { if(window.formInicialAguaContainer) window.formInicialAguaContainer.classList.remove('hidden'); if(window.btnAbrirInicialAgua) window.btnAbrirInicialAgua.classList.add('hidden'); });
+    if (window.formInicialAgua) window.formInicialAgua.addEventListener('submit', handleInicialEstoqueSubmit);
+    
+    const filtroStatus = document.getElementById('filtro-status-agua');
+    if (filtroStatus) filtroStatus.addEventListener('input', (e) => window.filterTable(e.target, 'table-status-agua'));
+    
+    const filtroHistorico = document.getElementById('filtro-historico-agua');
+    if (filtroHistorico) filtroHistorico.addEventListener('input', (e) => window.filterTable(e.target, 'table-historico-agua'));
 
     // Inicializa a visibilidade correta dos inputs Qtd
     toggleAguaFormInputs();
@@ -43,104 +48,103 @@ window.initAgua = initAgua;
 
 // Alterna a visibilidade dos campos de quantidade (Entregue/Recebido) baseado no Tipo de Movimentação
 function toggleAguaFormInputs() {
-     if (!domReady) return; 
-    if (!selectTipoAgua) return; 
-    const tipo = selectTipoAgua.value;
+     // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.selectTipoAgua, etc.
+     if (!window.domReady) return; 
+    if (!window.selectTipoAgua) return; 
+    const tipo = window.selectTipoAgua.value;
     if (tipo === 'troca') {
-        formGroupQtdEntregueAgua?.classList.remove('hidden');
-        formGroupQtdRetornoAgua?.classList.remove('hidden');
+        window.formGroupQtdEntregueAgua?.classList.remove('hidden');
+        window.formGroupQtdRetornoAgua?.classList.remove('hidden');
     } else if (tipo === 'entrega') {
-        formGroupQtdEntregueAgua?.classList.remove('hidden');
-        formGroupQtdRetornoAgua?.classList.add('hidden');
-        if (inputQtdRetornoAgua) inputQtdRetornoAgua.value = "0"; 
+        window.formGroupQtdEntregueAgua?.classList.remove('hidden');
+        window.formGroupQtdRetornoAgua?.classList.add('hidden');
+        if (window.inputQtdRetornoAgua) window.inputQtdRetornoAgua.value = "0"; 
     } else if (tipo === 'retorno') {
-        formGroupQtdEntregueAgua?.classList.add('hidden');
-        formGroupQtdRetornoAgua?.classList.remove('hidden');
-        if (inputQtdEntregueAgua) inputQtdEntregueAgua.value = "0"; 
+        window.formGroupQtdEntregueAgua?.classList.add('hidden');
+        window.formGroupQtdRetornoAgua?.classList.remove('hidden');
+        if (window.inputQtdEntregueAgua) window.inputQtdEntregueAgua.value = "0"; 
     }
 }
 
 // Processa o envio do formulário de movimentação de água
 async function handleAguaSubmit(e) {
      e.preventDefault();
-    if (!isAuthReady) { showAlert('alert-agua', 'Erro: Não autenticado.', 'error'); return; }
-    if (!domReady) { showAlert('alert-agua', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
-    const selectValue = selectUnidadeAgua.value; 
-    if (!selectValue) { showAlert('alert-agua', 'Selecione uma unidade.', 'warning'); return; }
+     // **CORREÇÃO DE ESCOPO**: Usa window.isAuthReady, window.showAlert, etc.
+    if (!window.isAuthReady) { window.showAlert('alert-agua', 'Erro: Não autenticado.', 'error'); return; }
+    if (!window.domReady) { window.showAlert('alert-agua', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
+    const selectValue = window.selectUnidadeAgua.value; 
+    if (!selectValue) { window.showAlert('alert-agua', 'Selecione uma unidade.', 'warning'); return; }
     const [unidadeId, unidadeNome, tipoUnidadeRaw] = selectValue.split('|');
     const tipoUnidade = (tipoUnidadeRaw || '').toUpperCase() === 'SEMCAS' ? 'SEDE' : (tipoUnidadeRaw || '').toUpperCase();
 
-    const tipoMovimentacao = selectTipoAgua.value; 
-    const qtdEntregue = parseInt(inputQtdEntregueAgua.value, 10) || 0;
-    const qtdRetorno = parseInt(inputQtdRetornoAgua.value, 10) || 0;
-    const data = dateToTimestamp(inputDataAgua.value);
-    const responsavel = capitalizeString(inputResponsavelAgua.value.trim()); 
+    const tipoMovimentacao = window.selectTipoAgua.value; 
+    const qtdEntregue = parseInt(window.inputQtdEntregueAgua.value, 10) || 0;
+    const qtdRetorno = parseInt(window.inputQtdRetornoAgua.value, 10) || 0;
+    const data = window.dateToTimestamp(window.inputDataAgua.value);
+    const responsavel = window.capitalizeString(window.inputResponsavelAgua.value.trim()); 
     
     if (!unidadeId || !data || !responsavel) {
-        showAlert('alert-agua', 'Dados inválidos. Verifique Unidade, Data e Responsável.', 'warning'); return;
+        window.showAlert('alert-agua', 'Dados inválidos. Verifique Unidade, Data e Responsável.', 'warning'); return;
     }
     if (tipoMovimentacao === 'troca' && qtdEntregue === 0 && qtdRetorno === 0) {
-         showAlert('alert-agua', 'Para "Troca", ao menos uma das quantidades deve ser maior que zero.', 'warning'); return;
+         window.showAlert('alert-agua', 'Para "Troca", ao menos uma das quantidades deve ser maior que zero.', 'warning'); return;
     }
     if (tipoMovimentacao === 'entrega' && qtdEntregue <= 0) {
-         showAlert('alert-agua', 'Para "Apenas Saída", a quantidade deve ser maior que zero.', 'warning'); return;
+         window.showAlert('alert-agua', 'Para "Apenas Saída", a quantidade deve ser maior que zero.', 'warning'); return;
     }
     if (tipoMovimentacao === 'retorno' && qtdRetorno <= 0) {
-         showAlert('alert-agua', 'Para "Apenas Retorno", a quantidade deve ser maior que zero.', 'warning'); return;
+         window.showAlert('alert-agua', 'Para "Apenas Retorno", a quantidade deve ser maior que zero.', 'warning'); return;
     }
     if (qtdEntregue > 0) {
-        if (!estoqueInicialDefinido.agua) {
-            showAlert('alert-agua', 'Defina o Estoque Inicial de Água antes de lançar saídas.', 'warning'); return;
+        if (!window.estoqueInicialDefinido.agua) {
+            window.showAlert('alert-agua', 'Defina o Estoque Inicial de Água antes de lançar saídas.', 'warning'); return;
         }
-        const estoqueAtual = parseInt(estoqueAguaAtualEl.textContent) || 0;
+        const estoqueAtual = parseInt(window.estoqueAguaAtualEl.textContent) || 0;
         if (qtdEntregue > estoqueAtual) {
-            showAlert('alert-agua', `Erro: Estoque insuficiente. Disponível: ${estoqueAtual}`, 'error'); return;
+            window.showAlert('alert-agua', `Erro: Estoque insuficiente. Disponível: ${estoqueAtual}`, 'error'); return;
         }
     }
     
-    btnSubmitAgua.disabled = true; btnSubmitAgua.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+    window.btnSubmitAgua.disabled = true; window.btnSubmitAgua.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
     let msgSucesso = [];
     
     try {
-        // Usa serverTimestamp() importado do app.js
-        const timestamp = serverTimestamp(); 
+        const timestamp = window.serverTimestamp(); 
         if (qtdEntregue > 0) {
-            // Usa aguaCollection definida no app.js
-            await addDoc(aguaCollection, { unidadeId, unidadeNome, tipoUnidade, tipo: 'entrega', quantidade: qtdEntregue, data, responsavel, registradoEm: timestamp });
+            await window.addDoc(window.aguaCollection, { unidadeId, unidadeNome, tipoUnidade, tipo: 'entrega', quantidade: qtdEntregue, data, responsavel, registradoEm: timestamp });
             msgSucesso.push(`${qtdEntregue} galão(ões) entregue(s)`);
         }
         if (qtdRetorno > 0) {
-             await addDoc(aguaCollection, { unidadeId, unidadeNome, tipoUnidade, tipo: 'retorno', quantidade: qtdRetorno, data, responsavel, registradoEm: timestamp });
+             await window.addDoc(window.aguaCollection, { unidadeId, unidadeNome, tipoUnidade, tipo: 'retorno', quantidade: qtdRetorno, data, responsavel, registradoEm: timestamp });
              msgSucesso.push(`${qtdRetorno} galão(ões) recebido(s)`);
         }
-        showAlert('alert-agua', `Movimentação salva! ${msgSucesso.join('; ')}.`, 'success');
-        formAgua.reset(); 
-        inputDataAgua.value = getTodayDateString(); 
+        window.showAlert('alert-agua', `Movimentação salva! ${msgSucesso.join('; ')}.`, 'success');
+        window.formAgua.reset(); 
+        window.inputDataAgua.value = window.getTodayDateString(); 
         toggleAguaFormInputs(); 
     } catch (error) { 
         console.error("Erro salvar água:", error); 
-        showAlert('alert-agua', `Erro: ${error.message}`, 'error');
+        window.showAlert('alert-agua', `Erro: ${error.message}`, 'error');
     } finally { 
-        btnSubmitAgua.disabled = false; 
-        btnSubmitAgua.textContent = 'Salvar Movimentação'; 
+        window.btnSubmitAgua.disabled = false; 
+        window.btnSubmitAgua.textContent = 'Salvar Movimentação'; 
     }
 }
 
 // Renderiza a tabela de status (saldo) de água por unidade
 function renderAguaStatus() {
-     if (!tableStatusAgua) return;
-     if (!domReady) { console.warn("renderAguaStatus chamada antes do DOM pronto."); return; }
+     // **CORREÇÃO DE ESCOPO**: Usa window.tableStatusAgua, window.domReady, etc.
+     if (!window.tableStatusAgua) return;
+     if (!window.domReady) { console.warn("renderAguaStatus chamada antes do DOM pronto."); return; }
      
      const statusMap = new Map();
-     // Usa fb_unidades (global do app.js)
-     fb_unidades.forEach(u => { 
+     window.fb_unidades.forEach(u => { 
         let tipoNormalizado = (u.tipo || 'N/A').toUpperCase();
         if (tipoNormalizado === 'SEMCAS') tipoNormalizado = 'SEDE';
         statusMap.set(u.id, { id: u.id, nome: u.nome, tipo: tipoNormalizado, entregues: 0, recebidos: 0, ultimosLancamentos: [] }); 
     });
 
-     // Usa fb_agua_movimentacoes (global do app.js)
-     const movsOrdenadas = [...fb_agua_movimentacoes].sort((a, b) => (b.registradoEm?.toMillis() || 0) - (a.registradoEm?.toMillis() || 0));
+     const movsOrdenadas = [...window.fb_agua_movimentacoes].sort((a, b) => (b.registradoEm?.toMillis() || 0) - (a.registradoEm?.toMillis() || 0));
      
      movsOrdenadas.forEach(m => {
          if (statusMap.has(m.unidadeId)) {
@@ -148,7 +152,7 @@ function renderAguaStatus() {
              if (m.tipo === 'entrega') unidadeStatus.entregues += m.quantidade;
              else if (m.tipo === 'retorno') unidadeStatus.recebidos += m.quantidade;
              if (unidadeStatus.ultimosLancamentos.length < 1) { 
-                 unidadeStatus.ultimosLancamentos.push({id: m.id, resp: m.responsavel, data: formatTimestamp(m.data), tipo: m.tipo});
+                 unidadeStatus.ultimosLancamentos.push({id: m.id, resp: m.responsavel, data: window.formatTimestamp(m.data), tipo: m.tipo});
              }
          }
      });
@@ -159,10 +163,10 @@ function renderAguaStatus() {
          .sort((a, b) => b.pendentes - a.pendentes || a.nome.localeCompare(b.nome)); 
 
     if (statusArray.length === 0) { 
-        tableStatusAgua.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma movimentação registrada.</td></tr>'; 
+        window.tableStatusAgua.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma movimentação registrada.</td></tr>'; 
         return; 
     }
-    tableStatusAgua.innerHTML = statusArray.map(s => {
+    window.tableStatusAgua.innerHTML = statusArray.map(s => {
         const tooltipText = s.ultimosLancamentos.map(l => `${l.tipo === 'entrega' ? 'E': 'R'}: ${l.resp} (${l.data})`).join(' | ');
         const ultimoId = s.ultimosLancamentos[0]?.id; 
         const saldo = s.pendentes;
@@ -178,11 +182,11 @@ function renderAguaStatus() {
             </td>
         </tr>
     `}).join('');
-     lucide.createIcons(); 
+     window.lucide.createIcons(); 
 
     const filtroStatusAguaEl = document.getElementById('filtro-status-agua');
     if (filtroStatusAguaEl && filtroStatusAguaEl.value) {
-        filterTable(filtroStatusAguaEl, 'table-status-agua');
+        window.filterTable(filtroStatusAguaEl, 'table-status-agua');
     }
 }
 
@@ -191,7 +195,8 @@ function renderAguaStatus() {
 // Processa o envio do formulário de estoque inicial
 async function handleInicialEstoqueSubmit(e) {
     e.preventDefault();
-     if (!domReady) return; 
+     // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.capitalizeString, etc.
+     if (!window.domReady) return; 
     const tipoEstoque = e.target.id.includes('agua') ? 'agua' : 'gas'; 
     if(tipoEstoque !== 'agua') return; // Garante que só processe água aqui
     
@@ -201,14 +206,14 @@ async function handleInicialEstoqueSubmit(e) {
     const alertElId = `alert-inicial-agua`;
     
     const quantidade = parseInt(inputQtd, 10);
-    const responsavel = capitalizeString(inputResp.trim());
+    const responsavel = window.capitalizeString(inputResp.trim());
 
     if (isNaN(quantidade) || quantidade < 0 || !responsavel) { 
-        showAlert(alertElId, "Preencha a quantidade e o responsável.", 'warning'); return; 
+        window.showAlert(alertElId, "Preencha a quantidade e o responsável.", 'warning'); return; 
     }
     
-    if (estoqueInicialDefinido.agua) { // Usa a variável global
-         showAlert(alertElId, "O estoque inicial já foi definido.", 'info'); 
+    if (window.estoqueInicialDefinido.agua) { // Usa a variável global
+         window.showAlert(alertElId, "O estoque inicial já foi definido.", 'info'); 
          document.getElementById(`form-inicial-agua-container`).classList.add('hidden');
          document.getElementById(`btn-abrir-inicial-agua`).classList.add('hidden');
          document.getElementById(`resumo-estoque-agua`).classList.remove('hidden'); 
@@ -218,20 +223,20 @@ async function handleInicialEstoqueSubmit(e) {
     btnSubmit.disabled = true; btnSubmit.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
     
     try {
-        await addDoc(estoqueAguaCollection, { // Usa a collection global
+        await window.addDoc(window.estoqueAguaCollection, { // Usa a collection global
             tipo: 'inicial', 
             quantidade: quantidade, 
-            data: serverTimestamp(), 
+            data: window.serverTimestamp(), 
             responsavel: responsavel, 
             notaFiscal: 'INICIAL', 
-            registradoEm: serverTimestamp() 
+            registradoEm: window.serverTimestamp() 
         });
-        showAlert(alertElId, "Estoque inicial salvo!", 'success', 2000);
+        window.showAlert(alertElId, "Estoque inicial salvo!", 'success', 2000);
          document.getElementById(`form-inicial-agua-container`).classList.add('hidden');
          document.getElementById(`btn-abrir-inicial-agua`).classList.add('hidden');
     } catch (error) {
         console.error("Erro ao salvar estoque inicial:", error);
-        showAlert(alertElId, `Erro ao salvar: ${error.message}`, 'error');
+        window.showAlert(alertElId, `Erro ao salvar: ${error.message}`, 'error');
         btnSubmit.disabled = false; btnSubmit.textContent = 'Salvar Inicial'; 
     }
 }
@@ -239,8 +244,9 @@ async function handleInicialEstoqueSubmit(e) {
 // Processa o envio do formulário de entrada de estoque
 async function handleEntradaEstoqueSubmit(e) {
     e.preventDefault();
-    if (!isAuthReady) { showAlert('alert-agua', 'Erro: Não autenticado.', 'error'); return; } 
-    if (!domReady) { showAlert('alert-agua', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
+    // **CORREÇÃO DE ESCOPO**: Usa window.isAuthReady, window.showAlert, etc.
+    if (!window.isAuthReady) { window.showAlert('alert-agua', 'Erro: Não autenticado.', 'error'); return; } 
+    if (!window.domReady) { window.showAlert('alert-agua', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
     
     const tipoEstoque = e.target.id.includes('agua') ? 'agua' : 'gas';
     if(tipoEstoque !== 'agua') return; // Garante que só processe água aqui
@@ -254,34 +260,34 @@ async function handleEntradaEstoqueSubmit(e) {
     const form = document.getElementById(`form-entrada-agua`);
     
     const quantidade = parseInt(inputQtd, 10);
-    const data = dateToTimestamp(inputData);
-    const responsavel = capitalizeString(inputResp.trim());
+    const data = window.dateToTimestamp(inputData);
+    const responsavel = window.capitalizeString(inputResp.trim());
     const notaFiscal = inputNf.trim() || 'N/A'; 
 
     if (!quantidade || quantidade <= 0 || !data || !responsavel) { 
-        showAlert(alertElementId, 'Dados inválidos. Verifique quantidade, data e responsável.', 'warning'); return; 
+        window.showAlert(alertElementId, 'Dados inválidos. Verifique quantidade, data e responsável.', 'warning'); return; 
     }
-    if (!estoqueInicialDefinido.agua) { // Usa a variável global
-        showAlert(alertElementId, `Defina o Estoque Inicial de Água antes de lançar entradas.`, 'warning'); return; 
+    if (!window.estoqueInicialDefinido.agua) { // Usa a variável global
+        window.showAlert(alertElementId, `Defina o Estoque Inicial de Água antes de lançar entradas.`, 'warning'); return; 
     }
     
     btnSubmit.disabled = true; btnSubmit.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
     
     try {
-        await addDoc(estoqueAguaCollection, { // Usa a collection global
+        await window.addDoc(window.estoqueAguaCollection, { // Usa a collection global
             tipo: 'entrada', 
             quantidade: quantidade, 
             data: data, 
             responsavel: responsavel, 
             notaFiscal: notaFiscal, 
-            registradoEm: serverTimestamp() 
+            registradoEm: window.serverTimestamp() 
         });
-        showAlert(alertElementId, 'Entrada no estoque salva!', 'success');
+        window.showAlert(alertElementId, 'Entrada no estoque salva!', 'success');
         form.reset(); 
-        document.getElementById(`input-data-entrada-agua`).value = getTodayDateString(); 
+        document.getElementById(`input-data-entrada-agua`).value = window.getTodayDateString(); 
     } catch (error) {
         console.error("Erro salvar entrada estoque:", error); 
-        showAlert(alertElementId, `Erro: ${error.message}`, 'error');
+        window.showAlert(alertElementId, `Erro: ${error.message}`, 'error');
     } finally { 
         btnSubmit.disabled = false; btnSubmit.textContent = 'Salvar Entrada'; 
     }
@@ -289,53 +295,55 @@ async function handleEntradaEstoqueSubmit(e) {
 
 // Renderiza o resumo do estoque de água
 function renderEstoqueAgua() {
-    if (!estoqueAguaAtualEl) return; 
-     if (!domReady) { console.warn("renderEstoqueAgua chamada antes do DOM pronto."); return; }
+    // **CORREÇÃO DE ESCOPO**: Usa window.estoqueAguaAtualEl, window.domReady, etc.
+    if (!window.estoqueAguaAtualEl) return; 
+     if (!window.domReady) { console.warn("renderEstoqueAgua chamada antes do DOM pronto."); return; }
     
-    if (loadingEstoqueAguaEl) loadingEstoqueAguaEl.style.display = 'none'; 
+    if (window.loadingEstoqueAguaEl) window.loadingEstoqueAguaEl.style.display = 'none'; 
     
-    if (estoqueInicialDefinido.agua) { // Usa a variável global
-        if(btnAbrirInicialAgua) btnAbrirInicialAgua.classList.add('hidden'); 
-        if(formInicialAguaContainer) formInicialAguaContainer.classList.add('hidden'); 
-        if(resumoEstoqueAguaEl) resumoEstoqueAguaEl.classList.remove('hidden'); 
+    if (window.estoqueInicialDefinido.agua) { // Usa a variável global
+        if(window.btnAbrirInicialAgua) window.btnAbrirInicialAgua.classList.add('hidden'); 
+        if(window.formInicialAguaContainer) window.formInicialAguaContainer.classList.add('hidden'); 
+        if(window.resumoEstoqueAguaEl) window.resumoEstoqueAguaEl.classList.remove('hidden'); 
     } else { 
-        if(btnAbrirInicialAgua) btnAbrirInicialAgua.classList.remove('hidden'); 
-        if(resumoEstoqueAguaEl) resumoEstoqueAguaEl.classList.add('hidden'); 
+        if(window.btnAbrirInicialAgua) window.btnAbrirInicialAgua.classList.remove('hidden'); 
+        if(window.resumoEstoqueAguaEl) window.resumoEstoqueAguaEl.classList.add('hidden'); 
     }
 
     // Usa os arrays globais fb_estoque_agua e fb_agua_movimentacoes
-    const estoqueInicial = fb_estoque_agua.filter(e => e.tipo === 'inicial').reduce((sum, e) => sum + e.quantidade, 0);
-    const totalEntradas = fb_estoque_agua.filter(e => e.tipo === 'entrada').reduce((sum, e) => sum + e.quantidade, 0);
-    const totalSaidas = fb_agua_movimentacoes.filter(m => m.tipo === 'entrega').reduce((sum, m) => sum + m.quantidade, 0);
+    const estoqueInicial = window.fb_estoque_agua.filter(e => e.tipo === 'inicial').reduce((sum, e) => sum + e.quantidade, 0);
+    const totalEntradas = window.fb_estoque_agua.filter(e => e.tipo === 'entrada').reduce((sum, e) => sum + e.quantidade, 0);
+    const totalSaidas = window.fb_agua_movimentacoes.filter(m => m.tipo === 'entrega').reduce((sum, m) => sum + m.quantidade, 0);
     const estoqueAtual = estoqueInicial + totalEntradas - totalSaidas;
 
-    estoqueAguaInicialEl.textContent = estoqueInicial;
-    estoqueAguaEntradasEl.textContent = `+${totalEntradas}`;
-    estoqueAguaSaidasEl.textContent = `-${totalSaidas}`;
-    estoqueAguaAtualEl.textContent = estoqueAtual;
+    window.estoqueAguaInicialEl.textContent = estoqueInicial;
+    window.estoqueAguaEntradasEl.textContent = `+${totalEntradas}`;
+    window.estoqueAguaSaidasEl.textContent = `-${totalSaidas}`;
+    window.estoqueAguaAtualEl.textContent = estoqueAtual;
     
     // Atualiza o card no dashboard também
-    renderDashboardVisaoGeralSummary(); 
+    window.renderDashboardVisaoGeralSummary(); 
 }
 
 // Renderiza a tabela de histórico de entradas no estoque de água
 function renderHistoricoAgua() {
-    if (!tableHistoricoAgua) return;
-     if (!domReady) { console.warn("renderHistoricoAgua chamada antes do DOM pronto."); return; }
+    // **CORREÇÃO DE ESCOPO**: Usa window.tableHistoricoAgua, window.domReady, etc.
+    if (!window.tableHistoricoAgua) return;
+     if (!window.domReady) { console.warn("renderHistoricoAgua chamada antes do DOM pronto."); return; }
     
      // Usa o array global fb_estoque_agua
-    const historicoOrdenado = [...fb_estoque_agua].sort((a, b) => (b.data?.toMillis() || 0) - (a.data?.toMillis() || 0));
+    const historicoOrdenado = [...window.fb_estoque_agua].sort((a, b) => (b.data?.toMillis() || 0) - (a.data?.toMillis() || 0));
      
      if (historicoOrdenado.length === 0) { 
-        tableHistoricoAgua.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma entrada registrada.</td></tr>'; return; 
+        window.tableHistoricoAgua.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma entrada registrada.</td></tr>'; return; 
      }
      
-    tableHistoricoAgua.innerHTML = historicoOrdenado.map(e => {
+    window.tableHistoricoAgua.innerHTML = historicoOrdenado.map(e => {
         const tipoClass = e.tipo === 'inicial' ? 'badge-blue' : 'badge-green';
         const tipoText = e.tipo === 'inicial' ? 'Inicial' : 'Entrada';
         return `
         <tr>
-            <td>${formatTimestamp(e.data)}</td>
+            <td>${window.formatTimestamp(e.data)}</td>
             <td><span class="badge ${tipoClass}">${tipoText}</span></td>
             <td class="text-center font-medium">${e.quantidade}</td>
             <td>${e.responsavel || 'N/A'}</td><td>${e.notaFiscal || 'N/A'}</td>
@@ -344,12 +352,14 @@ function renderHistoricoAgua() {
             </td>
         </tr>
     `}).join('');
-    lucide.createIcons(); 
+    window.lucide.createIcons(); 
 
     const filtroHistoricoAguaEl = document.getElementById('filtro-historico-agua');
-    if (filtroHistoricoAguaEl && filtroHistoricoAguaEl.value) { filterTable(filtroHistoricoAguaEl, 'table-historico-agua'); }
+    if (filtroHistoricoAguaEl && filtroHistoricoAguaEl.value) { window.filterTable(filtroHistoricoAguaEl, 'table-historico-agua'); }
 }
-
+// **CORREÇÃO DE ESCOPO**: As funções abaixo (selecionarModoPrevisao, etc.)
+// já são anexadas ao 'window' no app.js, mas elas usam variáveis globais.
+// Vamos garantir que elas usem window.X internamente.
 
 // --- LÓGICA DE PREVISÃO INTELIGENTE DE ÁGUA ---
 
@@ -357,9 +367,16 @@ function renderHistoricoAgua() {
 // A função agora usa as variáveis globais modoPrevisao, listaExclusoes, tipoSelecionadoPrevisao
 // e chama as funções globais populateUnidadeSelects e renderizarListaExclusoes
 window.selecionarModoPrevisao = (tipoItem, modo) => {
-    if (tipoItem !== 'agua' || !domReady) return; 
+    // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.modoPrevisao, etc.
+    if (!window.domReady) return; 
+    
+    // Este arquivo agora trata AMBOS os tipos, mas o app.js
+    // anexa as funções do gas.js por último, sobrescrevendo estas.
+    // Vamos fazer esta função tratar APENAS 'agua'.
+    if (tipoItem !== 'agua') return; 
+    
     console.log(`Modo Previsão (Água): ${modo}`);
-    modoPrevisao.agua = modo;
+    window.modoPrevisao.agua = modo;
     
     const configContainer = document.getElementById(`config-previsao-agua`);
     const cards = document.querySelectorAll(`#subview-previsao-agua .previsao-option-card`);
@@ -379,17 +396,17 @@ window.selecionarModoPrevisao = (tipoItem, modo) => {
     if (modo === 'unidade-especifica') {
         selectUnidadeContainer.classList.remove('hidden');
         exclusaoContainer.classList.add('hidden'); 
-        tipoSelecionadoPrevisao.agua = null; 
+        window.tipoSelecionadoPrevisao.agua = null; 
     } else if (modo === 'por-tipo') {
         selectTipoContainer.classList.remove('hidden');
-        tipoSelecionadoPrevisao.agua = selectTipoEl.value; 
-        populateUnidadeSelects(selectExclusaoEl, 'atendeAgua', false, true, tipoSelecionadoPrevisao.agua); 
+        window.tipoSelecionadoPrevisao.agua = selectTipoEl.value; 
+        window.populateUnidadeSelects(selectExclusaoEl, 'atendeAgua', false, true, window.tipoSelecionadoPrevisao.agua); 
     } else if (modo === 'completo') {
-        tipoSelecionadoPrevisao.agua = null; 
-         populateUnidadeSelects(selectExclusaoEl, 'atendeAgua', false, true, null);
+        window.tipoSelecionadoPrevisao.agua = null; 
+         window.populateUnidadeSelects(selectExclusaoEl, 'atendeAgua', false, true, null);
     }
 
-    listaExclusoes.agua = [];
+    window.listaExclusoes.agua = [];
     renderizarListaExclusoes('agua');
     
     // Remove listener antigo (se existir) e adiciona o novo
@@ -399,33 +416,36 @@ window.selecionarModoPrevisao = (tipoItem, modo) => {
 
 // Handler específico para mudança de tipo na previsão de água
 function handleTipoPrevisaoChangeAgua(event) {
-    if (!domReady) return; 
+    // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.tipoSelecionadoPrevisao, etc.
+    if (!window.domReady) return; 
     const selectEl = event.target;
     const novoTipo = selectEl.value;
-    tipoSelecionadoPrevisao.agua = novoTipo; 
+    window.tipoSelecionadoPrevisao.agua = novoTipo; 
     
     const selectExclusaoEl = document.getElementById(`select-exclusao-agua`);
-    populateUnidadeSelects(selectExclusaoEl, 'atendeAgua', false, true, novoTipo); 
+    window.populateUnidadeSelects(selectExclusaoEl, 'atendeAgua', false, true, novoTipo); 
     
-    listaExclusoes.agua = [];
+    window.listaExclusoes.agua = [];
     renderizarListaExclusoes('agua');
 }
 
 
 // Adiciona unidade à lista de exclusão (chamado pelo HTML)
 window.adicionarExclusao = (tipoItem) => {
-    if (tipoItem !== 'agua' || !domReady) return; 
+    // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.listaExclusoes, etc.
+    if (tipoItem !== 'agua' || !window.domReady) return; 
+    
     const selectExclusao = document.getElementById(`select-exclusao-agua`);
     const unidadeId = selectExclusao.value;
     if (!unidadeId || unidadeId === 'todas') return; 
     
-    if (listaExclusoes.agua.find(item => item.id === unidadeId)) {
+    if (window.listaExclusoes.agua.find(item => item.id === unidadeId)) {
         selectExclusao.value = ""; 
         return;
     }
 
     const unidadeNome = selectExclusao.options[selectExclusao.selectedIndex].text;
-    listaExclusoes.agua.push({ id: unidadeId, nome: unidadeNome });
+    window.listaExclusoes.agua.push({ id: unidadeId, nome: unidadeNome });
     
     renderizarListaExclusoes('agua'); 
     selectExclusao.value = ""; 
@@ -433,9 +453,10 @@ window.adicionarExclusao = (tipoItem) => {
 
 // Renderiza a lista de unidades excluídas
 function renderizarListaExclusoes(tipoItem) {
-     if (tipoItem !== 'agua' || !domReady) return; 
+     // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.listaExclusoes, etc.
+     if (tipoItem !== 'agua' || !window.domReady) return; 
     const container = document.getElementById(`lista-exclusoes-agua`);
-    container.innerHTML = listaExclusoes.agua.map((item, index) => `
+    container.innerHTML = window.listaExclusoes.agua.map((item, index) => `
         <span class="exclusao-item">
             ${item.nome}
             <button type="button" onclick="removerExclusao('agua', ${index})">&times;</button>
@@ -445,20 +466,22 @@ function renderizarListaExclusoes(tipoItem) {
 
 // Remove unidade da lista de exclusão (chamado pelo HTML)
 window.removerExclusao = (tipoItem, index) => {
-     if (tipoItem !== 'agua' || !domReady) return; 
-    listaExclusoes.agua.splice(index, 1); 
+     // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.listaExclusoes, etc.
+     if (tipoItem !== 'agua' || !window.domReady) return; 
+    window.listaExclusoes.agua.splice(index, 1); 
     renderizarListaExclusoes('agua'); 
 }
 
 // Calcula a previsão inteligente (chamado pelo HTML)
 window.calcularPrevisaoInteligente = (tipoItem) => {
-     if (tipoItem !== 'agua' || !domReady) return; 
+     // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.modoPrevisao, etc.
+     if (tipoItem !== 'agua' || !window.domReady) return; 
     console.log(`Calculando previsão para Água...`);
     const alertId = `alertas-previsao-agua`;
     const resultadoContainerId = `resultado-previsao-agua-v2`;
     
-    if (!modoPrevisao.agua) {
-        showAlert(alertId, 'Por favor, selecione um modo de previsão primeiro (Etapa 1).', 'warning');
+    if (!window.modoPrevisao.agua) {
+        window.showAlert(alertId, 'Por favor, selecione um modo de previsão primeiro (Etapa 1).', 'warning');
         return;
     }
 
@@ -468,16 +491,16 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
     let unidadeIdFiltro = null;
     let tipoUnidadeFiltro = null;
 
-    if (modoPrevisao.agua === 'unidade-especifica') {
+    if (window.modoPrevisao.agua === 'unidade-especifica') {
         unidadeIdFiltro = document.getElementById(`select-previsao-unidade-agua-v2`).value;
         if (!unidadeIdFiltro) {
-            showAlert(alertId, 'Por favor, selecione uma unidade específica (Etapa 2).', 'warning');
+            window.showAlert(alertId, 'Por favor, selecione uma unidade específica (Etapa 2).', 'warning');
             return;
         }
-    } else if (modoPrevisao.agua === 'por-tipo') {
+    } else if (window.modoPrevisao.agua === 'por-tipo') {
         tipoUnidadeFiltro = document.getElementById(`select-previsao-tipo-agua`).value;
          if (!tipoUnidadeFiltro) {
-            showAlert(alertId, 'Por favor, selecione um tipo de unidade (Etapa 2).', 'warning');
+            window.showAlert(alertId, 'Por favor, selecione um tipo de unidade (Etapa 2).', 'warning');
             return;
         }
     }
@@ -488,8 +511,8 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
     resultadoContentEl.innerHTML = '<div class="loading-spinner-small mx-auto" style="border-color: #fff; border-top-color: #ccc;"></div>';
     alertasContentEl.innerHTML = ''; 
 
-    const movimentacoes = fb_agua_movimentacoes; // Usa array global
-    const idsExcluidos = new Set(listaExclusoes.agua.map(item => item.id)); // Usa array global
+    const movimentacoes = window.fb_agua_movimentacoes; // Usa array global
+    const idsExcluidos = new Set(window.listaExclusoes.agua.map(item => item.id)); // Usa array global
     
     let movsFiltradas = movimentacoes.filter(m => {
         let tipoMov = (m.tipoUnidade || '').toUpperCase();
@@ -505,16 +528,16 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
     });
 
     let tituloPrevisao = "Previsão Completa (Água)";
-    if (modoPrevisao.agua === 'unidade-especifica') {
-        const unidade = fb_unidades.find(u => u.id === unidadeIdFiltro);
+    if (window.modoPrevisao.agua === 'unidade-especifica') {
+        const unidade = window.fb_unidades.find(u => u.id === unidadeIdFiltro);
         tituloPrevisao = `Previsão (Água) para: ${unidade?.nome || 'Unidade Desconhecida'}`;
-    } else if (modoPrevisao.agua === 'por-tipo') {
+    } else if (window.modoPrevisao.agua === 'por-tipo') {
         tituloPrevisao = `Previsão (Água) para tipo: ${tipoUnidadeFiltro}`;
     }
 
     if (movsFiltradas.length < 2) {
         resultadoContentEl.innerHTML = `<p class="text-yellow-200">Dados insuficientes para calcular (necessário no mínimo 2 entregas no período/filtro).</p>`;
-        if (graficoPrevisao.agua) graficoPrevisao.agua.destroy(); 
+        if (window.graficoPrevisao.agua) window.graficoPrevisao.agua.destroy(); 
         return;
     }
     
@@ -550,13 +573,13 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
                 <span class="text-3xl font-bold text-yellow-300">${previsaoFinal}</span>
             </div>
         </div>
-        <p class="text-xs opacity-70 mt-3 text-center">Cálculo baseado em ${totalQuantidade} unidades entregues entre ${formatTimestamp(movsFiltradas[0].data)} e ${formatTimestamp(movsFiltradas[movsFiltradas.length - 1].data)} (${diffDays} dias).</p>
-         ${listaExclusoes.agua.length > 0 ? `<p class="text-xs opacity-70 mt-1 text-center text-red-200">Excluídas: ${listaExclusoes.agua.map(u=>u.nome).join(', ')}</p>` : ''}
+        <p class="text-xs opacity-70 mt-3 text-center">Cálculo baseado em ${totalQuantidade} unidades entregues entre ${window.formatTimestamp(movsFiltradas[0].data)} e ${window.formatTimestamp(movsFiltradas[movsFiltradas.length - 1].data)} (${diffDays} dias).</p>
+         ${window.listaExclusoes.agua.length > 0 ? `<p class="text-xs opacity-70 mt-1 text-center text-red-200">Excluídas: ${window.listaExclusoes.agua.map(u=>u.nome).join(', ')}</p>` : ''}
     `;
     
     renderizarGraficoPrevisao('agua', movsFiltradas);
     
-    const estoqueAtual = parseInt(estoqueAguaAtualEl?.textContent || '0') || 0;
+    const estoqueAtual = parseInt(window.estoqueAguaAtualEl?.textContent || '0') || 0;
         
     if (estoqueAtual < previsaoFinal) {
          alertasContentEl.innerHTML = `
@@ -575,18 +598,19 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
          // Mostra o alerta de sucesso que normalmente fica escondido
          document.querySelector(`#${alertId} .alert-success`).style.display = 'block'; 
     }
-     lucide.createIcons(); 
+     window.lucide.createIcons(); 
 }
 
 // Renderiza o gráfico de previsão
 function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
-    if (tipoItem !== 'agua' || !domReady) return; 
+    // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.graficoPrevisao, etc.
+    if (tipoItem !== 'agua' || !window.domReady) return; 
     const canvasId = `grafico-previsao-agua`;
     const ctx = document.getElementById(canvasId)?.getContext('2d');
     if (!ctx) return;
 
     const dadosPorDia = movsFiltradas.reduce((acc, m) => {
-        const dataFormatada = formatTimestamp(m.data);
+        const dataFormatada = window.formatTimestamp(m.data);
         if (!acc[dataFormatada]) {
             acc[dataFormatada] = { timestamp: m.data.toMillis(), total: 0 };
         }
@@ -599,11 +623,11 @@ function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
     const labels = diasOrdenados;
     const data = diasOrdenados.map(dia => dadosPorDia[dia].total);
 
-    if (graficoPrevisao.agua) { // Usa a variável global
-        graficoPrevisao.agua.destroy();
+    if (window.graficoPrevisao.agua) { // Usa a variável global
+        window.graficoPrevisao.agua.destroy();
     }
     
-    graficoPrevisao.agua = new Chart(ctx, { // Atribui à variável global
+    window.graficoPrevisao.agua = new Chart(ctx, { // Atribui à variável global
         type: 'line',
         data: {
             labels: labels,
