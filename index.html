@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.7.1 - Melhorias Visuais)</title>
+    <!-- O título foi ligeiramente alterado para refletir a nova estrutura -->
+    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.8.0 - Refatorado)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
@@ -15,6 +16,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Carregando o style.css do diretório raiz -->
     <link rel="stylesheet" href="style.css">
     
 </head>
@@ -23,7 +25,8 @@
     <header class="header-banner sticky top-0 z-50">
         <div class="container mx-auto px-4">
             <div class="logo-container">
-                <!-- A imagem da logo está correta aqui --><img src="SaoLuis.png" alt="Logo SEMCAS São Luís" class="logo-img" onerror="this.src='https://placehold.co/150x60/ffffff/1e40af?text=SEMCAS'; this.onerror=null;">
+                <!-- A imagem é carregada do diretório raiz -->
+                <img src="SaoLuis.png" alt="Logo SEMCAS São Luís" class="logo-img" onerror="this.src='https://placehold.co/150x60/ffffff/1e40af?text=SEMCAS'; this.onerror=null;">
                 <div class="title-container">
                     <h1 class="main-title">CONTROLE DE ALMOXARIFADO</h1>
                     <p class="sub-title">SEMCAS - Secretaria Municipal da Criança e Assistência Social</p>
@@ -40,8 +43,9 @@
                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M19 16h-3m0 0 3-3 3 3m-3 7v-7"/><path d="M18 5V3"/><path d="M7 5V3"/><path d="M12 5V3"/></svg>
                     </div>
                     <div>
+                        <!-- Atualizado para v.1.0 refatorada -->
                         <h2 class="font-bold text-lg text-slate-800">Sistema de Almoxarifado</h2>
-                        <p class="text-sm text-slate-500">v.1.0 by Jurandy Santana</p> </div>
+                        <p class="text-sm text-slate-500">v.1.0 (Refatorado) by Jurandy Santana</p> </div>
                 </div>
                 <div class="flex items-center space-x-4 text-sm">
                     <div id="connectionStatus" class="flex items-center gap-2"></div>
@@ -64,6 +68,7 @@
         </div>
     </nav>
 
+    <!-- O conteúdo principal do main permanece o mesmo -->
     <main class="container mx-auto p-4 sm:p-6 lg:p-8">
         
         <div id="content-dashboard" class="fade-in">
@@ -387,6 +392,7 @@
                     <div class="mb-6">
                         <h3 class="font-semibold text-slate-700 mb-3">1. Selecione o modo de previsão:</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- Funções (ex: selecionarModoPrevisao) serão movidas para agua.js e gas.js -->
                             <div class="previsao-option-card" data-modo="unidade-especifica" onclick="selecionarModoPrevisao('agua', 'unidade-especifica')">
                                 <div class="flex items-center gap-3 mb-2">
                                     <div class="bg-blue-100 p-2 rounded-full">
@@ -919,6 +925,7 @@
                             <input type="date" id="relatorio-data-fim" class="form-input" required>
                         </div>
                     </div>
+                    <!-- O ID deste botão será usado no relatorio.js -->
                     <button id="btn-gerar-pdf" class="btn btn-primary w-full">Gerar Relatório PDF</button>
                 </div>
                 <div id="alert-relatorio" class="alert mt-4"></div>
@@ -977,6 +984,18 @@
       </div>
     </div>
 
-    <script src="app.js" type="module" defer></script>
+    <!-- 
+      *** MUDANÇA IMPORTANTE ***
+      Carrega os scripts da pasta /js/ conforme o seu .txt
+      O 'defer' garante que eles executem na ordem correta após o HTML ser lido.
+      'app.js' deve vir primeiro, pois ele define as variáveis globais e o app Firebase.
+    -->
+    <script src="js/app.js" type="module" defer></script>
+    <script src="js/agua.js" defer></script>
+    <script src="js/gas.js" defer></script>
+    <script src="js/materiais.js" defer></script>
+    <script src="js/unidades.js" defer></script>
+    <script src="js/relatorio.js" defer></script>
+    
 </body>
 </html>
