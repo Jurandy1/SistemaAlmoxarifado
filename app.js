@@ -2,6 +2,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, Timestamp, serverTimestamp, setLogLevel, setDoc, getDocs, where, limit, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
+// NOVO: Imports do Storage
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- CONFIGURAÇÃO E VARIÁVEIS GLOBAIS ---
 
@@ -22,7 +24,7 @@ const appId = rawAppId.replace(/[\/.]/g, '-');
 
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-let app, auth, db, userId;
+let app, auth, db, storage, userId; // <<< Adicionado storage
 let isAuthReady = false;
 let domReady = false; // <<< BANDEIRA: Indica se o DOM está pronto e elementos encontrados
 
@@ -54,7 +56,7 @@ let formAgua, selectUnidadeAgua, selectTipoAgua, inputDataAgua, inputResponsavel
 let inputQtdEntregueAgua, inputQtdRetornoAgua, formGroupQtdEntregueAgua, formGroupQtdRetornoAgua; 
 let formGas, selectUnidadeGas, selectTipoGas, inputDataGas, inputResponsavelGas, btnSubmitGas, alertGas, tableStatusGas, alertGasLista;
 let inputQtdEntregueGas, inputQtdRetornoGas, formGroupQtdEntregueGas, formGroupQtdRetornoGas; 
-let formMateriais, selectUnidadeMateriais, selectTipoMateriais, inputDataSeparacao, textareaItensMateriais, inputResponsavelMateriais, btnSubmitMateriais, alertMateriais, tableStatusMateriais, alertMateriaisLista;
+let formMateriais, selectUnidadeMateriais, selectTipoMateriais, inputDataSeparacao, textareaItensMateriais, inputResponsavelMateriais, inputArquivoMateriais, btnSubmitMateriais, alertMateriais, tableStatusMateriais, alertMateriaisLista; // <<< Adicionado inputArquivoMateriais
 let tableGestaoUnidades, alertGestao, textareaBulkUnidades, btnBulkAddUnidades;
 let filtroUnidadeNome, filtroUnidadeTipo; 
 let relatorioTipo, relatorioDataInicio, relatorioDataFim, btnGerarPdf, alertRelatorio;
@@ -160,6 +162,7 @@ async function initFirebase() {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
+        storage = getStorage(app); // <<< Adicionado inicializador do Storage
         
         // Tentativa de buscar o elemento de status logo cedo
         connectionStatusEl = document.getElementById('connectionStatus'); 
@@ -1026,13 +1029,51 @@ async function handleMateriaisSubmit(e) {
     const dataSeparacao = dateToTimestamp(inputDataSeparacao.value);
     const itens = textareaItensMateriais.value.trim();
     const responsavelSeparacao = capitalizeString(inputResponsavelMateriais.value.trim()); 
+    const arquivo = inputArquivoMateriais.files[0]; // <<< NOVO: Pega o arquivo
      
      if (!unidadeId || !tipoMaterial || !dataSeparacao || !responsavelSeparacao) {
         showAlert('alert-materiais', 'Dados inválidos. Verifique unidade, tipo, data e Responsável (Separação).', 'warning'); return;
     }
     
-    btnSubmitMateriais.disabled = true; btnSubmitMateriais.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+    btnSubmitMateriais.disabled = true; 
     
+    let fileURL = null;
+    let storagePath = null;
+
+    // Lógica de Upload (Se houver arquivo)
+    if (arquivo) {
+        if (arquivo.size > 10 * 1024 * 1024) { // Limite de 10MB
+            showAlert('alert-materiais', 'Erro: Arquivo muito grande (máx 10MB).', 'error');
+            btnSubmitMateriais.disabled = false;
+            return;
+        }
+        
+        btnSubmitMateriais.innerHTML = '<div class="loading-spinner-small mx-auto"></div><span class="ml-2">Enviando arquivo...</span>';
+        showAlert('alert-materiais', 'Enviando arquivo anexo...', 'info', 10000);
+
+        try {
+            const fileId = `${Date.now()}_${arquivo.name.replace(/[^a-zA-Z0-9._-]/g, '')}`;
+            storagePath = `artifacts/${appId}/pedidosMateriais/${fileId}`;
+            const storageRef = ref(storage, storagePath);
+            
+            const snapshot = await uploadBytes(storageRef, arquivo);
+            fileURL = await getDownloadURL(snapshot.ref);
+            
+            console.log("Arquivo enviado:", fileURL);
+            showAlert('alert-materiais', 'Arquivo enviado! Salvando registro...', 'info', 10000);
+
+        } catch (error) {
+            console.error("Erro no upload do arquivo:", error);
+            showAlert('alert-materiais', `Erro ao enviar arquivo: ${error.message}`, 'error');
+            btnSubmitMateriais.disabled = false; 
+            btnSubmitMateriais.textContent = 'Registrar Separação';
+            return;
+        }
+    } else {
+         btnSubmitMateriais.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+    }
+    
+    // Salvar no Firestore
     try {
         await addDoc(materiaisCollection, { 
             unidadeId, unidadeNome, tipoUnidade, tipoMaterial, 
@@ -1041,7 +1082,9 @@ async function handleMateriaisSubmit(e) {
             dataEntrega: null, responsavelSeparacao, 
             responsavelRetirada: null, 
             responsavelEntrega: null, 
-            registradoEm: serverTimestamp() 
+            registradoEm: serverTimestamp(),
+            fileURL: fileURL, // <<< NOVO
+            storagePath: storagePath // <<< NOVO
         });
         showAlert('alert-materiais', 'Separação registrada!', 'success');
         formMateriais.reset(); 
@@ -1079,6 +1122,11 @@ function renderMateriaisStatus() {
         let dataStatusText = '';
         let acoesHtml = '';
         
+        // NOVO: Botão de Download
+        const downloadBtnHtml = m.fileURL 
+            ? `<a href="${m.fileURL}" target="_blank" class="btn-icon btn-download-pedido text-blue-600 hover:text-blue-800" title="Baixar Pedido Anexado"><i data-lucide="download-cloud"></i></a>`
+            : `<span class="btn-icon text-slate-300" title="Nenhum pedido anexado"><i data-lucide="file-x"></i></span>`;
+
         const tooltipText = `Separado por: ${m.responsavelSeparacao || 'N/A'}${m.responsavelEntrega ? ' | Entregue por: '+m.responsavelEntrega : ''}`;
         const isEntregue = m.status === 'entregue';
         
@@ -1109,8 +1157,9 @@ function renderMateriaisStatus() {
                 <td class="capitalize">${m.tipoMaterial || 'N/D'}</td>
                 <td>${formatTimestamp(m.dataSeparacao)}</td>
                 <td><span class="badge ${statusClass}">${statusText}${dataStatusText}</span></td>
-                <td class="text-right space-x-1">
+                <td class="text-center space-x-1"> <!-- ATUALIZADO: text-center -->
                     ${acoesHtml}
+                    ${downloadBtnHtml} <!-- NOVO: Adicionado botão de download -->
                     <button class="btn-danger btn-remove" data-id="${m.id}" data-type="materiais" title="Remover este registro"><i data-lucide="trash-2"></i></button>
                 </td>
             </tr>`;
@@ -1158,6 +1207,7 @@ async function handleMarcarEntregue(e) {
     
     const material = fb_materiais.find(m => m.id === materialId);
     const responsavelEntrega = material?.responsavelSeparacao || "Responsável (Retirada)"; 
+    const storagePath = material?.storagePath; // <<< NOVO: Pega o caminho do arquivo
     
     button.disabled = true; button.innerHTML = '<div class="loading-spinner-small mx-auto" style="width: 16px; height: 16px; border-width: 2px;"></div>';
     
@@ -1169,6 +1219,20 @@ async function handleMarcarEntregue(e) {
             responsavelEntrega: capitalizeString(responsavelEntrega) 
         });
         showAlert('alert-materiais-lista', 'Material marcado como entregue!', 'success', 3000);
+        
+        // NOVO: Excluir arquivo do Storage
+        if (storagePath) {
+            try {
+                const fileRef = ref(storage, storagePath);
+                await deleteObject(fileRef);
+                console.log("Arquivo anexo excluído:", storagePath);
+            } catch (error) {
+                // Não bloquear o usuário por isso, apenas logar
+                console.warn("Erro ao excluir arquivo anexo:", error);
+                showAlert('alert-materiais-lista', 'Material entregue, mas houve um erro ao limpar o anexo.', 'warning', 4000);
+            }
+        }
+
     } catch (error) { 
         console.error("Erro marcar entregue:", error); 
         showAlert('alert-materiais-lista', `Erro: ${error.message}`, 'error'); 
@@ -1916,6 +1980,24 @@ async function executeDelete() {
     btnCancelDelete.disabled = true;
     
     try {
+        // NOVO: Lógica para excluir arquivo anexo se estiver deletando um material
+        if (deleteInfo.type === 'materiais') {
+            const materialDoc = await getDoc(doc(deleteInfo.collectionRef, deleteInfo.id));
+            if (materialDoc.exists()) {
+                const storagePath = materialDoc.data().storagePath;
+                if (storagePath) {
+                     try {
+                        const fileRef = ref(storage, storagePath);
+                        await deleteObject(fileRef);
+                        console.log("Arquivo anexo excluído (registro removido):", storagePath);
+                    } catch (error) {
+                        console.warn("Erro ao excluir arquivo anexo durante a remoção do registro:", error);
+                        // Continua mesmo se falhar
+                    }
+                }
+            }
+        }
+        
         const docRef = doc(deleteInfo.collectionRef, deleteInfo.id);
         await deleteDoc(docRef);
 
@@ -2308,7 +2390,7 @@ function setupApp() {
     inputQtdEntregueAgua = document.getElementById('input-qtd-entregue-agua'); inputQtdRetornoAgua = document.getElementById('input-qtd-retorno-agua'); formGroupQtdEntregueAgua = document.getElementById('form-group-qtd-entregue-agua'); formGroupQtdRetornoAgua = document.getElementById('form-group-qtd-retorno-agua');
     formGas = document.getElementById('form-gas'); selectUnidadeGas = document.getElementById('select-unidade-gas'); selectTipoGas = document.getElementById('select-tipo-gas'); inputDataGas = document.getElementById('input-data-gas'); inputResponsavelGas = document.getElementById('input-responsavel-gas'); btnSubmitGas = document.getElementById('btn-submit-gas'); alertGas = document.getElementById('alert-gas'); tableStatusGas = document.getElementById('table-status-gas'); alertGasLista = document.getElementById('alert-gas-lista');
     inputQtdEntregueGas = document.getElementById('input-qtd-entregue-gas'); inputQtdRetornoGas = document.getElementById('input-qtd-retorno-gas'); formGroupQtdEntregueGas = document.getElementById('form-group-qtd-entregue-gas'); formGroupQtdRetornoGas = document.getElementById('form-group-qtd-retorno-gas');
-    formMateriais = document.getElementById('form-materiais'); selectUnidadeMateriais = document.getElementById('select-unidade-materiais'); selectTipoMateriais = document.getElementById('select-tipo-materiais'); inputDataSeparacao = document.getElementById('input-data-separacao'); textareaItensMateriais = document.getElementById('textarea-itens-materiais'); inputResponsavelMateriais = document.getElementById('input-responsavel-materiais'); btnSubmitMateriais = document.getElementById('btn-submit-materiais'); alertMateriais = document.getElementById('alert-materiais'); tableStatusMateriais = document.getElementById('table-status-materiais'); alertMateriaisLista = document.getElementById('alert-materiais-lista');
+    formMateriais = document.getElementById('form-materiais'); selectUnidadeMateriais = document.getElementById('select-unidade-materiais'); selectTipoMateriais = document.getElementById('select-tipo-materiais'); inputDataSeparacao = document.getElementById('input-data-separacao'); textareaItensMateriais = document.getElementById('textarea-itens-materiais'); inputResponsavelMateriais = document.getElementById('input-responsavel-materiais'); inputArquivoMateriais = document.getElementById('input-arquivo-materiais'); btnSubmitMateriais = document.getElementById('btn-submit-materiais'); alertMateriais = document.getElementById('alert-materiais'); tableStatusMateriais = document.getElementById('table-status-materiais'); alertMateriaisLista = document.getElementById('alert-materiais-lista'); // <<< Atualizado
     tableGestaoUnidades = document.getElementById('table-gestao-unidades'); alertGestao = document.getElementById('alert-gestao'); textareaBulkUnidades = document.getElementById('textarea-bulk-unidades'); btnBulkAddUnidades = document.getElementById('btn-bulk-add-unidades');
     filtroUnidadeNome = document.getElementById('filtro-unidade-nome'); filtroUnidadeTipo = document.getElementById('filtro-unidade-tipo'); 
     relatorioTipo = document.getElementById('relatorio-tipo'); relatorioDataInicio = document.getElementById('relatorio-data-inicio'); relatorioDataFim = document.getElementById('relatorio-data-fim'); btnGerarPdf = document.getElementById('btn-gerar-pdf'); alertRelatorio = document.getElementById('alert-relatorio');
