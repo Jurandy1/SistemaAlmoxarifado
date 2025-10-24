@@ -1,6 +1,7 @@
 /* =============================================================
    MÓDULO: Geração de Relatórios
    Funções:
+     - initRelatorio() -> NOVO: Chamado pelo app.js
      - handleGerarPdf()
    Dependências:
      - jsPDF, jsPDF-AutoTable (carregados via CDN no HTML)
@@ -12,11 +13,16 @@
 // Importa apenas Timestamp, pois as outras funções/vars são globais
 import { Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
 
-
-document.addEventListener('DOMContentLoaded', () => {
+// **CORREÇÃO**: Removemos o 'DOMContentLoaded' e criamos a função initRelatorio()
+// que será chamada pelo app.js quando o DOM e o Firebase estiverem prontos.
+function initRelatorio() {
+    console.log("Inicializando módulo de Relatório...");
     // Adiciona listener específico para o botão de gerar PDF
     if (btnGerarPdf) btnGerarPdf.addEventListener('click', handleGerarPdf);
-});
+}
+
+// **NOVO**: Torna a função initRelatorio acessível globalmente para o app.js
+window.initRelatorio = initRelatorio;
 
 
 // --- LÓGICA DE RELATÓRIO PDF ---
