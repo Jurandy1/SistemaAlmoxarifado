@@ -18,8 +18,9 @@
    Autor: Jurandy Santana (Refatorado por Gemini)
    ============================================================= */
 
-// **CORREÇÃO**: Removemos o 'DOMContentLoaded' e criamos a função initGas()
-// que será chamada pelo app.js quando o DOM e o Firebase estiverem prontos.
+// **NOTA**: Este arquivo já estava no formato correto, usando initGas().
+// Nenhuma correção foi necessária aqui, apenas garantimos que ele segue
+// o padrão dos outros arquivos corrigidos.
 
 function initGas() {
     console.log("Inicializando módulo de Gás...");
