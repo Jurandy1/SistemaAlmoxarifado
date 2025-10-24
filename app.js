@@ -74,6 +74,8 @@ let modoPrevisao = { agua: null, gas: null };
 let graficoPrevisao = { agua: null, gas: null };
 let tipoSelecionadoPrevisao = { agua: null, gas: null };
 
+// NOVO: Referências do Modal do Separador
+let separadorModal, inputSeparadorNome, btnSalvarSeparador, separadorMaterialIdEl, alertSeparador; // <<< NOVO
 
 // --- FUNÇÕES DE UTILIDADE ---
 function showAlert(elementId, message, type = 'info', duration = 5000) {
@@ -120,6 +122,13 @@ function formatTimestamp(timestamp) {
     } catch (e) { console.error("Erro ao formatar timestamp:", timestamp, e); return 'Erro Data'; }
 }
 
+function formatTimestampComTempo(timestamp) { // <<< NOVA FUNÇÃO
+    if (!timestamp || typeof timestamp.toDate !== 'function') return 'N/A';
+    try {
+        return timestamp.toDate().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    } catch (e) { console.error("Erro ao formatar timestamp com tempo:", timestamp, e); return 'Erro Data'; }
+}
+
 function normalizeString(str) {
     if (!str) return '';
     return String(str).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -141,16 +150,22 @@ function filterTable(inputEl, tableBodyId) {
     }
     
     rows.forEach(row => {
-        if (row.querySelectorAll('td').length > 1 && !row.classList.contains('editing-row') && !row.classList.contains('obs-row')) { 
+        // Ignora linhas de observação e linhas de separador/edição
+        if (row.querySelectorAll('td').length > 1 && !row.classList.contains('editing-row') && !row.classList.contains('obs-row') && !row.classList.contains('separador-row')) { 
             const rowText = normalizeString(row.textContent);
             const isMatch = rowText.includes(searchTerm);
             row.style.display = isMatch ? '' : 'none';
             
-            const obsRow = row.nextElementSibling;
-            if(obsRow && obsRow.classList.contains('obs-row')) {
-                obsRow.style.display = isMatch ? '' : 'none';
+            // Lógica para esconder/mostrar linhas associadas (obs e separador)
+            let nextRow = row.nextElementSibling;
+            while(nextRow && (nextRow.classList.contains('obs-row') || nextRow.classList.contains('separador-row'))) {
+                nextRow.style.display = isMatch ? '' : 'none';
+                nextRow = nextRow.nextElementSibling;
             }
-        } else if (!row.classList.contains('obs-row')) { 
+
+        } else if (row.classList.contains('editing-row')) { 
+            // Se for linha de edição, mantém visível se a busca for por unidade/tipo (não implementado o filtro complexo aqui, mas mantém a linha de edição visível por segurança)
+            // Se for linha de observação ou separador, a visibilidade é controlada pela linha principal
         }
     });
 }
@@ -1026,13 +1041,15 @@ async function handleMateriaisSubmit(e) {
     const tipoUnidade = (tipoUnidadeRaw || '').toUpperCase() === 'SEMCAS' ? 'SEDE' : (tipoUnidadeRaw || '').toUpperCase();
 
     const tipoMaterial = selectTipoMateriais.value;
-    const dataSeparacao = dateToTimestamp(inputDataSeparacao.value);
+    const dataSeparacao = dateToTimestamp(inputDataSeparacao.value); // Data da requisição
     const itens = textareaItensMateriais.value.trim();
-    const responsavelSeparacao = capitalizeString(inputResponsavelMateriais.value.trim()); 
-    const arquivo = inputArquivoMateriais.files[0]; // <<< NOVO: Pega o arquivo
+    
+    const responsavelLancamento = capitalizeString(inputResponsavelMateriais.value.trim()); // <<< NOME ATUALIZADO
+    const arquivo = inputArquivoMateriais.files[0];
      
-     if (!unidadeId || !tipoMaterial || !dataSeparacao || !responsavelSeparacao) {
-        showAlert('alert-materiais', 'Dados inválidos. Verifique unidade, tipo, data e Responsável (Separação).', 'warning'); return;
+     // ATUALIZADO: Verifica responsavelLancamento
+     if (!unidadeId || !tipoMaterial || !dataSeparacao || !responsavelLancamento) {
+        showAlert('alert-materiais', 'Dados inválidos. Verifique unidade, tipo, data e Responsável pelo Lançamento.', 'warning'); return;
     }
     
     btnSubmitMateriais.disabled = true; 
@@ -1066,7 +1083,7 @@ async function handleMateriaisSubmit(e) {
             console.error("Erro no upload do arquivo:", error);
             showAlert('alert-materiais', `Erro ao enviar arquivo: ${error.message}`, 'error');
             btnSubmitMateriais.disabled = false; 
-            btnSubmitMateriais.textContent = 'Registrar Separação';
+            btnSubmitMateriais.textContent = 'Registrar Requisição';
             return;
         }
     } else {
@@ -1075,26 +1092,31 @@ async function handleMateriaisSubmit(e) {
     
     // Salvar no Firestore
     try {
-        await addDoc(materiaisCollection, { 
-            unidadeId, unidadeNome, tipoUnidade, tipoMaterial, 
-            dataSeparacao, itens, status: 'separacao', 
-            dataRetirada: null, 
-            dataEntrega: null, responsavelSeparacao, 
-            responsavelRetirada: null, 
-            responsavelEntrega: null, 
+        await addDoc(materiaisCollection, {
+            unidadeId, unidadeNome, tipoUnidade, tipoMaterial,
+            dataSeparacao: dataSeparacao, // Data da Requisição
+            itens,
+            status: 'requisitado', // <<< NOVO STATUS INICIAL
+            dataInicioSeparacao: null, // <<< NOVO
+            dataRetirada: null,
+            dataEntrega: null,
+            responsavelLancamento: responsavelLancamento, // <<< NOME ATUALIZADO
+            responsavelSeparador: null, // <<< NOVO
+            responsavelEntrega: null,
             registradoEm: serverTimestamp(),
-            fileURL: fileURL, // <<< NOVO
-            storagePath: storagePath // <<< NOVO
+            fileURL: fileURL,
+            storagePath: storagePath,
+            downloadInfo: { count: 0, lastDownload: null, blockedUntil: null } // <<< NOVO para controle download
         });
-        showAlert('alert-materiais', 'Separação registrada!', 'success');
+        showAlert('alert-materiais', 'Requisição registrada!', 'success'); // Mensagem atualizada
         formMateriais.reset(); 
         inputDataSeparacao.value = getTodayDateString(); 
     } catch (error) { 
-        console.error("Erro salvar separação:", error); 
+        console.error("Erro salvar requisição:", error); // Atualizado
         showAlert('alert-materiais', `Erro: ${error.message}`, 'error');
     } finally { 
         btnSubmitMateriais.disabled = false; 
-        btnSubmitMateriais.textContent = 'Registrar Separação'; 
+        btnSubmitMateriais.textContent = 'Registrar Requisição'; // Atualizado
     }
 }
 
@@ -1102,76 +1124,120 @@ function renderMateriaisStatus() {
      if (!tableStatusMateriais) return;
      if (!domReady) { console.warn("renderMateriaisStatus chamada antes do DOM pronto."); return; }
 
-    const materiaisOrdenados = [...fb_materiais].sort((a,b) => { 
-        const statusOrder = { 'separacao': 1, 'retirada': 2, 'entregue': 3 }; 
+    const materiaisOrdenados = [...fb_materiais].sort((a,b) => {
+        const statusOrder = { 'requisitado': 0, 'separacao': 1, 'retirada': 2, 'entregue': 3 };
         const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
         if (statusCompare !== 0) return statusCompare;
-        const dateA = a.dataEntrega?.toMillis() || a.dataRetirada?.toMillis() || a.dataSeparacao?.toMillis() || 0; 
-        const dateB = b.dataEntrega?.toMillis() || b.dataRetirada?.toMillis() || b.dataSeparacao?.toMillis() || 0; 
-        return dateB - dateA; 
+        // Ordena por data de requisição (dataSeparacao no BD) decrescente dentro do mesmo status
+        return (b.dataSeparacao?.toMillis() || 0) - (a.dataSeparacao?.toMillis() || 0);
     });
 
-    if (materiaisOrdenados.length === 0) { 
-        tableStatusMateriais.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-500">Nenhuma separação registrada.</td></tr>'; 
-        return; 
+    if (materiaisOrdenados.length === 0) {
+        tableStatusMateriais.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-500">Nenhuma requisição registrada.</td></tr>';
+        return;
     }
 
     tableStatusMateriais.innerHTML = materiaisOrdenados.map(m => {
         let statusClass = '';
         let statusText = '';
-        let dataStatusText = '';
         let acoesHtml = '';
-        
-        // NOVO: Botão de Download
-        const downloadBtnHtml = m.fileURL 
-            ? `<a href="${m.fileURL}" target="_blank" class="btn-icon btn-download-pedido text-blue-600 hover:text-blue-800" title="Baixar Pedido Anexado"><i data-lucide="download-cloud"></i></a>`
-            : `<span class="btn-icon text-slate-300" title="Nenhum pedido anexado"><i data-lucide="file-x"></i></span>`;
+        let downloadBtnHtml = ''; // Botão de download/iniciar separação
 
-        const tooltipText = `Separado por: ${m.responsavelSeparacao || 'N/A'}${m.responsavelEntrega ? ' | Entregue por: '+m.responsavelEntrega : ''}`;
         const isEntregue = m.status === 'entregue';
-        
-        if (m.status === 'separacao') {
+        const now = Timestamp.now();
+        const isBlocked = m.downloadInfo?.blockedUntil && m.downloadInfo.blockedUntil.toMillis() > now.toMillis();
+        const blockTimeRemaining = isBlocked ? Math.ceil((m.downloadInfo.blockedUntil.toMillis() - now.toMillis()) / (60 * 1000)) : 0; // Minutos restantes
+
+        // 1. Botão de Download / Iniciar Separação
+        if (m.fileURL) {
+            if (m.status === 'requisitado') {
+                downloadBtnHtml = `<button class="btn-icon btn-start-separacao text-orange-600 hover:text-orange-800" data-id="${m.id}" title="Iniciar Separação (Requer Nome)"><i data-lucide="play-circle"></i></button>`;
+            } else if (m.status === 'separacao' || m.status === 'retirada' || m.status === 'entregue') {
+                 if (isBlocked) {
+                     downloadBtnHtml = `<span class="btn-icon text-red-400" title="Download bloqueado por ${blockTimeRemaining} min."><i data-lucide="lock"></i></span>`;
+                 } else {
+                     const downloadCount = m.downloadInfo?.count || 0;
+                     const title = `Baixar Pedido (${downloadCount}/2 downloads usados)`;
+                     // Passa a URL pelo data-url para a função handleDownloadPedido
+                     downloadBtnHtml = `<button class="btn-icon btn-download-pedido text-blue-600 hover:text-blue-800 ${downloadCount >= 2 ? 'opacity-50 cursor-not-allowed' : ''}" data-id="${m.id}" data-url="${m.fileURL}" ${downloadCount >= 2 ? 'disabled' : ''} title="${title}"><i data-lucide="download-cloud"></i></button>`;
+                 }
+            } else {
+                 // Caso o status não seja nenhum dos anteriores, mas tenha URL (não deveria acontecer)
+                 downloadBtnHtml = `<span class="btn-icon text-slate-300" title="Aguardando início da separação"><i data-lucide="file-clock"></i></span>`;
+            }
+        } else {
+            // Se não tem anexo
+            if (m.status === 'requisitado') {
+                 downloadBtnHtml = `<button class="btn-icon btn-start-separacao text-orange-600 hover:text-orange-800" data-id="${m.id}" title="Iniciar Separação (Sem anexo)"><i data-lucide="play-circle"></i></button>`;
+            } else {
+                downloadBtnHtml = `<span class="btn-icon text-slate-300" title="Nenhum pedido anexado"><i data-lucide="file-x"></i></span>`;
+            }
+        }
+
+
+        // 2. Status e Ações principais
+        if (m.status === 'requisitado') {
+             statusClass = 'badge-purple'; // Cor nova para requisitado
+             statusText = 'Requisitado';
+             acoesHtml = ''; // Ação principal é iniciar separação (no lugar do download)
+        } else if (m.status === 'separacao') {
             statusClass = 'badge-yellow';
             statusText = 'Em Separação';
-            dataStatusText = ''; 
             acoesHtml = `
                 <button class="btn-info btn-retirada text-xs py-1 px-2" data-id="${m.id}">Disponível p/ Retirada</button>
             `;
         } else if (m.status === 'retirada') {
             statusClass = 'badge-green';
             statusText = 'Disponível p/ Retirada';
-            dataStatusText = m.dataRetirada ? ` (${formatTimestamp(m.dataRetirada)})` : '';
             acoesHtml = `
                 <button class="btn-success btn-entregue text-xs py-1 px-2" data-id="${m.id}">Entregue</button>
             `;
-        } else {
+        } else { // entregue
             statusClass = 'badge-gray';
             statusText = 'Entregue';
-            dataStatusText = m.dataEntrega ? ` (${formatTimestamp(m.dataEntrega)})` : '';
-            acoesHtml = ''; 
+            acoesHtml = '';
         }
-        
+
+        // Tooltip e Linha Principal
+        const tooltipText = `Lançado por: ${m.responsavelLancamento || 'N/A'} em ${formatTimestampComTempo(m.registradoEm)}`;
         const linhaPrincipal = `
             <tr class="align-top ${isEntregue ? 'opacity-60' : ''}" title="${tooltipText}">
                 <td class="font-medium">${m.unidadeNome || 'Unidade Desc.'}</td>
                 <td class="capitalize">${m.tipoMaterial || 'N/D'}</td>
-                <td>${formatTimestamp(m.dataSeparacao)}</td>
-                <td><span class="badge ${statusClass}">${statusText}${dataStatusText}</span></td>
-                <td class="text-center space-x-1"> <!-- ATUALIZADO: text-center -->
+                <td>${formatTimestamp(m.dataSeparacao)}</td> <!-- Data da Requisição -->
+                <td><span class="badge ${statusClass}">${statusText}</span></td>
+                <td class="text-center space-x-1 whitespace-nowrap"> <!-- Ajustado para alinhar ícones -->
                     ${acoesHtml}
-                    ${downloadBtnHtml} <!-- NOVO: Adicionado botão de download -->
-                    <button class="btn-danger btn-remove" data-id="${m.id}" data-type="materiais" title="Remover este registro"><i data-lucide="trash-2"></i></button>
+                    ${downloadBtnHtml} <!-- Botão Iniciar/Download -->
+                    <button class="btn-danger btn-remove" data-id="${m.id}" data-type="materiais" title="Remover esta requisição"><i data-lucide="trash-2"></i></button>
                 </td>
             </tr>`;
-        
+
+        // Linha de Observação
         const linhaObservacao = m.itens ? `
-            <tr class="obs-row ${isEntregue ? 'opacity-60' : ''} ${m.status === 'separacao' ? 'bg-slate-50' : (m.status === 'retirada' ? 'bg-green-50' : 'bg-gray-50')} border-b-2 border-slate-200">
-                <td colspan="5" class="py-2 px-6 text-sm text-slate-600 whitespace-pre-wrap"><strong>Observação:</strong> ${m.itens}</td>
+            <tr class="obs-row ${isEntregue ? 'opacity-60' : ''} border-b border-slate-200">
+                <td colspan="5" class="pt-0 pb-1 px-6 text-xs text-slate-500 whitespace-pre-wrap italic">Obs: ${m.itens}</td>
             </tr>` : '';
 
-        return linhaPrincipal + linhaObservacao;
+        // Linha do Separador
+        const linhaSeparador = m.responsavelSeparador ? `
+             <tr class="separador-row ${isEntregue ? 'opacity-60' : ''} ${m.status === 'separacao' ? 'bg-yellow-50' : (m.status === 'retirada' ? 'bg-green-50' : 'bg-gray-50')} border-b-2 border-slate-200">
+                <td colspan="5" class="py-1 px-6 text-xs text-slate-600">
+                    <span class="font-semibold">Separador:</span> ${m.responsavelSeparador}
+                    ${m.dataInicioSeparacao ? ` <span class="text-slate-400">(${formatTimestampComTempo(m.dataInicioSeparacao)})</span>` : ''}
+                </td>
+            </tr>` : '';
+
+
+        return linhaPrincipal + linhaObservacao + linhaSeparador;
     }).join('');
-    lucide.createIcons(); 
+    lucide.createIcons();
+
+     // Reaplicar filtro se houver
+     const filtroMateriaisEl = document.getElementById('filtro-status-materiais');
+    if (filtroMateriaisEl && filtroMateriaisEl.value) {
+        filterTable(filtroMateriaisEl, 'table-status-materiais');
+    }
 }
 
 async function handleMarcarRetirada(e) {
@@ -1206,7 +1272,8 @@ async function handleMarcarEntregue(e) {
     if (!isAuthReady || !materialId) return;
     
     const material = fb_materiais.find(m => m.id === materialId);
-    const responsavelEntrega = material?.responsavelSeparacao || "Responsável (Retirada)"; 
+    // Alterado para usar responsavelSeparador, que é quem está liberando
+    const responsavelEntrega = material?.responsavelSeparador || "Responsável (Retirada)"; 
     const storagePath = material?.storagePath; // <<< NOVO: Pega o caminho do arquivo
     
     button.disabled = true; button.innerHTML = '<div class="loading-spinner-small mx-auto" style="width: 16px; height: 16px; border-width: 2px;"></div>';
@@ -1239,6 +1306,151 @@ async function handleMarcarEntregue(e) {
         button.disabled = false; 
         button.textContent = 'Entregue'; 
     } 
+}
+
+// --- NOVAS FUNÇÕES PARA FLUXO DO SEPARADOR ---
+
+function openSeparadorModal(materialId) {
+    if (!domReady || !separadorModal || !separadorMaterialIdEl || !inputSeparadorNome) return;
+    console.log("Abrindo modal para material ID:", materialId);
+    separadorMaterialIdEl.value = materialId;
+    inputSeparadorNome.value = ''; // Limpa o campo
+    inputSeparadorNome.disabled = false;
+    btnSalvarSeparador.disabled = false;
+    btnSalvarSeparador.innerHTML = 'Salvar Nome e Liberar';
+    alertSeparador.style.display = 'none';
+    separadorModal.style.display = 'flex'; // Usa flex para centralizar
+    inputSeparadorNome.focus();
+}
+
+async function handleSalvarSeparador() {
+    if (!isAuthReady || !domReady || !inputSeparadorNome || !separadorMaterialIdEl) return;
+
+    const nomeSeparador = capitalizeString(inputSeparadorNome.value.trim());
+    const materialId = separadorMaterialIdEl.value;
+
+    if (!nomeSeparador) {
+        showAlert('alert-separador', 'Por favor, informe o nome do separador.', 'warning');
+        return;
+    }
+    if (!materialId) {
+        showAlert('alert-separador', 'Erro: ID do material não encontrado.', 'error');
+        return;
+    }
+
+    btnSalvarSeparador.disabled = true;
+    inputSeparadorNome.disabled = true;
+    btnSalvarSeparador.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+
+    try {
+        const docRef = doc(materiaisCollection, materialId);
+        await updateDoc(docRef, {
+            status: 'separacao', // Muda o status para Em Separação
+            responsavelSeparador: nomeSeparador,
+            dataInicioSeparacao: serverTimestamp() // Marca quando a separação começou
+        });
+
+        showAlert('alert-separador', 'Nome salvo! O status foi atualizado para "Em Separação".', 'success', 4000);
+        // Fecha o modal após um pequeno delay para o usuário ver a msg de sucesso
+        setTimeout(() => {
+            if (separadorModal) separadorModal.style.display = 'none';
+        }, 2000);
+
+        // Opcional: Tenta iniciar o download automaticamente após salvar (se houver URL)
+        const material = fb_materiais.find(m => m.id === materialId);
+        if (material?.fileURL) {
+             // Chama a função de download após salvar o nome
+             setTimeout(() => {
+                 handleDownloadPedido(materialId, material.fileURL);
+             }, 500); // Pequeno delay
+        }
+
+    } catch (error) {
+        console.error("Erro ao salvar nome do separador:", error);
+        showAlert('alert-separador', `Erro ao salvar: ${error.message}`, 'error');
+        btnSalvarSeparador.disabled = false;
+        inputSeparadorNome.disabled = false;
+        btnSalvarSeparador.innerHTML = 'Salvar Nome e Liberar';
+    }
+}
+
+async function handleDownloadPedido(materialId, fileURL) {
+    if (!isAuthReady || !domReady || !materialId || !fileURL) return;
+
+    const material = fb_materiais.find(m => m.id === materialId);
+    if (!material) {
+        console.error("Material não encontrado para download:", materialId);
+        showAlert('alert-materiais-lista', 'Erro: Registro não encontrado.', 'error');
+        return;
+    }
+
+    const now = Timestamp.now();
+    const downloadInfo = material.downloadInfo || { count: 0, lastDownload: null, blockedUntil: null };
+
+    // Verifica se está bloqueado
+    if (downloadInfo.blockedUntil && downloadInfo.blockedUntil.toMillis() > now.toMillis()) {
+        const blockTimeRemaining = Math.ceil((downloadInfo.blockedUntil.toMillis() - now.toMillis()) / (60 * 1000));
+        showAlert('alert-materiais-lista', `Download temporariamente bloqueado. Tente novamente em ${blockTimeRemaining} minuto(s).`, 'warning');
+        return;
+    }
+
+    // Verifica limite de downloads
+    if (downloadInfo.count >= 2) {
+        showAlert('alert-materiais-lista', 'Limite de 2 downloads atingido para este pedido.', 'warning');
+        // Bloqueia por 3 minutos após a segunda tentativa falha
+        const blockedUntil = Timestamp.fromMillis(now.toMillis() + 3 * 60 * 1000);
+        try {
+            const docRef = doc(materiaisCollection, materialId);
+            await updateDoc(docRef, {
+                'downloadInfo.blockedUntil': blockedUntil
+            });
+            renderMateriaisStatus(); // Re-renderiza para mostrar o cadeado
+        } catch (error) {
+            console.error("Erro ao bloquear download:", error);
+        }
+        return;
+    }
+
+    // Incrementa contador e registra download
+    const newCount = downloadInfo.count + 1;
+    let newBlockedUntil = null;
+    let blockDurationMinutes = 0;
+
+    // Se for o segundo download, bloqueia por 3 min
+    if (newCount === 2) {
+        blockDurationMinutes = 3;
+        newBlockedUntil = Timestamp.fromMillis(now.toMillis() + blockDurationMinutes * 60 * 1000);
+    }
+    // Opcional: Bloco de segurança que não deve ser atingido se a lógica de bloqueio do topo estiver correta
+    // else if (newCount > 2) {
+    //     blockDurationMinutes = 60;
+    //     newBlockedUntil = Timestamp.fromMillis(now.toMillis() + blockDurationMinutes * 60 * 1000);
+    // }
+
+
+    try {
+        const docRef = doc(materiaisCollection, materialId);
+        await updateDoc(docRef, {
+            'downloadInfo.count': newCount,
+            'downloadInfo.lastDownload': now,
+            'downloadInfo.blockedUntil': newBlockedUntil
+        });
+
+        // Abre o link do arquivo em nova aba
+        window.open(fileURL, '_blank');
+
+        if (blockDurationMinutes > 0) {
+            showAlert('alert-materiais-lista', `Download ${newCount}/2 realizado. Próximo download bloqueado por ${blockDurationMinutes} min.`, 'info', 6000);
+        } else {
+            showAlert('alert-materiais-lista', `Download ${newCount}/2 realizado.`, 'info', 4000);
+        }
+
+        renderMateriaisStatus(); // Atualiza a interface (contador e possível cadeado)
+
+    } catch (error) {
+        console.error("Erro ao atualizar contador/bloqueio de download:", error);
+        showAlert('alert-materiais-lista', `Erro ao registrar download: ${error.message}`, 'error');
+    }
 }
 
 
@@ -1540,7 +1752,8 @@ function renderDashboardVisaoGeralSummary() {
 function renderDashboardMateriaisCounts() {
     if (!domReady) { return; } 
     if (!dashboardMateriaisSeparacaoCountEl || !dashboardMateriaisRetiradaCountEl) return;
-    const separacaoCount = fb_materiais.filter(m => m.status === 'separacao').length;
+    // O status agora é 'requisitado' ou 'separacao' que conta como 'Em Separação'
+    const separacaoCount = fb_materiais.filter(m => m.status === 'separacao' || m.status === 'requisitado').length;
     const retiradaCount = fb_materiais.filter(m => m.status === 'retirada').length;
     
     dashboardMateriaisSeparacaoCountEl.textContent = separacaoCount;
@@ -1628,9 +1841,9 @@ function renderDashboardMateriaisList() {
      loadingMateriaisDashboard.style.display = 'none'; 
      
     const pendentes = fb_materiais
-        .filter(m => m.status === 'separacao' || m.status === 'retirada')
+        .filter(m => m.status === 'requisitado' || m.status === 'separacao' || m.status === 'retirada')
         .sort((a,b) => { 
-            const statusOrder = { 'separacao': 1, 'retirada': 2 }; 
+            const statusOrder = { 'requisitado': 1, 'separacao': 2, 'retirada': 3 }; 
             const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
             if (statusCompare !== 0) return statusCompare;
             return (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0); 
@@ -1641,11 +1854,26 @@ function renderDashboardMateriaisList() {
         return; 
     }
     dashboardMateriaisListContainer.innerHTML = pendentes.map(m => {
+        const isRequisitado = m.status === 'requisitado';
         const isSeparacao = m.status === 'separacao';
-        const badgeClass = isSeparacao ? 'badge-yellow' : 'badge-green';
-        const badgeText = isSeparacao ? 'Em Separação' : 'Disponível';
-        const bgColor = isSeparacao ? 'bg-slate-50' : 'bg-green-50';
-        const borderColor = isSeparacao ? 'border-slate-200' : 'border-green-300';
+        const isRetirada = m.status === 'retirada';
+        
+        let badgeClass = 'badge-purple';
+        let badgeText = 'Requisitado';
+        let bgColor = 'bg-purple-50'; 
+        let borderColor = 'border-purple-300';
+        
+        if (isSeparacao) {
+            badgeClass = 'badge-yellow';
+            badgeText = 'Em Separação';
+            bgColor = 'bg-yellow-50';
+            borderColor = 'border-yellow-300';
+        } else if (isRetirada) {
+            badgeClass = 'badge-green';
+            badgeText = 'Disponível';
+            bgColor = 'bg-green-50';
+            borderColor = 'border-green-300';
+        }
 
         return ` 
             <div class="p-3 ${bgColor} rounded-lg border ${borderColor}"> 
@@ -1682,22 +1910,35 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     
     container.innerHTML = '<div class="text-center p-10 col-span-full"><div class="loading-spinner-small mx-auto mb-2"></div><p class="text-sm text-slate-500">Atualizando...</p></div>';
 
-    let pendentes = fb_materiais.filter(m => m.status === 'separacao' || m.status === 'retirada');
-    if (filterStatus) {
-        pendentes = pendentes.filter(m => m.status === filterStatus);
-        // Só manipula se existir
-        if (clearButton) clearButton.classList.remove('hidden'); 
-        if (titleEl) titleEl.textContent = `Materiais ${filterStatus === 'separacao' ? 'em Separação' : 'Disponíveis p/ Retirada'}`;
-    } else {
-        // Só manipula se existir
-        if (clearButton) clearButton.classList.add('hidden'); 
-        if (titleEl) titleEl.textContent = 'Materiais do Almoxarifado';
+    let pendentes = fb_materiais.filter(m => m.status === 'requisitado' || m.status === 'separacao' || m.status === 'retirada');
+    
+    let filterToDisplay = filterStatus;
+    if (filterStatus === 'separacao') {
+         // Se o filtro for 'separacao', inclui também 'requisitado' na exibição da contagem geral
+         pendentes = pendentes.filter(m => m.status === 'separacao' || m.status === 'requisitado');
+         filterToDisplay = 'Em Separação/Requisitado';
+    } else if (filterStatus) {
+         pendentes = pendentes.filter(m => m.status === filterStatus);
+         filterToDisplay = filterStatus === 'retirada' ? 'Disponíveis p/ Retirada' : filterStatus;
+    }
+
+
+    // Só manipula se existir
+    if (clearButton) clearButton.classList.toggle('hidden', !filterStatus); 
+    if (titleEl) {
+        if (filterStatus === 'separacao') {
+             titleEl.textContent = 'Materiais em Separação e Requisitados';
+        } else if (filterStatus === 'retirada') {
+            titleEl.textContent = 'Materiais Disponíveis p/ Retirada';
+        } else {
+             titleEl.textContent = 'Materiais do Almoxarifado';
+        }
     }
     
     let contentHtml = ''; 
     
     if (pendentes.length === 0) {
-        contentHtml = `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterStatus ? `com status "${filterStatus}"` : 'pendente'} encontrado.</p>`;
+        contentHtml = `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</p>`;
     } else {
         const gruposTipoUnidade = pendentes.reduce((acc, m) => {
             let tipoUnidade = (m.tipoUnidade || 'OUTROS').toUpperCase();
@@ -1720,7 +1961,7 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
                 colunasHtml += `<div class="materiais-prontos-col"><h4>${tipoUnidade}</h4><ul class="space-y-3">`; 
                 
                 const materiaisOrdenados = gruposTipoUnidade[tipoUnidade].sort((a,b) => {
-                    const statusOrder = { 'separacao': 1, 'retirada': 2 };
+                    const statusOrder = { 'requisitado': 1, 'separacao': 2, 'retirada': 3 };
                     const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
                     if (statusCompare !== 0) return statusCompare;
                     return (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0);
@@ -1729,15 +1970,20 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
                 materiaisOrdenados.forEach(m => {
                     const tiposMateriais = m.tipoMaterial || 'N/D';
                     let statusIndicator = '';
+                    let itemClass = '';
                     
-                    if (m.status === 'separacao') {
+                    if (m.status === 'requisitado') {
+                         statusIndicator = `<span class="status-indicator separando" style="background-color: #f3e8ff; color: #6b21a8;">📝 Requisitado</span>`;
+                         itemClass = 'item-requisitado';
+                    } else if (m.status === 'separacao') {
                         statusIndicator = `<span class="status-indicator separando">⏳ Separando...</span>`;
                     } else if (m.status === 'retirada') {
                         statusIndicator = `<span class="status-indicator pronto">✅ Pronto</span>`;
+                        itemClass = 'item-retirada';
                     }
 
                     colunasHtml += `
-                        <li class="${m.status === 'retirada' ? 'item-retirada' : ''}">
+                        <li class="${itemClass}">
                             <strong>${m.unidadeNome}</strong><br>
                             <span class="capitalize">(${tiposMateriais})</span>
                             <div>${statusIndicator}</div>
@@ -1748,7 +1994,7 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
             }
         });
 
-        contentHtml = colunasRenderizadas > 0 ? colunasHtml : `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterStatus ? `com status "${filterStatus}"` : 'pendente'} encontrado.</p>`;
+        contentHtml = colunasRenderizadas > 0 ? colunasHtml : `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</p>`;
     }
     
     // Usar setTimeout 0 para garantir que a renderização ocorra após o fluxo atual
@@ -1767,7 +2013,10 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
 }
 
 function filterDashboardMateriais(status) {
+    // Se o status for 'separacao' o filtro deve ser aplicado a 'requisitado' e 'separacao'
     currentDashboardMaterialFilter = status;
+    switchTab('dashboard'); 
+    switchDashboardView('geral');
     renderDashboardMateriaisProntos(status);
 }
 
@@ -2395,6 +2644,12 @@ function setupApp() {
     filtroUnidadeNome = document.getElementById('filtro-unidade-nome'); filtroUnidadeTipo = document.getElementById('filtro-unidade-tipo'); 
     relatorioTipo = document.getElementById('relatorio-tipo'); relatorioDataInicio = document.getElementById('relatorio-data-inicio'); relatorioDataFim = document.getElementById('relatorio-data-fim'); btnGerarPdf = document.getElementById('btn-gerar-pdf'); alertRelatorio = document.getElementById('alert-relatorio');
     confirmDeleteModal = document.getElementById('confirm-delete-modal'); btnCancelDelete = document.getElementById('btn-cancel-delete'); btnConfirmDelete = document.getElementById('btn-confirm-delete'); deleteDetailsEl = document.getElementById('delete-details'); deleteWarningUnidadeEl = document.getElementById('delete-warning-unidade'); deleteWarningInicialEl = document.getElementById('delete-warning-inicial'); 
+    // NOVO: Busca elementos do modal do separador
+    separadorModal = document.getElementById('separador-modal');
+    inputSeparadorNome = document.getElementById('input-separador-nome');
+    btnSalvarSeparador = document.getElementById('btn-salvar-separador');
+    separadorMaterialIdEl = document.getElementById('separador-material-id'); // Input hidden
+    alertSeparador = document.getElementById('alert-separador');
     estoqueAguaInicialEl = document.getElementById('estoque-agua-inicial'); estoqueAguaEntradasEl = document.getElementById('estoque-agua-entradas'); estoqueAguaSaidasEl = document.getElementById('estoque-agua-saidas'); estoqueAguaAtualEl = document.getElementById('estoque-agua-atual'); loadingEstoqueAguaEl = document.getElementById('loading-estoque-agua'); resumoEstoqueAguaEl = document.getElementById('resumo-estoque-agua');
     formEntradaAgua = document.getElementById('form-entrada-agua'); inputDataEntradaAgua = document.getElementById('input-data-entrada-agua'); btnSubmitEntradaAgua = document.getElementById('btn-submit-entrada-agua');
     formInicialAguaContainer = document.getElementById('form-inicial-agua-container'); formInicialAgua = document.getElementById('form-inicial-agua'); inputInicialQtdAgua = document.getElementById('input-inicial-qtd-agua'); inputInicialResponsavelAgua = document.getElementById('input-inicial-responsavel-agua'); btnSubmitInicialAgua = document.getElementById('btn-submit-inicial-agua'); alertInicialAgua = document.getElementById('alert-inicial-agua'); btnAbrirInicialAgua = document.getElementById('btn-abrir-inicial-agua');
@@ -2432,11 +2687,23 @@ function setupApp() {
          const removeBtn = e.target.closest('button.btn-remove[data-id]');
          const entregueBtn = e.target.closest('button.btn-entregue[data-id]');
          const retiradaBtn = e.target.closest('button.btn-retirada[data-id]');
-         
-         if (removeBtn) { openConfirmDeleteModal(removeBtn.dataset.id, removeBtn.dataset.type, removeBtn.dataset.details); } 
-         else if (entregueBtn) { handleMarcarEntregue(e); }
-         else if (retiradaBtn) { handleMarcarRetirada(e); } 
+         // NOVOS: Botões de Iniciar Separação e Download
+         const startSeparacaoBtn = e.target.closest('button.btn-start-separacao[data-id]');
+         const downloadPedidoBtn = e.target.closest('button.btn-download-pedido[data-id]');
+
+         if (removeBtn) {
+             openConfirmDeleteModal(removeBtn.dataset.id, removeBtn.dataset.type, removeBtn.dataset.details);
+         } else if (entregueBtn) {
+             handleMarcarEntregue(e);
+         } else if (retiradaBtn) {
+             handleMarcarRetirada(e);
+         } else if (startSeparacaoBtn) { // NOVO
+             openSeparadorModal(startSeparacaoBtn.dataset.id);
+         } else if (downloadPedidoBtn) { // NOVO
+             handleDownloadPedido(downloadPedidoBtn.dataset.id, downloadPedidoBtn.dataset.url);
+         }
     });
+
     if (tableGestaoUnidades) { 
         tableGestaoUnidades.addEventListener('click', handleEditUnidadeClick);
         tableGestaoUnidades.addEventListener('click', handleCancelEditUnidadeClick);
@@ -2452,6 +2719,8 @@ function setupApp() {
     if (btnGerarPdf) btnGerarPdf.addEventListener('click', handleGerarPdf);
     if (btnCancelDelete) btnCancelDelete.addEventListener('click', () => confirmDeleteModal.style.display = 'none');
     if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', executeDelete);
+    // NOVO: Listener para salvar nome do separador
+    if (btnSalvarSeparador) btnSalvarSeparador.addEventListener('click', handleSalvarSeparador);
     document.querySelectorAll('.form-tab-btn[data-form="saida-agua"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('saida-agua')));
     document.querySelectorAll('.form-tab-btn[data-form="entrada-agua"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('entrada-agua')));
     document.querySelectorAll('.form-tab-btn[data-form="saida-gas"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('saida-gas')));
@@ -2475,6 +2744,7 @@ function setupApp() {
     const btnClearFilter = btnClearDashboardFilter; 
     
     if (cardSeparacao) {
+        // Agora, clicar em 'Em Separação' filtra por status 'separacao' E 'requisitado' (lógica interna)
         cardSeparacao.addEventListener('click', () => filterDashboardMateriais('separacao')); 
     }
     if (cardRetirada) {
@@ -2524,4 +2794,3 @@ document.addEventListener('DOMContentLoaded', () => {
     initFirebase(); 
     // <<< NÃO CHAMA setupApp aqui, espera o onAuthStateChanged >>>
 });
-
