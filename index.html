@@ -985,17 +985,16 @@
     </div>
 
     <!-- 
-      *** MUDANÇA IMPORTANTE ***
-      Carrega os scripts da pasta /js/ conforme o seu .txt
-      O 'defer' garante que eles executem na ordem correta após o HTML ser lido.
-      'app.js' deve vir primeiro, pois ele define as variáveis globais e o app Firebase.
+      *** CORREÇÃO APLICADA AQUI ***
+      1. Corrigido o caminho do 'app.js' (removido 'js/').
+      2. Adicionado 'type="module"' a todos os scripts para permitir 'import'.
     -->
-    <script src="js/app.js" type="module" defer></script>
-    <script src="js/agua.js" defer></script>
-    <script src="js/gas.js" defer></script>
-    <script src="js/materiais.js" defer></script>
-    <script src="js/unidades.js" defer></script>
-    <script src="js/relatorio.js" defer></script>
+    <script src="app.js" type="module" defer></script>
+    <script src="js/agua.js" type="module" defer></script>
+    <script src="js/gas.js" type="module" defer></script>
+    <script src="js/materiais.js" type="module" defer></script>
+    <script src="js/unidades.js" type="module" defer></script>
+    <script src="js/relatorio.js" type="module" defer></script>
     
 </body>
 </html>
