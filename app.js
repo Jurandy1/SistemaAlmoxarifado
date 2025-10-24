@@ -79,11 +79,17 @@ let separadorModal, inputSeparadorNome, btnSalvarSeparador, separadorMaterialIdE
 
 // --- FUNÇÕES DE UTILIDADE ---
 function showAlert(elementId, message, type = 'info', duration = 5000) {
-    // Só tenta mostrar se domReady for true
-    // Removido check domReady daqui para permitir alertas de erro críticos antes
     const el = document.getElementById(elementId);
     if (!el) { console.warn(`Elemento de alerta não encontrado: ${elementId}, Mensagem: ${message}`); return; }
-    el.className = `alert alert-${type}`; 
+    
+    // Mapeamento das classes Shadcn/Tailwind para o tipo de alerta
+    let tailwindClass;
+    if (type === 'success') tailwindClass = 'alert-success';
+    else if (type === 'error') tailwindClass = 'alert-error';
+    else if (type === 'warning') tailwindClass = 'alert-warning';
+    else tailwindClass = 'alert-info'; // Default
+
+    el.className = `alert ${tailwindClass}`; 
     el.textContent = message;
     el.style.display = 'block';
     if (el.timeoutId) clearTimeout(el.timeoutId);
@@ -125,7 +131,7 @@ function formatTimestamp(timestamp) {
 function formatTimestampComTempo(timestamp) { // <<< NOVA FUNÇÃO
     if (!timestamp || typeof timestamp.toDate !== 'function') return 'N/A';
     try {
-        return timestamp.toDate().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+        return timestamp.toDate().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     } catch (e) { console.error("Erro ao formatar timestamp com tempo:", timestamp, e); return 'Erro Data'; }
 }
 
@@ -182,7 +188,8 @@ async function initFirebase() {
         // Tentativa de buscar o elemento de status logo cedo
         connectionStatusEl = document.getElementById('connectionStatus'); 
         if (connectionStatusEl) {
-             connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-yellow-400 rounded-full animate-pulse"></span> <span>Autenticando...</span>`;
+             // Usando classes Tailwind para cores e animação Shadcn-like
+             connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-yellow-400 rounded-full animate-pulse"></span> <span class="text-muted-foreground">Autenticando...</span>`;
         } else {
              console.warn("connectionStatusEl não encontrado ao iniciar initFirebase");
         }
@@ -196,7 +203,8 @@ async function initFirebase() {
                 isAuthReady = true;
                 userId = user.uid;
                 console.log("Autenticado com UID:", userId, "Anônimo:", user.isAnonymous);
-                if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-green-500 rounded-full"></span> <span class="text-green-700">Conectado</span>`;
+                // Usando classes Tailwind para status de conexão Shadcn-like
+                if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-secondary rounded-full animate-pulse"></span> <span class="text-secondary">Conectado</span>`;
                 
                 const basePath = `artifacts/${appId}/public/data`;
                 unidadesCollection = collection(db, `${basePath}/unidades`);
@@ -220,11 +228,11 @@ async function initFirebase() {
                 isAuthReady = false;
                 userId = null; 
                 console.log("Usuário deslogado.");
-                if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-red-500 rounded-full"></span> <span class="text-red-700">Desconectado</span>`;
+                // Usando classes Tailwind para status de desconexão Shadcn-like
+                if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-destructive rounded-full"></span> <span class="text-destructive">Desconectado</span>`;
                 clearAlmoxarifadoData();
                  domReady = false; // <<< Resetar domReady ao deslogar
             }
-             // Não chama updateLastUpdateTime aqui, deixa para o setupApp ou listeners
         });
 
         // Inicia o processo de autenticação
@@ -238,8 +246,7 @@ async function initFirebase() {
 
     } catch (error) {
         console.error("Erro CRÍTICO ao inicializar Firebase:", error);
-         if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-red-500 rounded-full"></span> <span class="text-red-700">Erro Firebase</span>`;
-        // Tenta mostrar alerta mesmo sem domReady, mas pode falhar
+         if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-destructive rounded-full"></span> <span class="text-destructive">Erro Firebase</span>`;
         showAlert('alert-agua', `Erro crítico na conexão com Firebase: ${error.message}. Recarregue a página.`, 'error', 60000);
     }
 }
@@ -250,8 +257,6 @@ function initFirestoreListeners() {
         console.warn("Firestore listeners não iniciados: Auth não pronto ou coleção inválida."); 
         return; 
     }
-    // Não precisa mais logar aqui, o onAuthStateChanged já loga
-    // console.log("Iniciando listeners do Firestore..."); 
 
     onSnapshot(query(unidadesCollection), (snapshot) => { 
         fb_unidades = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
@@ -364,13 +369,13 @@ function clearAlmoxarifadoData() {
          document.getElementById('select-previsao-tipo-gas')
         ].forEach(sel => { if(sel) sel.innerHTML = '<option value="">Desconectado</option>'; });
         
-        [tableStatusAgua, tableStatusGas, tableStatusMateriais, tableGestaoUnidades, tableHistoricoAgua, tableHistoricoGas].forEach(tbody => { if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">Desconectado do Firebase</td></tr>'; });
+        [tableStatusAgua, tableStatusGas, tableStatusMateriais, tableGestaoUnidades, tableHistoricoAgua, tableHistoricoGas].forEach(tbody => { if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-destructive">Desconectado do Firebase</td></tr>'; });
         
         const dashMateriaisList = document.getElementById('dashboard-materiais-list');
         const dashMateriaisProntos = document.getElementById('dashboard-materiais-prontos');
-        if (dashMateriaisList) dashMateriaisList.innerHTML = '<p class="text-center py-4 text-red-500">Desconectado</p>';
+        if (dashMateriaisList) dashMateriaisList.innerHTML = '<p class="text-center py-4 text-destructive">Desconectado</p>';
         if (dashMateriaisProntos) {
-             dashMateriaisProntos.innerHTML = '<div class="text-center p-10 col-span-full" id="loading-materiais-prontos"><div class="loading-spinner-small mx-auto mb-2"></div><p class="text-sm text-slate-500">Carregando...</p></div>'; 
+             dashMateriaisProntos.innerHTML = '<div class="text-center p-10 col-span-full" id="loading-materiais-prontos"><div class="loading-spinner-small mx-auto mb-2"></div><p class="text-sm text-muted-foreground">Carregando...</p></div>'; 
         }
         
         [dashboardAguaChartInstance, dashboardGasChartInstance, graficoPrevisao.agua, graficoPrevisao.gas].forEach(chartInstance => { 
@@ -414,7 +419,6 @@ function updateLastUpdateTime() {
 
 function populateUnidadeSelects(selectEl, serviceField, includeAll = false, includeSelecione = true, filterType = null) {
     if (!domReady || !selectEl) return; 
-    // CORREÇÃO: Adiciona uma verificação extra para garantir que o elemento não é nulo/undefined
     if (!selectEl) {
         console.warn(`populateUnidadeSelects: Elemento de seleção não encontrado para o campo ${serviceField}.`);
         return;
@@ -591,7 +595,7 @@ function renderAguaStatus() {
          .sort((a, b) => b.pendentes - a.pendentes || a.nome.localeCompare(b.nome)); 
 
     if (statusArray.length === 0) { 
-        tableStatusAgua.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma movimentação registrada.</td></tr>'; 
+        tableStatusAgua.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted-foreground">Nenhuma movimentação registrada.</td></tr>'; 
         return; 
     }
     tableStatusAgua.innerHTML = statusArray.map(s => {
@@ -599,14 +603,16 @@ function renderAguaStatus() {
         const ultimoId = s.ultimosLancamentos[0]?.id; 
         const saldo = s.pendentes;
         const saldoText = saldo > 0 ? `Faltando ${saldo}` : (saldo < 0 ? `Crédito ${Math.abs(saldo)}` : 'Zerado');
-        const saldoClass = saldo > 0 ? 'text-red-600' : (saldo < 0 ? 'text-blue-600' : 'text-green-600');
+        // Usando classes Tailwind/HSL
+        const saldoClass = saldo > 0 ? 'text-destructive' : (saldo < 0 ? 'text-primary' : 'text-secondary');
         return `
         <tr title="${tooltipText || 'Sem detalhes de responsável'}">
             <td class="font-medium">${s.nome}</td><td>${s.tipo || 'N/A'}</td>
             <td class="text-center">${s.entregues}</td><td class="text-center">${s.recebidos}</td>
             <td class="text-center font-bold ${saldoClass}">${saldoText}</td>
             <td class="text-center">
-                ${ultimoId ? `<button class="btn-danger btn-remove" data-id="${ultimoId}" data-type="agua" title="Remover último lançamento desta unidade"><i data-lucide="trash-2"></i></button>` : '-'}
+                <!-- Usando classe Shadcn 'btn-destructive' -->
+                ${ultimoId ? `<button class="btn btn-destructive btn-remove" data-id="${ultimoId}" data-type="agua" title="Remover último lançamento desta unidade"><i data-lucide="trash-2"></i></button>` : '-'}
             </td>
         </tr>
     `}).join('');
@@ -731,7 +737,7 @@ function renderGasStatus() {
          .sort((a, b) => b.pendentes - a.pendentes || a.nome.localeCompare(b.nome));
 
     if (statusArray.length === 0) { 
-        tableStatusGas.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma movimentação registrada.</td></tr>'; 
+        tableStatusGas.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted-foreground">Nenhuma movimentação registrada.</td></tr>'; 
         return; 
     }
      tableStatusGas.innerHTML = statusArray.map(s => {
@@ -739,14 +745,16 @@ function renderGasStatus() {
         const ultimoId = s.ultimosLancamentos[0]?.id;
         const saldo = s.pendentes;
         const saldoText = saldo > 0 ? `Faltando ${saldo}` : (saldo < 0 ? `Crédito ${Math.abs(saldo)}` : 'Zerado');
-        const saldoClass = saldo > 0 ? 'text-red-600' : (saldo < 0 ? 'text-blue-600' : 'text-green-600');
+        // Usando classes Tailwind/HSL
+        const saldoClass = saldo > 0 ? 'text-destructive' : (saldo < 0 ? 'text-primary' : 'text-secondary');
         return `
         <tr title="${tooltipText || 'Sem detalhes de responsável'}">
             <td class="font-medium">${s.nome}</td><td>${s.tipo || 'N/A'}</td>
             <td class="text-center">${s.entregues}</td><td class="text-center">${s.recebidos}</td>
             <td class="text-center font-bold ${saldoClass}">${saldoText}</td>
              <td class="text-center">
-                ${ultimoId ? `<button class="btn-danger btn-remove" data-id="${ultimoId}" data-type="gas" title="Remover último lançamento"><i data-lucide="trash-2"></i></button>` : '-'}
+                <!-- Usando classe Shadcn 'btn-destructive' -->
+                ${ultimoId ? `<button class="btn btn-destructive btn-remove" data-id="${ultimoId}" data-type="gas" title="Remover último lançamento"><i data-lucide="trash-2"></i></button>` : '-'}
             </td>
         </tr>
     `}).join('');
@@ -911,7 +919,7 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
     }
 
     if (movsFiltradas.length < 2) {
-        resultadoContentEl.innerHTML = `<p class="text-yellow-200">Dados insuficientes para calcular (necessário no mínimo 2 entregas no período/filtro).</p>`;
+        resultadoContentEl.innerHTML = `<p class="text-primary-foreground/80">Dados insuficientes para calcular (necessário no mínimo 2 entregas no período/filtro).</p>`;
         if (graficoPrevisao[tipoItem]) graficoPrevisao[tipoItem].destroy(); 
         return;
     }
@@ -934,7 +942,7 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
 
     resultadoContentEl.innerHTML = `
         <h4 class="text-lg font-semibold mb-3">${tituloPrevisao}</h4>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center text-primary-foreground">
             <div>
                 <span class="text-sm opacity-80 block">Média Diária</span>
                 <span class="text-2xl font-bold">${mediaDiaria.toFixed(2)}</span>
@@ -945,11 +953,11 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
             </div>
             <div>
                 <span class="text-sm opacity-80 block">Total Recomendado (+${(margemSeguranca * 100).toFixed(0)}%)</span>
-                <span class="text-3xl font-bold text-yellow-300">${previsaoFinal}</span>
+                <span class="text-3xl font-bold text-accent">${previsaoFinal}</span>
             </div>
         </div>
         <p class="text-xs opacity-70 mt-3 text-center">Cálculo baseado em ${totalQuantidade} unidades entregues entre ${formatTimestamp(movsFiltradas[0].data)} e ${formatTimestamp(movsFiltradas[movsFiltradas.length - 1].data)} (${diffDays} dias).</p>
-         ${listaExclusoes[tipoItem].length > 0 ? `<p class="text-xs opacity-70 mt-1 text-center text-red-200">Excluídas: ${listaExclusoes[tipoItem].map(u=>u.nome).join(', ')}</p>` : ''}
+         ${listaExclusoes[tipoItem].length > 0 ? `<p class="text-xs opacity-70 mt-1 text-destructive/80">Excluídas: ${listaExclusoes[tipoItem].map(u=>u.nome).join(', ')}</p>` : ''}
     `;
     
     renderizarGraficoPrevisao(tipoItem, movsFiltradas);
@@ -959,11 +967,12 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
         
     if (estoqueAtual < previsaoFinal) {
          alertasContentEl.innerHTML = `
-            <div class="previsao-alerta">
-                <h4 class="font-bold text-yellow-800">Alerta de Estoque Baixo!</h4>
-                <p class="text-sm text-yellow-700">Seu estoque atual (${estoqueAtual}) está abaixo da necessidade prevista (${previsaoFinal}) para os próximos ${diasPrevisao} dias. Recomenda-se reposição.</p>
+            <div class="alert alert-warning">
+                <h4 class="font-bold">Alerta de Estoque Baixo!</h4>
+                <p class="text-sm">Seu estoque atual (${estoqueAtual}) está abaixo da necessidade prevista (${previsaoFinal}) para os próximos ${diasPrevisao} dias. Recomenda-se reposição.</p>
             </div>
         `;
+        document.querySelector(`#${alertId} .alert-warning`).style.display = 'block'; 
     } else {
          alertasContentEl.innerHTML = `
              <div class="alert alert-success"> 
@@ -1007,8 +1016,9 @@ function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
             datasets: [{
                 label: 'Consumo Diário (Entregas)',
                 data: data,
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                // Usando cores do tema Shadcn/HSL
+                borderColor: 'hsl(var(--primary))',
+                backgroundColor: 'hsl(var(--primary) / 0.1)',
                 fill: true,
                 tension: 0.1 
             }]
@@ -1140,7 +1150,7 @@ function renderMateriaisStatus() {
 
     if (materiaisOrdenados.length === 0) {
         // CORREÇÃO: Remove o spinner de carregamento persistente
-        tableStatusMateriais.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-500">Nenhuma requisição registrada.</td></tr>';
+        tableStatusMateriais.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted-foreground">Nenhuma requisição registrada.</td></tr>';
         return;
     }
 
@@ -1158,49 +1168,52 @@ function renderMateriaisStatus() {
         // 1. Botão de Download / Iniciar Separação
         if (m.fileURL) {
             if (m.status === 'requisitado') {
-                downloadBtnHtml = `<button class="btn-icon btn-start-separacao text-orange-600 hover:text-orange-800" data-id="${m.id}" title="Iniciar Separação (Requer Nome)"><i data-lucide="play-circle"></i></button>`;
+                // Usando btn-icon Tailwind-like
+                downloadBtnHtml = `<button class="btn-icon btn-start-separacao text-accent hover:text-accent-foreground" data-id="${m.id}" title="Iniciar Separação (Requer Nome)"><i data-lucide="play-circle"></i></button>`;
             } else if (m.status === 'separacao' || m.status === 'retirada' || m.status === 'entregue') {
                  if (isBlocked) {
-                     downloadBtnHtml = `<span class="btn-icon text-red-400" title="Download bloqueado por ${blockTimeRemaining} min."><i data-lucide="lock"></i></span>`;
+                     downloadBtnHtml = `<span class="btn-icon text-destructive/50" title="Download bloqueado por ${blockTimeRemaining} min."><i data-lucide="lock"></i></span>`;
                  } else {
                      const downloadCount = m.downloadInfo?.count || 0;
                      const title = `Baixar Pedido (${downloadCount}/2 downloads usados)`;
                      // Passa a URL pelo data-url para a função handleDownloadPedido
-                     downloadBtnHtml = `<button class="btn-icon btn-download-pedido text-blue-600 hover:text-blue-800 ${downloadCount >= 2 ? 'opacity-50 cursor-not-allowed' : ''}" data-id="${m.id}" data-url="${m.fileURL}" ${downloadCount >= 2 ? 'disabled' : ''} title="${title}"><i data-lucide="download-cloud"></i></button>`;
+                     downloadBtnHtml = `<button class="btn-icon btn-download-pedido text-primary hover:text-primary-foreground ${downloadCount >= 2 ? 'opacity-50 cursor-not-allowed' : ''}" data-id="${m.id}" data-url="${m.fileURL}" ${downloadCount >= 2 ? 'disabled' : ''} title="${title}"><i data-lucide="download-cloud"></i></button>`;
                  }
             } else {
                  // Caso o status não seja nenhum dos anteriores, mas tenha URL (não deveria acontecer)
-                 downloadBtnHtml = `<span class="btn-icon text-slate-300" title="Aguardando início da separação"><i data-lucide="file-clock"></i></span>`;
+                 downloadBtnHtml = `<span class="btn-icon text-muted-foreground/50" title="Aguardando início da separação"><i data-lucide="file-clock"></i></span>`;
             }
         } else {
             // Se não tem anexo
             if (m.status === 'requisitado') {
-                 downloadBtnHtml = `<button class="btn-icon btn-start-separacao text-orange-600 hover:text-orange-800" data-id="${m.id}" title="Iniciar Separação (Sem anexo)"><i data-lucide="play-circle"></i></button>`;
+                 downloadBtnHtml = `<button class="btn-icon btn-start-separacao text-accent hover:text-accent-foreground" data-id="${m.id}" title="Iniciar Separação (Sem anexo)"><i data-lucide="play-circle"></i></button>`;
             } else {
-                downloadBtnHtml = `<span class="btn-icon text-slate-300" title="Nenhum pedido anexado"><i data-lucide="file-x"></i></span>`;
+                downloadBtnHtml = `<span class="btn-icon text-muted-foreground/50" title="Nenhum pedido anexado"><i data-lucide="file-x"></i></span>`;
             }
         }
 
 
         // 2. Status e Ações principais
         if (m.status === 'requisitado') {
-             statusClass = 'badge-purple'; // Cor nova para requisitado
+             statusClass = 'badge-purple'; // Mapeado no style.css para primary/10
              statusText = 'Requisitado';
              acoesHtml = ''; // Ação principal é iniciar separação (no lugar do download)
         } else if (m.status === 'separacao') {
-            statusClass = 'badge-yellow';
+            statusClass = 'badge-yellow'; // Mapeado no style.css para accent/10
             statusText = 'Em Separação';
+            // Usando classes Shadcn para botões
             acoesHtml = `
-                <button class="btn-info btn-retirada text-xs py-1 px-2" data-id="${m.id}">Disponível p/ Retirada</button>
+                <button class="btn btn-primary btn-sm btn-retirada text-xs py-1 px-2" data-id="${m.id}">Disponível p/ Retirada</button>
             `;
         } else if (m.status === 'retirada') {
-            statusClass = 'badge-green';
+            statusClass = 'badge-green'; // Mapeado no style.css para secondary/10
             statusText = 'Disponível p/ Retirada';
+             // Usando classes Shadcn para botões
             acoesHtml = `
-                <button class="btn-success btn-entregue text-xs py-1 px-2" data-id="${m.id}">Entregue</button>
+                <button class="btn btn-secondary btn-sm btn-entregue text-xs py-1 px-2" data-id="${m.id}">Entregue</button>
             `;
         } else { // entregue
-            statusClass = 'badge-gray';
+            statusClass = 'badge-gray'; // Mapeado no style.css para muted
             statusText = 'Entregue';
             acoesHtml = '';
         }
@@ -1216,22 +1229,23 @@ function renderMateriaisStatus() {
                 <td class="text-center space-x-1 whitespace-nowrap"> <!-- Ajustado para alinhar ícones -->
                     ${acoesHtml}
                     ${downloadBtnHtml} <!-- Botão Iniciar/Download -->
-                    <button class="btn-danger btn-remove" data-id="${m.id}" data-type="materiais" title="Remover esta requisição"><i data-lucide="trash-2"></i></button>
+                    <!-- Usando classe Shadcn 'btn-destructive' -->
+                    <button class="btn btn-destructive btn-remove" data-id="${m.id}" data-type="materiais" title="Remover esta requisição"><i data-lucide="trash-2"></i></button>
                 </td>
             </tr>`;
 
         // Linha de Observação
         const linhaObservacao = m.itens ? `
-            <tr class="obs-row ${isEntregue ? 'opacity-60' : ''} border-b border-slate-200">
-                <td colspan="5" class="pt-0 pb-1 px-6 text-xs text-slate-500 whitespace-pre-wrap italic">Obs: ${m.itens}</td>
+            <tr class="obs-row ${isEntregue ? 'opacity-60' : ''} border-b border-muted">
+                <td colspan="5" class="pt-0 pb-1 px-6 text-xs text-muted-foreground whitespace-pre-wrap italic">Obs: ${m.itens}</td>
             </tr>` : '';
 
         // Linha do Separador
         const linhaSeparador = m.responsavelSeparador ? `
-             <tr class="separador-row ${isEntregue ? 'opacity-60' : ''} ${m.status === 'separacao' ? 'bg-yellow-50' : (m.status === 'retirada' ? 'bg-green-50' : 'bg-gray-50')} border-b-2 border-slate-200">
-                <td colspan="5" class="py-1 px-6 text-xs text-slate-600">
-                    <span class="font-semibold">Separador:</span> ${m.responsavelSeparador}
-                    ${m.dataInicioSeparacao ? ` <span class="text-slate-400">(${formatTimestampComTempo(m.dataInicioSeparacao)})</span>` : ''}
+             <tr class="separador-row ${isEntregue ? 'opacity-60' : ''} ${m.status === 'separacao' ? 'bg-accent/10' : (m.status === 'retirada' ? 'bg-secondary/10' : 'bg-muted/10')} border-b-2 border-border">
+                <td colspan="5" class="py-1 px-6 text-xs text-muted-foreground">
+                    <span class="font-semibold text-foreground">Separador:</span> ${m.responsavelSeparador}
+                    ${m.dataInicioSeparacao ? ` <span class="text-muted-foreground/70">(${formatTimestampComTempo(m.dataInicioSeparacao)})</span>` : ''}
                 </td>
             </tr>` : '';
 
@@ -1254,7 +1268,9 @@ async function handleMarcarRetirada(e) {
     const materialId = button.dataset.id;
     if (!isAuthReady || !materialId) return;
     
-    button.disabled = true; button.innerHTML = '<div class="loading-spinner-small mx-auto" style="width: 16px; height: 16px; border-width: 2px;"></div>';
+    button.disabled = true; 
+    // Usando classes Shadcn para o spinner
+    button.innerHTML = '<div class="loading-spinner-small mx-auto" style="width: 16px; height: 16px; border-width: 2px;"></div>';
     
     try {
         const docRef = doc(materiaisCollection, materialId);
@@ -1283,7 +1299,9 @@ async function handleMarcarEntregue(e) {
     const responsavelEntrega = material?.responsavelSeparador || "Responsável (Retirada)"; 
     const storagePath = material?.storagePath; // <<< NOVO: Pega o caminho do arquivo
     
-    button.disabled = true; button.innerHTML = '<div class="loading-spinner-small mx-auto" style="width: 16px; height: 16px; border-width: 2px;"></div>';
+    button.disabled = true; 
+    // Usando classes Shadcn para o spinner
+    button.innerHTML = '<div class="loading-spinner-small mx-auto" style="width: 16px; height: 16px; border-width: 2px;"></div>';
     
     try {
         const docRef = doc(materiaisCollection, materialId);
@@ -1479,7 +1497,7 @@ function renderGestaoUnidades() {
     });
 
     if (unidadesFiltradas.length === 0) { 
-        tableGestaoUnidades.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma unidade encontrada ${ (filtroNome || filtroTipo) ? 'com estes filtros' : 'cadastrada. Adicione abaixo.'}</td></tr>`; 
+        tableGestaoUnidades.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted-foreground">Nenhuma unidade encontrada ${ (filtroNome || filtroTipo) ? 'com estes filtros' : 'cadastrada. Adicione abaixo.'}</td></tr>`; 
         return; 
     }
     tableGestaoUnidades.innerHTML = unidadesFiltradas.map(unidade => {
@@ -1489,6 +1507,7 @@ function renderGestaoUnidades() {
             <tr data-unidade-id="${unidade.id}">
                 <td class="font-medium">
                     <span class="unidade-nome-display">${unidade.nome}</span>
+                    <!-- Usando classe Shadcn 'btn-icon' -->
                     <button class="btn-icon btn-edit-unidade ml-1" title="Editar nome"><i data-lucide="pencil"></i></button>
                 </td>
                 <td>${tipoDisplay}</td>
@@ -1496,7 +1515,8 @@ function renderGestaoUnidades() {
                 <td class="text-center"><input type="checkbox" class="form-toggle gestao-toggle" data-field="atendeGas" ${(unidade.atendeGas ?? true) ? 'checked' : ''}></td>
                 <td class="text-center"><input type="checkbox" class="form-toggle gestao-toggle" data-field="atendeMateriais" ${(unidade.atendeMateriais ?? true) ? 'checked' : ''}></td>
                 <td class="text-center">
-                    <button class="btn-danger btn-remove" data-id="${unidade.id}" data-type="unidade" data-details="${unidade.nome} (${tipoDisplay})" title="Remover esta unidade e seu histórico"><i data-lucide="trash-2"></i></button>
+                    <!-- Usando classe Shadcn 'btn-destructive' -->
+                    <button class="btn btn-destructive btn-remove" data-id="${unidade.id}" data-type="unidade" data-details="${unidade.nome} (${tipoDisplay})" title="Remover esta unidade e seu histórico"><i data-lucide="trash-2"></i></button>
                 </td>
             </tr>`
     }).join('');
@@ -1541,8 +1561,9 @@ function handleEditUnidadeClick(e) {
     td.innerHTML = `
         <input type="text" value="${currentName}" class="edit-input w-full" placeholder="Novo nome da unidade">
         <div class="mt-1 space-x-1">
-            <button class="btn-icon btn-save-unidade text-green-600 hover:text-green-800" title="Salvar"><i data-lucide="save"></i></button>
-            <button class="btn-icon btn-cancel-edit-unidade text-red-600 hover:text-red-800" title="Cancelar"><i data-lucide="x-circle"></i></button>
+            <!-- Usando classes Shadcn para botões de ícone -->
+            <button class="btn-icon btn-save-unidade text-secondary hover:text-secondary-foreground" title="Salvar"><i data-lucide="save"></i></button>
+            <button class="btn-icon btn-cancel-edit-unidade text-destructive hover:text-destructive-foreground" title="Cancelar"><i data-lucide="x-circle"></i></button>
         </div>
     `;
     row.classList.add('editing-row'); 
@@ -1719,8 +1740,8 @@ function getChartDataLast30Days(movimentacoes) {
     return { 
         labels, 
         datasets: [ 
-            { label: 'Entregues (Cheios)', data: entregasData, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, tension: 0.1 }, 
-            { label: 'Recebidos (Vazios)', data: retornosData, backgroundColor: 'rgba(16, 185, 129, 0.7)', borderColor: 'rgba(16, 185, 129, 1)', borderWidth: 1, tension: 0.1 } 
+            { label: 'Entregues (Cheios)', data: entregasData, backgroundColor: 'hsl(var(--primary) / 0.7)', borderColor: 'hsl(var(--primary))', borderWidth: 1, tension: 0.1 }, 
+            { label: 'Recebidos (Vazios)', data: retornosData, backgroundColor: 'hsl(var(--secondary) / 0.7)', borderColor: 'hsl(var(--secondary))', borderWidth: 1, tension: 0.1 } 
         ] 
     };
 }
@@ -1740,8 +1761,6 @@ function switchDashboardView(viewName) {
     if(viewName === 'gas') renderDashboardGasChart();
     if(viewName === 'geral') {
         renderDashboardVisaoGeralSummary(); 
-        // Não chama filterDashboardMateriais aqui para evitar recursão
-        // filterDashboardMateriais(null); 
     }
     if(viewName === 'materiais') renderDashboardMateriaisList();
 }
@@ -1857,7 +1876,7 @@ function renderDashboardMateriaisList() {
         }); 
     
     if (pendentes.length === 0) { 
-        dashboardMateriaisListContainer.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Nenhum material pendente.</p>'; 
+        dashboardMateriaisListContainer.innerHTML = '<p class="text-sm text-muted-foreground text-center py-4">Nenhum material pendente.</p>'; 
         return; 
     }
     dashboardMateriaisListContainer.innerHTML = pendentes.map(m => {
@@ -1867,29 +1886,29 @@ function renderDashboardMateriaisList() {
         
         let badgeClass = 'badge-purple';
         let badgeText = 'Requisitado';
-        let bgColor = 'bg-purple-50'; 
-        let borderColor = 'border-purple-300';
+        let bgColor = 'bg-primary/5'; 
+        let borderColor = 'border-primary/20';
         
         if (isSeparacao) {
             badgeClass = 'badge-yellow';
             badgeText = 'Em Separação';
-            bgColor = 'bg-yellow-50';
-            borderColor = 'border-yellow-300';
+            bgColor = 'bg-accent/5';
+            borderColor = 'border-accent/20';
         } else if (isRetirada) {
             badgeClass = 'badge-green';
             badgeText = 'Disponível';
-            bgColor = 'bg-green-50';
-            borderColor = 'border-green-300';
+            bgColor = 'bg-secondary/5';
+            borderColor = 'border-secondary/20';
         }
 
         return ` 
-            <div class="p-3 ${bgColor} rounded-lg border ${borderColor}"> 
+            <div class="p-3 ${bgColor} rounded-lg border ${borderColor} shadow-sm hover:shadow-md transition-shadow"> 
                 <div class="flex justify-between items-center gap-2"> 
-                    <span class="font-medium text-slate-700 text-sm truncate" title="${m.unidadeNome || ''}">${m.unidadeNome || 'Unidade Desc.'}</span> 
+                    <span class="font-medium text-foreground text-sm truncate" title="${m.unidadeNome || ''}">${m.unidadeNome || 'Unidade Desc.'}</span> 
                     <span class="badge ${badgeClass} flex-shrink-0">${badgeText} (${formatTimestamp(m.dataSeparacao)})</span> 
                 </div> 
-                <p class="text-xs text-slate-600 capitalize mt-1">${m.tipoMaterial || 'N/D'}</p> 
-                ${m.itens ? `<p class="text-xs text-gray-500 mt-1 truncate" title="${m.itens}">Obs: ${m.itens}</p>` : ''} 
+                <p class="text-xs text-muted-foreground capitalize mt-1">${m.tipoMaterial || 'N/D'}</p> 
+                ${m.itens ? `<p class="text-xs text-muted-foreground/70 mt-1 truncate" title="${m.itens}">Obs: ${m.itens}</p>` : ''} 
             </div> `
     }).join('');
 }
@@ -1915,7 +1934,8 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
          loaderOriginal.style.display = 'none'; 
     }
     
-    container.innerHTML = '<div class="text-center p-10 col-span-full"><div class="loading-spinner-small mx-auto mb-2"></div><p class="text-sm text-slate-500">Atualizando...</p></div>';
+    // Usando classes Shadcn para o spinner
+    container.innerHTML = '<div class="text-center p-10 col-span-full"><div class="loading-spinner-small mx-auto mb-2"></div><p class="text-sm text-muted-foreground">Atualizando...</p></div>';
 
     let pendentes = fb_materiais.filter(m => m.status === 'requisitado' || m.status === 'separacao' || m.status === 'retirada');
     
@@ -1945,7 +1965,7 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     let contentHtml = ''; 
     
     if (pendentes.length === 0) {
-        contentHtml = `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</p>`;
+        contentHtml = `<p class="text-sm text-muted-foreground text-center py-4 col-span-full">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</p>`;
     } else {
         const gruposTipoUnidade = pendentes.reduce((acc, m) => {
             let tipoUnidade = (m.tipoUnidade || 'OUTROS').toUpperCase();
@@ -1965,6 +1985,7 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
         ordemColunas.forEach(tipoUnidade => {
             if (gruposTipoUnidade[tipoUnidade] && gruposTipoUnidade[tipoUnidade].length > 0) {
                 colunasRenderizadas++;
+                // Usando classes Shadcn para o contêiner da coluna
                 colunasHtml += `<div class="materiais-prontos-col"><h4>${tipoUnidade}</h4><ul class="space-y-3">`; 
                 
                 const materiaisOrdenados = gruposTipoUnidade[tipoUnidade].sort((a,b) => {
@@ -1980,7 +2001,7 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
                     let itemClass = '';
                     
                     if (m.status === 'requisitado') {
-                         statusIndicator = `<span class="status-indicator separando" style="background-color: #f3e8ff; color: #6b21a8;">📝 Requisitado</span>`;
+                         statusIndicator = `<span class="status-indicator separando" style="background-color: hsl(var(--primary) / 0.1); color: hsl(var(--primary));">📝 Requisitado</span>`;
                          itemClass = 'item-requisitado';
                     } else if (m.status === 'separacao') {
                         statusIndicator = `<span class="status-indicator separando">⏳ Separando...</span>`;
@@ -1992,7 +2013,7 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
                     colunasHtml += `
                         <li class="${itemClass}">
                             <strong>${m.unidadeNome}</strong><br>
-                            <span class="capitalize">(${tiposMateriais})</span>
+                            <span class="capitalize text-xs text-muted-foreground">(${tiposMateriais})</span>
                             <div>${statusIndicator}</div>
                         </li>`; 
                 });
@@ -2001,7 +2022,7 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
             }
         });
 
-        contentHtml = colunasRenderizadas > 0 ? colunasHtml : `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</p>`;
+        contentHtml = colunasRenderizadas > 0 ? colunasHtml : `<p class="text-sm text-muted-foreground text-center py-4 col-span-full">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</p>`;
     }
     
     // Usar setTimeout 0 para garantir que a renderização ocorra após o fluxo atual
@@ -2109,7 +2130,9 @@ function handleGerarPdf() {
 
     if (movsFiltradas.length === 0) { showAlert('alert-relatorio', 'Nenhum dado de entrega encontrado para este período.', 'info'); return; }
     
-    btnGerarPdf.disabled = true; btnGerarPdf.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+    btnGerarPdf.disabled = true; 
+    // Usando classes Shadcn para o spinner
+    btnGerarPdf.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
     
     try {
         const doc = new jsPDF(); 
@@ -2149,7 +2172,7 @@ function handleGerarPdf() {
             head: [['Unidade', 'Quantidade Fornecida']], 
             body: abastecimentoData, 
             theme: 'striped', 
-            headStyles: { fillColor: [22, 160, 133] } 
+            headStyles: { fillColor: [41, 128, 185] } // Usando uma cor Shadcn-like (blue-700/800)
         });
 
         autoTable(doc, { 
@@ -2163,7 +2186,7 @@ function handleGerarPdf() {
             head: [['Responsável', 'Quantidade Recebida']], 
             body: responsavelData, 
             theme: 'striped', 
-            headStyles: { fillColor: [41, 128, 185] } 
+            headStyles: { fillColor: [22, 160, 133] } // Usando uma cor Shadcn-like (green/secondary)
         });
 
         doc.save(`Relatorio_${tipoLabel}_${dataInicioStr}_a_${dataFimStr}.pdf`);
@@ -2226,7 +2249,7 @@ async function openConfirmDeleteModal(id, type, details = null) {
     deleteDetailsEl.textContent = `Detalhes: ${detailsText}`;
     deleteWarningUnidadeEl.style.display = showUnidadeWarning ? 'block' : 'none'; 
     deleteWarningInicialEl.style.display = isInicial ? 'block' : 'none'; 
-    confirmDeleteModal.style.display = 'block'; 
+    confirmDeleteModal.style.display = 'flex'; // Usando flex para centralizar
 }
 
 async function executeDelete() {
@@ -2236,7 +2259,9 @@ async function executeDelete() {
     }
      if (!domReady) { showAlert(deleteInfo.alertElementId || 'alert-gestao', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
     
-    btnConfirmDelete.disabled = true; btnConfirmDelete.innerHTML = '<div class="loading-spinner-small mx-auto" style="width:18px; height:18px;"></div>';
+    btnConfirmDelete.disabled = true; 
+    // Usando classes Shadcn para o spinner
+    btnConfirmDelete.innerHTML = '<div class="loading-spinner-small mx-auto" style="width:18px; height:18px;"></div>';
     btnCancelDelete.disabled = true;
     
     try {
@@ -2495,10 +2520,11 @@ function renderHistoricoAgua() {
     const historicoOrdenado = [...fb_estoque_agua].sort((a, b) => (b.data?.toMillis() || 0) - (a.data?.toMillis() || 0));
      
      if (historicoOrdenado.length === 0) { 
-        tableHistoricoAgua.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma entrada registrada.</td></tr>'; return; 
+        tableHistoricoAgua.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted-foreground">Nenhuma entrada registrada.</td></tr>'; return; 
      }
      
     tableHistoricoAgua.innerHTML = historicoOrdenado.map(e => {
+        // Usando classes Shadcn para badges
         const tipoClass = e.tipo === 'inicial' ? 'badge-blue' : 'badge-green';
         const tipoText = e.tipo === 'inicial' ? 'Inicial' : 'Entrada';
         return `
@@ -2508,7 +2534,8 @@ function renderHistoricoAgua() {
             <td class="text-center font-medium">${e.quantidade}</td>
             <td>${e.responsavel || 'N/A'}</td><td>${e.notaFiscal || 'N/A'}</td>
             <td class="text-center">
-                <button class="btn-danger btn-remove" data-id="${e.id}" data-type="entrada-agua" title="Remover esta entrada"><i data-lucide="trash-2"></i></button>
+                <!-- Usando classe Shadcn 'btn-destructive' -->
+                <button class="btn btn-destructive btn-remove" data-id="${e.id}" data-type="entrada-agua" title="Remover esta entrada"><i data-lucide="trash-2"></i></button>
             </td>
         </tr>
     `}).join('');
@@ -2525,10 +2552,11 @@ function renderHistoricoGas() {
     const historicoOrdenado = [...fb_estoque_gas].sort((a, b) => (b.data?.toMillis() || 0) - (a.data?.toMillis() || 0));
      
      if (historicoOrdenado.length === 0) { 
-        tableHistoricoGas.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma entrada registrada.</td></tr>'; return; 
+        tableHistoricoGas.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted-foreground">Nenhuma entrada registrada.</td></tr>'; return; 
      }
      
     tableHistoricoGas.innerHTML = historicoOrdenado.map(e => {
+        // Usando classes Shadcn para badges
         const tipoClass = e.tipo === 'inicial' ? 'badge-blue' : 'badge-green';
         const tipoText = e.tipo === 'inicial' ? 'Inicial' : 'Entrada';
         return `
@@ -2538,7 +2566,8 @@ function renderHistoricoGas() {
             <td class="text-center font-medium">${e.quantidade}</td>
             <td>${e.responsavel || 'N/A'}</td><td>${e.notaFiscal || 'N/A'}</td>
             <td class="text-center">
-                <button class="btn-danger btn-remove" data-id="${e.id}" data-type="entrada-gas" title="Remover esta entrada"><i data-lucide="trash-2"></i></button>
+                <!-- Usando classe Shadcn 'btn-destructive' -->
+                <button class="btn btn-destructive btn-remove" data-id="${e.id}" data-type="entrada-gas" title="Remover esta entrada"><i data-lucide="trash-2"></i></button>
             </td>
         </tr>
     `}).join('');
@@ -2569,8 +2598,9 @@ function switchTab(tabName) {
     }
     console.log(`Executando switchTab(${tabName})...`);
 
-    navButtons.forEach(btn => btn.classList.remove('active'));
-    const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
+    // ALTERAÇÃO: Usa o novo seletor 'nav-btn-new'
+    document.querySelectorAll('.nav-btn-new').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.querySelector(`.nav-btn-new[data-tab="${tabName}"]`);
     if (activeBtn) activeBtn.classList.add('active');
     
     contentPanes.forEach(pane => pane.classList.add('hidden'));
@@ -2625,7 +2655,8 @@ function setupApp() {
     console.log("Executando setupApp...");
     
     // <<< Busca elementos do DOM AQUI >>>
-    navButtons = document.querySelectorAll('.nav-btn'); 
+    // ALTERAÇÃO: Usa o novo seletor 'nav-btn-new' para os botões de aba
+    navButtons = document.querySelectorAll('.nav-btn-new'); 
     contentPanes = document.querySelectorAll('main > div[id^="content-"]'); 
     connectionStatusEl = document.getElementById('connectionStatus'); 
     lastUpdateTimeEl = document.getElementById('last-update-time');
@@ -2667,14 +2698,12 @@ function setupApp() {
     if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos) {
         console.error("ERRO CRÍTICO: Container ou loader do dashboard de materiais NÃO encontrados DENTRO de setupApp!");
         showAlert('alert-agua', 'Erro crítico ao carregar interface. Recarregue a página (Erro Setup).', 'error', 60000);
-        // O domReady não é alterado, o que impediria a inicialização do app.
         return; 
     } else {
         console.log("Elementos essenciais (container, loader) encontrados DENTRO de setupApp.");
     }
     
     // CORREÇÃO CRÍTICA: Se o setup chegou até aqui, o DOM está pronto.
-    // Marcamos domReady=true IMEDIATAMENTE para evitar que switchTab() rejeite as chamadas subsequentes.
     domReady = true; 
     console.log("setupApp: domReady marcado como TRUE.");
 
@@ -2694,8 +2723,9 @@ function setupApp() {
     
     document.querySelector('main').addEventListener('click', (e) => {
          const removeBtn = e.target.closest('button.btn-remove[data-id]');
-         const entregueBtn = e.target.closest('button.btn-entregue[data-id]');
-         const retiradaBtn = e.target.closest('button.btn-retirada[data-id]');
+         // ALTERAÇÃO: Atualiza a classe de botões (de btn-entregue para btn)
+         const entregueBtn = e.target.closest('button.btn-secondary.btn-entregue[data-id]');
+         const retiradaBtn = e.target.closest('button.btn-primary.btn-retirada[data-id]');
          // NOVOS: Botões de Iniciar Separação e Download
          const startSeparacaoBtn = e.target.closest('button.btn-start-separacao[data-id]');
          const downloadPedidoBtn = e.target.closest('button.btn-download-pedido[data-id]');
@@ -2766,8 +2796,6 @@ function setupApp() {
     if(typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 10: Garante que lucide existe
     toggleAguaFormInputs(); toggleGasFormInputs();
 
-    // <<< Removemos a marcação de domReady do final para evitar o race condition >>>
-    
     // Chama funções que podem depender de dados do Firebase (listeners podem ter rodado antes)
     console.log("Chamando funções de renderização inicial pós-setupApp...");
     updateLastUpdateTime(); 
