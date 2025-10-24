@@ -24,14 +24,19 @@
 
 function initGas() {
     console.log("Inicializando módulo de Gás...");
-    // Adiciona listeners específicos de Gás
-    if (formGas) formGas.addEventListener('submit', handleGasSubmit); 
-    if (selectTipoGas) selectTipoGas.addEventListener('change', toggleGasFormInputs);
-    if (formEntradaGas) formEntradaGas.addEventListener('submit', handleEntradaEstoqueSubmit);
-    if (btnAbrirInicialGas) btnAbrirInicialGas.addEventListener('click', () => { if(formInicialGasContainer) formInicialGasContainer.classList.remove('hidden'); if(btnAbrirInicialGas) btnAbrirInicialGas.classList.add('hidden'); });
-    if (formInicialGas) formInicialGas.addEventListener('submit', handleInicialEstoqueSubmit);
-    document.getElementById('filtro-status-gas')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-gas'));
-    document.getElementById('filtro-historico-gas')?.addEventListener('input', (e) => filterTable(e.target, 'table-historico-gas'));
+    
+    // **CORREÇÃO DE ESCOPO**: Usa window.formGas, window.handleGasSubmit, etc.
+    if (window.formGas) window.formGas.addEventListener('submit', handleGasSubmit); 
+    if (window.selectTipoGas) window.selectTipoGas.addEventListener('change', toggleGasFormInputs);
+    if (window.formEntradaGas) window.formEntradaGas.addEventListener('submit', handleEntradaEstoqueSubmit);
+    if (window.btnAbrirInicialGas) window.btnAbrirInicialGas.addEventListener('click', () => { if(window.formInicialGasContainer) window.formInicialGasContainer.classList.remove('hidden'); if(window.btnAbrirInicialGas) window.btnAbrirInicialGas.classList.add('hidden'); });
+    if (window.formInicialGas) window.formInicialGas.addEventListener('submit', handleInicialEstoqueSubmit);
+
+    const filtroStatus = document.getElementById('filtro-status-gas');
+    if (filtroStatus) filtroStatus.addEventListener('input', (e) => window.filterTable(e.target, 'table-status-gas'));
+
+    const filtroHistorico = document.getElementById('filtro-historico-gas');
+    if (filtroHistorico) filtroHistorico.addEventListener('input', (e) => window.filterTable(e.target, 'table-historico-gas'));
 
     // Inicializa a visibilidade correta dos inputs Qtd
     toggleGasFormInputs();
@@ -45,103 +50,106 @@ window.initGas = initGas;
 
 // Alterna a visibilidade dos campos de quantidade (Entregue/Recebido) baseado no Tipo de Movimentação
 function toggleGasFormInputs() {
-     if (!domReady) return; 
-    if (!selectTipoGas) return; 
-    const tipo = selectTipoGas.value;
+     // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.selectTipoGas, etc.
+     if (!window.domReady) return; 
+    if (!window.selectTipoGas) return; 
+    const tipo = window.selectTipoGas.value;
     if (tipo === 'troca') {
-        formGroupQtdEntregueGas?.classList.remove('hidden');
-        formGroupQtdRetornoGas?.classList.remove('hidden');
+        window.formGroupQtdEntregueGas?.classList.remove('hidden');
+        window.formGroupQtdRetornoGas?.classList.remove('hidden');
     } else if (tipo === 'entrega') {
-        formGroupQtdEntregueGas?.classList.remove('hidden');
-        formGroupQtdRetornoGas?.classList.add('hidden');
-        if(inputQtdRetornoGas) inputQtdRetornoGas.value = "0"; 
+        window.formGroupQtdEntregueGas?.classList.remove('hidden');
+        window.formGroupQtdRetornoGas?.classList.add('hidden');
+        if(window.inputQtdRetornoGas) window.inputQtdRetornoGas.value = "0"; 
     } else if (tipo === 'retorno') {
-        formGroupQtdEntregueGas?.classList.add('hidden');
-        formGroupQtdRetornoGas?.classList.remove('hidden');
-        if(inputQtdEntregueGas) inputQtdEntregueGas.value = "0"; 
+        window.formGroupQtdEntregueGas?.classList.add('hidden');
+        window.formGroupQtdRetornoGas?.classList.remove('hidden');
+        if(window.inputQtdEntregueGas) window.inputQtdEntregueGas.value = "0"; 
     }
 }
 
 // Processa o envio do formulário de movimentação de gás
 async function handleGasSubmit(e) {
     e.preventDefault();
-    if (!isAuthReady) { showAlert('alert-gas', 'Erro: Não autenticado.', 'error'); return; }
-    if (!domReady) { showAlert('alert-gas', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
-    const selectValue = selectUnidadeGas.value; 
-    if (!selectValue) { showAlert('alert-gas', 'Selecione uma unidade.', 'warning'); return; }
+    // **CORREÇÃO DE ESCOPO**: Usa window.isAuthReady, window.showAlert, etc.
+    if (!window.isAuthReady) { window.showAlert('alert-gas', 'Erro: Não autenticado.', 'error'); return; }
+    if (!window.domReady) { window.showAlert('alert-gas', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
+    const selectValue = window.selectUnidadeGas.value; 
+    if (!selectValue) { window.showAlert('alert-gas', 'Selecione uma unidade.', 'warning'); return; }
     const [unidadeId, unidadeNome, tipoUnidadeRaw] = selectValue.split('|');
     const tipoUnidade = (tipoUnidadeRaw || '').toUpperCase() === 'SEMCAS' ? 'SEDE' : (tipoUnidadeRaw || '').toUpperCase();
 
-    const tipoMovimentacao = selectTipoGas.value; 
-    const qtdEntregue = parseInt(inputQtdEntregueGas.value, 10) || 0;
-    const qtdRetorno = parseInt(inputQtdRetornoGas.value, 10) || 0;
-    const data = dateToTimestamp(inputDataGas.value);
-    const responsavel = capitalizeString(inputResponsavelGas.value.trim()); 
+    const tipoMovimentacao = window.selectTipoGas.value; 
+    const qtdEntregue = parseInt(window.inputQtdEntregueGas.value, 10) || 0;
+    const qtdRetorno = parseInt(window.inputQtdRetornoGas.value, 10) || 0;
+    const data = window.dateToTimestamp(window.inputDataGas.value);
+    const responsavel = window.capitalizeString(window.inputResponsavelGas.value.trim()); 
     
      if (!unidadeId || !data || !responsavel) { 
-        showAlert('alert-gas', 'Dados inválidos. Verifique Unidade, Data e Responsável.', 'warning'); return;
+        window.showAlert('alert-gas', 'Dados inválidos. Verifique Unidade, Data e Responsável.', 'warning'); return;
     }
     if (tipoMovimentacao === 'troca' && qtdEntregue === 0 && qtdRetorno === 0) {
-         showAlert('alert-gas', 'Para "Troca", ao menos uma das quantidades deve ser maior que zero.', 'warning'); return;
+         window.showAlert('alert-gas', 'Para "Troca", ao menos uma das quantidades deve ser maior que zero.', 'warning'); return;
     }
     if (tipoMovimentacao === 'entrega' && qtdEntregue <= 0) {
-         showAlert('alert-gas', 'Para "Apenas Saída", a quantidade deve ser maior que zero.', 'warning'); return;
+         window.showAlert('alert-gas', 'Para "Apenas Saída", a quantidade deve ser maior que zero.', 'warning'); return;
     }
     if (tipoMovimentacao === 'retorno' && qtdRetorno <= 0) {
-         showAlert('alert-gas', 'Para "Apenas Retorno", a quantidade deve ser maior que zero.', 'warning'); return;
+         window.showAlert('alert-gas', 'Para "Apenas Retorno", a quantidade deve ser maior que zero.', 'warning'); return;
     }
     if (qtdEntregue > 0) {
-        if (!estoqueInicialDefinido.gas) { // Usa variável global
-            showAlert('alert-gas', 'Defina o Estoque Inicial de Gás antes de lançar saídas.', 'warning'); return;
+        if (!window.estoqueInicialDefinido.gas) { // Usa variável global
+            window.showAlert('alert-gas', 'Defina o Estoque Inicial de Gás antes de lançar saídas.', 'warning'); return;
         }
-        const estoqueAtual = parseInt(estoqueGasAtualEl.textContent) || 0;
+        const estoqueAtual = parseInt(window.estoqueGasAtualEl.textContent) || 0;
         if (qtdEntregue > estoqueAtual) {
-            showAlert('alert-gas', `Erro: Estoque insuficiente. Disponível: ${estoqueAtual}`, 'error'); return;
+            window.showAlert('alert-gas', `Erro: Estoque insuficiente. Disponível: ${estoqueAtual}`, 'error'); return;
         }
     }
     
-    btnSubmitGas.disabled = true; btnSubmitGas.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+    window.btnSubmitGas.disabled = true; window.btnSubmitGas.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
     let msgSucesso = [];
     
     try {
-        const timestamp = serverTimestamp(); // Usa global
+        const timestamp = window.serverTimestamp(); // Usa global
         if (qtdEntregue > 0) {
             // Usa gasCollection (global)
-            await addDoc(gasCollection, { unidadeId, unidadeNome, tipoUnidade, tipo: 'entrega', quantidade: qtdEntregue, data, responsavel, registradoEm: timestamp });
+            await window.addDoc(window.gasCollection, { unidadeId, unidadeNome, tipoUnidade, tipo: 'entrega', quantidade: qtdEntregue, data, responsavel, registradoEm: timestamp });
             msgSucesso.push(`${qtdEntregue} botijão(ões) entregue(s)`);
         }
         if (qtdRetorno > 0) {
-             await addDoc(gasCollection, { unidadeId, unidadeNome, tipoUnidade, tipo: 'retorno', quantidade: qtdRetorno, data, responsavel, registradoEm: timestamp });
+             await window.addDoc(window.gasCollection, { unidadeId, unidadeNome, tipoUnidade, tipo: 'retorno', quantidade: qtdRetorno, data, responsavel, registradoEm: timestamp });
              msgSucesso.push(`${qtdRetorno} botijão(ões) recebido(s)`);
         }
-        showAlert('alert-gas', `Movimentação salva! ${msgSucesso.join('; ')}.`, 'success');
-        formGas.reset(); 
-        inputDataGas.value = getTodayDateString(); 
+        window.showAlert('alert-gas', `Movimentação salva! ${msgSucesso.join('; ')}.`, 'success');
+        window.formGas.reset(); 
+        window.inputDataGas.value = window.getTodayDateString(); 
         toggleGasFormInputs(); 
     } catch (error) { 
         console.error("Erro salvar gás:", error); 
-        showAlert('alert-gas', `Erro: ${error.message}`, 'error');
+        window.showAlert('alert-gas', `Erro: ${error.message}`, 'error');
     } finally { 
-        btnSubmitGas.disabled = false; 
-        btnSubmitGas.textContent = 'Salvar Movimentação'; 
+        window.btnSubmitGas.disabled = false; 
+        window.btnSubmitGas.textContent = 'Salvar Movimentação'; 
     }
 }
 
 // Renderiza a tabela de status (saldo) de gás por unidade
 function renderGasStatus() {
-    if (!tableStatusGas) return;
-    if (!domReady) { console.warn("renderGasStatus chamada antes do DOM pronto."); return; }
+    // **CORREÇÃO DE ESCOPO**: Usa window.tableStatusGas, window.domReady, etc.
+    if (!window.tableStatusGas) return;
+    if (!window.domReady) { console.warn("renderGasStatus chamada antes do DOM pronto."); return; }
 
     const statusMap = new Map();
      // Usa fb_unidades (global)
-     fb_unidades.forEach(u => { 
+     window.fb_unidades.forEach(u => { 
         let tipoNormalizado = (u.tipo || 'N/A').toUpperCase();
         if (tipoNormalizado === 'SEMCAS') tipoNormalizado = 'SEDE';
         statusMap.set(u.id, { id: u.id, nome: u.nome, tipo: tipoNormalizado, entregues: 0, recebidos: 0, ultimosLancamentos: [] }); 
     });
 
     // Usa fb_gas_movimentacoes (global)
-    const movsOrdenadas = [...fb_gas_movimentacoes].sort((a, b) => (b.registradoEm?.toMillis() || 0) - (a.registradoEm?.toMillis() || 0));
+    const movsOrdenadas = [...window.fb_gas_movimentacoes].sort((a, b) => (b.registradoEm?.toMillis() || 0) - (a.registradoEm?.toMillis() || 0));
     
     movsOrdenadas.forEach(m => {
          if (statusMap.has(m.unidadeId)) {
@@ -149,7 +157,7 @@ function renderGasStatus() {
              if (m.tipo === 'entrega') unidadeStatus.entregues += m.quantidade;
              else if (m.tipo === 'retorno') unidadeStatus.recebidos += m.quantidade;
              if (unidadeStatus.ultimosLancamentos.length < 1) { 
-                 unidadeStatus.ultimosLancamentos.push({id: m.id, resp: m.responsavel, data: formatTimestamp(m.data), tipo: m.tipo});
+                 unidadeStatus.ultimosLancamentos.push({id: m.id, resp: m.responsavel, data: window.formatTimestamp(m.data), tipo: m.tipo});
              }
          }
      });
@@ -160,10 +168,10 @@ function renderGasStatus() {
          .sort((a, b) => b.pendentes - a.pendentes || a.nome.localeCompare(b.nome));
 
     if (statusArray.length === 0) { 
-        tableStatusGas.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma movimentação registrada.</td></tr>'; 
+        window.tableStatusGas.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma movimentação registrada.</td></tr>'; 
         return; 
     }
-     tableStatusGas.innerHTML = statusArray.map(s => {
+     window.tableStatusGas.innerHTML = statusArray.map(s => {
         const tooltipText = s.ultimosLancamentos.map(l => `${l.tipo === 'entrega' ? 'E': 'R'}: ${l.resp} (${l.data})`).join(' | ');
         const ultimoId = s.ultimosLancamentos[0]?.id;
         const saldo = s.pendentes;
@@ -179,11 +187,11 @@ function renderGasStatus() {
             </td>
         </tr>
     `}).join('');
-     lucide.createIcons();
+     window.lucide.createIcons();
 
     const filtroStatusGasEl = document.getElementById('filtro-status-gas');
     if (filtroStatusGasEl && filtroStatusGasEl.value) {
-        filterTable(filtroStatusGasEl, 'table-status-gas');
+        window.filterTable(filtroStatusGasEl, 'table-status-gas');
     }
 }
 
@@ -193,7 +201,8 @@ function renderGasStatus() {
 // Processa o envio do formulário de estoque inicial
 async function handleInicialEstoqueSubmit(e) {
     e.preventDefault();
-     if (!domReady) return; 
+     // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.capitalizeString, etc.
+     if (!window.domReady) return; 
     const tipoEstoque = e.target.id.includes('agua') ? 'agua' : 'gas'; 
     if(tipoEstoque !== 'gas') return; // Garante que só processe gás aqui
     
@@ -203,14 +212,14 @@ async function handleInicialEstoqueSubmit(e) {
     const alertElId = `alert-inicial-gas`;
     
     const quantidade = parseInt(inputQtd, 10);
-    const responsavel = capitalizeString(inputResp.trim());
+    const responsavel = window.capitalizeString(inputResp.trim());
 
     if (isNaN(quantidade) || quantidade < 0 || !responsavel) { 
-        showAlert(alertElId, "Preencha a quantidade e o responsável.", 'warning'); return; 
+        window.showAlert(alertElId, "Preencha a quantidade e o responsável.", 'warning'); return; 
     }
     
-    if (estoqueInicialDefinido.gas) { // Usa a variável global
-         showAlert(alertElId, "O estoque inicial já foi definido.", 'info'); 
+    if (window.estoqueInicialDefinido.gas) { // Usa a variável global
+         window.showAlert(alertElId, "O estoque inicial já foi definido.", 'info'); 
          document.getElementById(`form-inicial-gas-container`).classList.add('hidden');
          document.getElementById(`btn-abrir-inicial-gas`).classList.add('hidden');
          document.getElementById(`resumo-estoque-gas`).classList.remove('hidden'); 
@@ -220,20 +229,20 @@ async function handleInicialEstoqueSubmit(e) {
     btnSubmit.disabled = true; btnSubmit.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
     
     try {
-        await addDoc(estoqueGasCollection, { // Usa a collection global
+        await window.addDoc(window.estoqueGasCollection, { // Usa a collection global
             tipo: 'inicial', 
             quantidade: quantidade, 
-            data: serverTimestamp(), 
+            data: window.serverTimestamp(), 
             responsavel: responsavel, 
             notaFiscal: 'INICIAL', 
-            registradoEm: serverTimestamp() 
+            registradoEm: window.serverTimestamp() 
         });
-        showAlert(alertElId, "Estoque inicial salvo!", 'success', 2000);
+        window.showAlert(alertElId, "Estoque inicial salvo!", 'success', 2000);
          document.getElementById(`form-inicial-gas-container`).classList.add('hidden');
          document.getElementById(`btn-abrir-inicial-gas`).classList.add('hidden');
     } catch (error) {
         console.error("Erro ao salvar estoque inicial:", error);
-        showAlert(alertElId, `Erro ao salvar: ${error.message}`, 'error');
+        window.showAlert(alertElId, `Erro ao salvar: ${error.message}`, 'error');
         btnSubmit.disabled = false; btnSubmit.textContent = 'Salvar Inicial'; 
     }
 }
@@ -241,8 +250,9 @@ async function handleInicialEstoqueSubmit(e) {
 // Processa o envio do formulário de entrada de estoque
 async function handleEntradaEstoqueSubmit(e) {
     e.preventDefault();
-    if (!isAuthReady) { showAlert('alert-gas', 'Erro: Não autenticado.', 'error'); return; } 
-    if (!domReady) { showAlert('alert-gas', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
+    // **CORREÇÃO DE ESCOPO**: Usa window.isAuthReady, window.showAlert, etc.
+    if (!window.isAuthReady) { window.showAlert('alert-gas', 'Erro: Não autenticado.', 'error'); return; } 
+    if (!window.domReady) { window.showAlert('alert-gas', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
     
     const tipoEstoque = e.target.id.includes('agua') ? 'agua' : 'gas';
     if(tipoEstoque !== 'gas') return; // Garante que só processe gás aqui
@@ -256,34 +266,34 @@ async function handleEntradaEstoqueSubmit(e) {
     const form = document.getElementById(`form-entrada-gas`);
     
     const quantidade = parseInt(inputQtd, 10);
-    const data = dateToTimestamp(inputData);
-    const responsavel = capitalizeString(inputResp.trim());
+    const data = window.dateToTimestamp(inputData);
+    const responsavel = window.capitalizeString(inputResp.trim());
     const notaFiscal = inputNf.trim() || 'N/A'; 
 
     if (!quantidade || quantidade <= 0 || !data || !responsavel) { 
-        showAlert(alertElementId, 'Dados inválidos. Verifique quantidade, data e responsável.', 'warning'); return; 
+        window.showAlert(alertElementId, 'Dados inválidos. Verifique quantidade, data e responsável.', 'warning'); return; 
     }
-    if (!estoqueInicialDefinido.gas) { // Usa a variável global
-        showAlert(alertElementId, `Defina o Estoque Inicial de Gás antes de lançar entradas.`, 'warning'); return; 
+    if (!window.estoqueInicialDefinido.gas) { // Usa a variável global
+        window.showAlert(alertElementId, `Defina o Estoque Inicial de Gás antes de lançar entradas.`, 'warning'); return; 
     }
     
     btnSubmit.disabled = true; btnSubmit.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
     
     try {
-        await addDoc(estoqueGasCollection, { // Usa a collection global
+        await window.addDoc(window.estoqueGasCollection, { // Usa a collection global
             tipo: 'entrada', 
             quantidade: quantidade, 
             data: data, 
             responsavel: responsavel, 
             notaFiscal: notaFiscal, 
-            registradoEm: serverTimestamp() 
+            registradoEm: window.serverTimestamp() 
         });
-        showAlert(alertElementId, 'Entrada no estoque salva!', 'success');
+        window.showAlert(alertElementId, 'Entrada no estoque salva!', 'success');
         form.reset(); 
-        document.getElementById(`input-data-entrada-gas`).value = getTodayDateString(); 
+        document.getElementById(`input-data-entrada-gas`).value = window.getTodayDateString(); 
     } catch (error) {
         console.error("Erro salvar entrada estoque:", error); 
-        showAlert(alertElementId, `Erro: ${error.message}`, 'error');
+        window.showAlert(alertElementId, `Erro: ${error.message}`, 'error');
     } finally { 
         btnSubmit.disabled = false; btnSubmit.textContent = 'Salvar Entrada'; 
     }
@@ -291,52 +301,54 @@ async function handleEntradaEstoqueSubmit(e) {
 
 // Renderiza o resumo do estoque de gás
 function renderEstoqueGas() {
-     if (!estoqueGasAtualEl) return;
-     if (!domReady) { console.warn("renderEstoqueGas chamada antes do DOM pronto."); return; }
-    if (loadingEstoqueGasEl) loadingEstoqueGasEl.style.display = 'none';
+     // **CORREÇÃO DE ESCOPO**: Usa window.estoqueGasAtualEl, window.domReady, etc.
+     if (!window.estoqueGasAtualEl) return;
+     if (!window.domReady) { console.warn("renderEstoqueGas chamada antes do DOM pronto."); return; }
+    if (window.loadingEstoqueGasEl) window.loadingEstoqueGasEl.style.display = 'none';
     
-    if (estoqueInicialDefinido.gas) { // Usa a variável global
-        if(btnAbrirInicialGas) btnAbrirInicialGas.classList.add('hidden'); 
-        if(formInicialGasContainer) formInicialGasContainer.classList.add('hidden'); 
-        if(resumoEstoqueGasEl) resumoEstoqueGasEl.classList.remove('hidden');
+    if (window.estoqueInicialDefinido.gas) { // Usa a variável global
+        if(window.btnAbrirInicialGas) window.btnAbrirInicialGas.classList.add('hidden'); 
+        if(window.formInicialGasContainer) window.formInicialGasContainer.classList.add('hidden'); 
+        if(window.resumoEstoqueGasEl) window.resumoEstoqueGasEl.classList.remove('hidden');
     } else { 
-        if(btnAbrirInicialGas) btnAbrirInicialGas.classList.remove('hidden'); 
-        if(resumoEstoqueGasEl) resumoEstoqueGasEl.classList.add('hidden'); 
+        if(window.btnAbrirInicialGas) window.btnAbrirInicialGas.classList.remove('hidden'); 
+        if(window.resumoEstoqueGasEl) window.resumoEstoqueGasEl.classList.add('hidden'); 
     }
 
     // Usa os arrays globais fb_estoque_gas e fb_gas_movimentacoes
-    const estoqueInicial = fb_estoque_gas.filter(e => e.tipo === 'inicial').reduce((sum, e) => sum + e.quantidade, 0);
-    const totalEntradas = fb_estoque_gas.filter(e => e.tipo === 'entrada').reduce((sum, e) => sum + e.quantidade, 0);
-    const totalSaidas = fb_gas_movimentacoes.filter(m => m.tipo === 'entrega').reduce((sum, m) => sum + m.quantidade, 0);
+    const estoqueInicial = window.fb_estoque_gas.filter(e => e.tipo === 'inicial').reduce((sum, e) => sum + e.quantidade, 0);
+    const totalEntradas = window.fb_estoque_gas.filter(e => e.tipo === 'entrada').reduce((sum, e) => sum + e.quantidade, 0);
+    const totalSaidas = window.fb_gas_movimentacoes.filter(m => m.tipo === 'entrega').reduce((sum, m) => sum + m.quantidade, 0);
     const estoqueAtual = estoqueInicial + totalEntradas - totalSaidas;
 
-    estoqueGasInicialEl.textContent = estoqueInicial;
-    estoqueGasEntradasEl.textContent = `+${totalEntradas}`;
-    estoqueGasSaidasEl.textContent = `-${totalSaidas}`;
-    estoqueGasAtualEl.textContent = estoqueAtual;
+    window.estoqueGasInicialEl.textContent = estoqueInicial;
+    window.estoqueGasEntradasEl.textContent = `+${totalEntradas}`;
+    window.estoqueGasSaidasEl.textContent = `-${totalSaidas}`;
+    window.estoqueGasAtualEl.textContent = estoqueAtual;
     
     // Atualiza o card no dashboard também
-    renderDashboardVisaoGeralSummary(); 
+    window.renderDashboardVisaoGeralSummary(); 
 }
 
 // Renderiza a tabela de histórico de entradas no estoque de gás
 function renderHistoricoGas() {
-     if (!tableHistoricoGas) return;
-     if (!domReady) { console.warn("renderHistoricoGas chamada antes do DOM pronto."); return; }
+     // **CORREÇÃO DE ESCOPO**: Usa window.tableHistoricoGas, window.domReady, etc.
+     if (!window.tableHistoricoGas) return;
+     if (!window.domReady) { console.warn("renderHistoricoGas chamada antes do DOM pronto."); return; }
     
     // Usa o array global fb_estoque_gas
-    const historicoOrdenado = [...fb_estoque_gas].sort((a, b) => (b.data?.toMillis() || 0) - (a.data?.toMillis() || 0));
+    const historicoOrdenado = [...window.fb_estoque_gas].sort((a, b) => (b.data?.toMillis() || 0) - (a.data?.toMillis() || 0));
      
      if (historicoOrdenado.length === 0) { 
-        tableHistoricoGas.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma entrada registrada.</td></tr>'; return; 
+        window.tableHistoricoGas.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma entrada registrada.</td></tr>'; return; 
      }
      
-    tableHistoricoGas.innerHTML = historicoOrdenado.map(e => {
+    window.tableHistoricoGas.innerHTML = historicoOrdenado.map(e => {
         const tipoClass = e.tipo === 'inicial' ? 'badge-blue' : 'badge-green';
         const tipoText = e.tipo === 'inicial' ? 'Inicial' : 'Entrada';
         return `
         <tr>
-            <td>${formatTimestamp(e.data)}</td>
+            <td>${window.formatTimestamp(e.data)}</td>
             <td><span class="badge ${tipoClass}">${tipoText}</span></td>
             <td class="text-center font-medium">${e.quantidade}</td>
             <td>${e.responsavel || 'N/A'}</td><td>${e.notaFiscal || 'N/A'}</td>
@@ -345,10 +357,10 @@ function renderHistoricoGas() {
             </td>
         </tr>
     `}).join('');
-    lucide.createIcons();
+    window.lucide.createIcons();
 
     const filtroHistoricoGasEl = document.getElementById('filtro-historico-gas');
-    if (filtroHistoricoGasEl && filtroHistoricoGasEl.value) { filterTable(filtroHistoricoGasEl, 'table-historico-gas'); }
+    if (filtroHistoricoGasEl && filtroHistoricoGasEl.value) { window.filterTable(filtroHistoricoGasEl, 'table-historico-gas'); }
 }
 
 
@@ -358,16 +370,21 @@ function renderHistoricoGas() {
 // A função agora usa as variáveis globais modoPrevisao, listaExclusoes, tipoSelecionadoPrevisao
 // e chama as funções globais populateUnidadeSelects e renderizarListaExclusoes
 window.selecionarModoPrevisao = (tipoItem, modo) => {
-    // **CORREÇÃO**: Verifica ambos os tipos, mas só atua se for o tipo correto
-    if (tipoItem !== 'agua' && tipoItem !== 'gas') return;
-    if (!domReady) return; 
+    // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.modoPrevisao, etc.
+    if (!window.domReady) return; 
     
-    // Se for 'agua', o agua.js (que também tem essa função) vai pegar.
-    // Este arquivo só deve tratar 'gas'.
-    if (tipoItem !== 'gas') return; 
+    // Esta função será sobrescrita pela de agua.js se ela for carregada depois.
+    // Para evitar conflito, esta só deve tratar 'gas'.
+    if (tipoItem !== 'gas') {
+        // Se não for gás, chama a função de água (caso ela exista)
+        if (typeof window.selecionarModoPrevisaoAgua === 'function') {
+            window.selecionarModoPrevisaoAgua(tipoItem, modo);
+        }
+        return; 
+    }
     
     console.log(`Modo Previsão (Gás): ${modo}`);
-    modoPrevisao.gas = modo;
+    window.modoPrevisao.gas = modo;
     
     const configContainer = document.getElementById(`config-previsao-gas`);
     const cards = document.querySelectorAll(`#subview-previsao-gas .previsao-option-card`);
@@ -387,66 +404,81 @@ window.selecionarModoPrevisao = (tipoItem, modo) => {
     if (modo === 'unidade-especifica') {
         selectUnidadeContainer.classList.remove('hidden');
         exclusaoContainer.classList.add('hidden'); 
-        tipoSelecionadoPrevisao.gas = null; 
+        window.tipoSelecionadoPrevisao.gas = null; 
     } else if (modo === 'por-tipo') {
         selectTipoContainer.classList.remove('hidden');
-        tipoSelecionadoPrevisao.gas = selectTipoEl.value; 
-        populateUnidadeSelects(selectExclusaoEl, 'atendeGas', false, true, tipoSelecionadoPrevisao.gas); 
+        window.tipoSelecionadoPrevisao.gas = selectTipoEl.value; 
+        window.populateUnidadeSelects(selectExclusaoEl, 'atendeGas', false, true, window.tipoSelecionadoPrevisao.gas); 
     } else if (modo === 'completo') {
-        tipoSelecionadoPrevisao.gas = null; 
-         populateUnidadeSelects(selectExclusaoEl, 'atendeGas', false, true, null);
+        window.tipoSelecionadoPrevisao.gas = null; 
+         window.populateUnidadeSelects(selectExclusaoEl, 'atendeGas', false, true, null);
     }
 
-    listaExclusoes.gas = [];
+    window.listaExclusoes.gas = [];
     renderizarListaExclusoes('gas');
     
     // Remove listener antigo (se existir) e adiciona o novo
     selectTipoEl.removeEventListener('change', handleTipoPrevisaoChangeGas); 
     selectTipoEl.addEventListener('change', handleTipoPrevisaoChangeGas); 
 }
+// Renomeia a função global de água para evitar colisão
+if (typeof window.selecionarModoPrevisao === 'function' && typeof window.selecionarModoPrevisaoAgua === 'undefined') {
+    window.selecionarModoPrevisaoAgua = window.selecionarModoPrevisao;
+}
+
 
 // Handler específico para mudança de tipo na previsão de gás
 function handleTipoPrevisaoChangeGas(event) {
-    if (!domReady) return; 
+    // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.tipoSelecionadoPrevisao, etc.
+    if (!window.domReady) return; 
     const selectEl = event.target;
     const novoTipo = selectEl.value;
-    tipoSelecionadoPrevisao.gas = novoTipo; 
+    window.tipoSelecionadoPrevisao.gas = novoTipo; 
     
     const selectExclusaoEl = document.getElementById(`select-exclusao-gas`);
-    populateUnidadeSelects(selectExclusaoEl, 'atendeGas', false, true, novoTipo); 
+    window.populateUnidadeSelects(selectExclusaoEl, 'atendeGas', false, true, novoTipo); 
     
-    listaExclusoes.gas = [];
+    window.listaExclusoes.gas = [];
     renderizarListaExclusoes('gas');
 }
 
 // Adiciona unidade à lista de exclusão (chamado pelo HTML)
 window.adicionarExclusao = (tipoItem) => {
-    // **CORREÇÃO**: Verifica ambos os tipos, mas só atua se for o tipo correto
-    if (tipoItem !== 'agua' && tipoItem !== 'gas') return;
-    if (!domReady) return; 
-    if (tipoItem !== 'gas') return; 
+    // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.listaExclusoes, etc.
+    if (!window.domReady) return; 
+    if (tipoItem !== 'gas') {
+         if (typeof window.adicionarExclusaoAgua === 'function') {
+            window.adicionarExclusaoAgua(tipoItem);
+        }
+        return; 
+    }
     
     const selectExclusao = document.getElementById(`select-exclusao-gas`);
     const unidadeId = selectExclusao.value;
     if (!unidadeId || unidadeId === 'todas') return; 
     
-    if (listaExclusoes.gas.find(item => item.id === unidadeId)) {
+    if (window.listaExclusoes.gas.find(item => item.id === unidadeId)) {
         selectExclusao.value = ""; 
         return;
     }
 
     const unidadeNome = selectExclusao.options[selectExclusao.selectedIndex].text;
-    listaExclusoes.gas.push({ id: unidadeId, nome: unidadeNome });
+    window.listaExclusoes.gas.push({ id: unidadeId, nome: unidadeNome });
     
     renderizarListaExclusoes('gas'); 
     selectExclusao.value = ""; 
 }
+if (typeof window.adicionarExclusao === 'function' && typeof window.adicionarExclusaoAgua === 'undefined') {
+    window.adicionarExclusaoAgua = window.adicionarExclusao;
+}
+
 
 // Renderiza a lista de unidades excluídas
 function renderizarListaExclusoes(tipoItem) {
-     if (tipoItem !== 'gas' || !domReady) return; 
+     // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.listaExclusoes, etc.
+     if (tipoItem !== 'gas' || !window.domReady) return; 
     const container = document.getElementById(`lista-exclusoes-gas`);
-    container.innerHTML = listaExclusoes.gas.map((item, index) => `
+    container.innerHTML = window.listaExclusoes.gas.map((item, index) => `
         <span class="exclusao-item">
             ${item.nome}
             <button type="button" onclick="removerExclusao('gas', ${index})">&times;</button>
@@ -456,28 +488,40 @@ function renderizarListaExclusoes(tipoItem) {
 
 // Remove unidade da lista de exclusão (chamado pelo HTML)
 window.removerExclusao = (tipoItem, index) => {
-     // **CORREÇÃO**: Verifica ambos os tipos, mas só atua se for o tipo correto
-    if (tipoItem !== 'agua' && tipoItem !== 'gas') return;
-    if (!domReady) return; 
-    if (tipoItem !== 'gas') return; 
+     // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.listaExclusoes, etc.
+    if (!window.domReady) return; 
+    if (tipoItem !== 'gas') {
+         if (typeof window.removerExclusaoAgua === 'function') {
+            window.removerExclusaoAgua(tipoItem, index);
+        }
+        return; 
+    }
     
-    listaExclusoes.gas.splice(index, 1); 
+    window.listaExclusoes.gas.splice(index, 1); 
     renderizarListaExclusoes('gas'); 
 }
+if (typeof window.removerExclusao === 'function' && typeof window.removerExclusaoAgua === 'undefined') {
+    window.removerExclusaoAgua = window.removerExclusao;
+}
+
 
 // Calcula a previsão inteligente (chamado pelo HTML)
 window.calcularPrevisaoInteligente = (tipoItem) => {
-    // **CORREÇÃO**: Verifica ambos os tipos, mas só atua se for o tipo correto
-    if (tipoItem !== 'agua' && tipoItem !== 'gas') return;
-    if (!domReady) return; 
-    if (tipoItem !== 'gas') return; 
+    // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.modoPrevisao, etc.
+    if (!window.domReady) return; 
+    if (tipoItem !== 'gas') {
+         if (typeof window.calcularPrevisaoInteligenteAgua === 'function') {
+            window.calcularPrevisaoInteligenteAgua(tipoItem);
+        }
+        return; 
+    }
     
     console.log(`Calculando previsão para Gás...`);
     const alertId = `alertas-previsao-gas`;
     const resultadoContainerId = `resultado-previsao-gas-v2`;
     
-    if (!modoPrevisao.gas) {
-        showAlert(alertId, 'Por favor, selecione um modo de previsão primeiro (Etapa 1).', 'warning');
+    if (!window.modoPrevisao.gas) {
+        window.showAlert(alertId, 'Por favor, selecione um modo de previsão primeiro (Etapa 1).', 'warning');
         return;
     }
 
@@ -487,16 +531,16 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
     let unidadeIdFiltro = null;
     let tipoUnidadeFiltro = null;
 
-    if (modoPrevisao.gas === 'unidade-especifica') {
+    if (window.modoPrevisao.gas === 'unidade-especifica') {
         unidadeIdFiltro = document.getElementById(`select-previsao-unidade-gas-v2`).value;
         if (!unidadeIdFiltro) {
-            showAlert(alertId, 'Por favor, selecione uma unidade específica (Etapa 2).', 'warning');
+            window.showAlert(alertId, 'Por favor, selecione uma unidade específica (Etapa 2).', 'warning');
             return;
         }
-    } else if (modoPrevisao.gas === 'por-tipo') {
+    } else if (window.modoPrevisao.gas === 'por-tipo') {
         tipoUnidadeFiltro = document.getElementById(`select-previsao-tipo-gas`).value;
          if (!tipoUnidadeFiltro) {
-            showAlert(alertId, 'Por favor, selecione um tipo de unidade (Etapa 2).', 'warning');
+            window.showAlert(alertId, 'Por favor, selecione um tipo de unidade (Etapa 2).', 'warning');
             return;
         }
     }
@@ -507,8 +551,8 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
     resultadoContentEl.innerHTML = '<div class="loading-spinner-small mx-auto" style="border-color: #fff; border-top-color: #ccc;"></div>';
     alertasContentEl.innerHTML = ''; 
 
-    const movimentacoes = fb_gas_movimentacoes; // Usa array global
-    const idsExcluidos = new Set(listaExclusoes.gas.map(item => item.id)); // Usa array global
+    const movimentacoes = window.fb_gas_movimentacoes; // Usa array global
+    const idsExcluidos = new Set(window.listaExclusoes.gas.map(item => item.id)); // Usa array global
     
     let movsFiltradas = movimentacoes.filter(m => {
         let tipoMov = (m.tipoUnidade || '').toUpperCase();
@@ -524,16 +568,16 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
     });
 
     let tituloPrevisao = "Previsão Completa (Gás)";
-    if (modoPrevisao.gas === 'unidade-especifica') {
-        const unidade = fb_unidades.find(u => u.id === unidadeIdFiltro);
+    if (window.modoPrevisao.gas === 'unidade-especifica') {
+        const unidade = window.fb_unidades.find(u => u.id === unidadeIdFiltro);
         tituloPrevisao = `Previsão (Gás) para: ${unidade?.nome || 'Unidade Desconhecida'}`;
-    } else if (modoPrevisao.gas === 'por-tipo') {
+    } else if (window.modoPrevisao.gas === 'por-tipo') {
         tituloPrevisao = `Previsão (Gás) para tipo: ${tipoUnidadeFiltro}`;
     }
 
     if (movsFiltradas.length < 2) {
         resultadoContentEl.innerHTML = `<p class="text-yellow-200">Dados insuficientes para calcular (necessário no mínimo 2 entregas no período/filtro).</p>`;
-        if (graficoPrevisao.gas) graficoPrevisao.gas.destroy(); 
+        if (window.graficoPrevisao.gas) window.graficoPrevisao.gas.destroy(); 
         return;
     }
     
@@ -569,13 +613,13 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
                 <span class="text-3xl font-bold text-yellow-300">${previsaoFinal}</span>
             </div>
         </div>
-        <p class="text-xs opacity-70 mt-3 text-center">Cálculo baseado em ${totalQuantidade} unidades entregues entre ${formatTimestamp(movsFiltradas[0].data)} e ${formatTimestamp(movsFiltradas[movsFiltradas.length - 1].data)} (${diffDays} dias).</p>
-         ${listaExclusoes.gas.length > 0 ? `<p class="text-xs opacity-70 mt-1 text-center text-red-200">Excluídas: ${listaExclusoes.gas.map(u=>u.nome).join(', ')}</p>` : ''}
+        <p class="text-xs opacity-70 mt-3 text-center">Cálculo baseado em ${totalQuantidade} unidades entregues entre ${window.formatTimestamp(movsFiltradas[0].data)} e ${window.formatTimestamp(movsFiltradas[movsFiltradas.length - 1].data)} (${diffDays} dias).</p>
+         ${window.listaExclusoes.gas.length > 0 ? `<p class="text-xs opacity-70 mt-1 text-center text-red-200">Excluídas: ${window.listaExclusoes.gas.map(u=>u.nome).join(', ')}</p>` : ''}
     `;
     
     renderizarGraficoPrevisao('gas', movsFiltradas);
     
-    const estoqueAtual = parseInt(estoqueGasAtualEl?.textContent || '0') || 0;
+    const estoqueAtual = parseInt(window.estoqueGasAtualEl?.textContent || '0') || 0;
         
     if (estoqueAtual < previsaoFinal) {
          alertasContentEl.innerHTML = `
@@ -593,18 +637,23 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
          `;
          document.querySelector(`#${alertId} .alert-success`).style.display = 'block'; 
     }
-     lucide.createIcons(); 
+     window.lucide.createIcons(); 
 }
+if (typeof window.calcularPrevisaoInteligente === 'function' && typeof window.calcularPrevisaoInteligenteAgua === 'undefined') {
+    window.calcularPrevisaoInteligenteAgua = window.calcularPrevisaoInteligente;
+}
+
 
 // Renderiza o gráfico de previsão
 function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
-    if (tipoItem !== 'gas' || !domReady) return; 
+    // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.graficoPrevisao, etc.
+    if (tipoItem !== 'gas' || !window.domReady) return; 
     const canvasId = `grafico-previsao-gas`;
     const ctx = document.getElementById(canvasId)?.getContext('2d');
     if (!ctx) return;
 
     const dadosPorDia = movsFiltradas.reduce((acc, m) => {
-        const dataFormatada = formatTimestamp(m.data);
+        const dataFormatada = window.formatTimestamp(m.data);
         if (!acc[dataFormatada]) {
             acc[dataFormatada] = { timestamp: m.data.toMillis(), total: 0 };
         }
@@ -617,11 +666,11 @@ function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
     const labels = diasOrdenados;
     const data = diasOrdenados.map(dia => dadosPorDia[dia].total);
 
-    if (graficoPrevisao.gas) { // Usa a variável global
-        graficoPrevisao.gas.destroy();
+    if (window.graficoPrevisao.gas) { // Usa a variável global
+        window.graficoPrevisao.gas.destroy();
     }
     
-    graficoPrevisao.gas = new Chart(ctx, { // Atribui à variável global
+    window.graficoPrevisao.gas = new Chart(ctx, { // Atribui à variável global
         type: 'line',
         data: {
             labels: labels,
