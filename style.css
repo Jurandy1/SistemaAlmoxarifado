@@ -25,20 +25,19 @@ body {
     flex-wrap: wrap; /* Para responsividade */
 }
 
-.logo-container {
-    display: flex;
-    align-items: center;
-    /* Removido background-color e padding daqui, se existissem, para evitar a caixa branca */
-    /* Garante que o container da logo não adicione um fundo */
-}
+/* Removido .logo-container pois a estrutura foi simplificada no HTML */
 
 .logo-img {
     height: 65px; /* Ajuste a altura conforme necessário para sua nova logo */
     width: auto; /* Mantém a proporção da imagem */
     margin-right: 1.5rem; /* Espaçamento entre a logo e o texto */
-    /* Removido qualquer padding ou background-color que estivesse aqui para a caixa branca */
-    /* Adicionado filter para suavizar bordas se a logo não tiver anti-aliasing perfeito */
-    filter: drop-shadow(0 0 2px rgba(0,0,0,0.1)); /* Uma leve sombra para destacar, se quiser */
+    
+    /* CORREÇÃO: Força o background da imagem a ser transparente. 
+       Se o fundo transparente do PNG estava mostrando o quadriculado, 
+       essa regra garante que ela se misture com o fundo azul do banner.
+    */
+    background-color: transparent !important; 
+    filter: drop-shadow(0 0 2px rgba(0,0,0,0.1)); /* Uma leve sombra para destacar */
 }
 
 @media (max-width: 768px) {
@@ -55,19 +54,23 @@ body {
     .sub-title {
         font-size: 0.75rem; /* Subtítulo menor em mobile */
     }
-    .header-banner .container {
+    .header-banner .container > div:first-child { /* Alvo do flex-container da logo e título */
         justify-content: center; /* Centraliza em mobile se necessário */
         text-align: center;
         flex-direction: column;
         gap: 0.5rem;
     }
-    .logo-container {
+    /* Removido o .logo-container antigo. Usando o novo div anônimo (first-child) */
+    .header-banner .container > div:first-child { 
         flex-direction: column;
         margin-bottom: 0.5rem;
     }
      .logo-img {
         margin-right: 0; /* Remove margem lateral em layout de coluna */
         margin-bottom: 0.5rem; /* Adiciona margem abaixo da logo */
+    }
+    .title-container {
+        text-align: center; /* Centraliza o texto do título em mobile */
     }
 }
 
