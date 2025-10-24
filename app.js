@@ -471,7 +471,6 @@ function populateTipoSelects(itemType) {
 
 
 // --- LÓGICA DE CONTROLE DE ÁGUA ---
-// ... (restante das funções com check domReady adicionado no início) ...
 function toggleAguaFormInputs() {
      if (!domReady) return; 
     if (!selectTipoAgua) return; 
@@ -602,7 +601,7 @@ function renderAguaStatus() {
             </td>
         </tr>
     `}).join('');
-     lucide.createIcons(); 
+     if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 1: Garante que lucide existe
 
     const filtroStatusAguaEl = document.getElementById('filtro-status-agua');
     if (filtroStatusAguaEl && filtroStatusAguaEl.value) {
@@ -612,7 +611,6 @@ function renderAguaStatus() {
 
 
 // --- LÓGICA DE CONTROLE DE GÁS ---
-// ... (restante das funções com check domReady adicionado no início) ...
 function toggleGasFormInputs() {
      if (!domReady) return; 
     if (!selectTipoGas) return; 
@@ -743,7 +741,7 @@ function renderGasStatus() {
             </td>
         </tr>
     `}).join('');
-     lucide.createIcons();
+     if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 2: Garante que lucide existe
 
     const filtroStatusGasEl = document.getElementById('filtro-status-gas');
     if (filtroStatusGasEl && filtroStatusGasEl.value) {
@@ -753,7 +751,6 @@ function renderGasStatus() {
 
 
 // --- LÓGICA DE PREVISÃO INTELIGENTE ---
-// ... (restante das funções com check domReady adicionado no início) ...
 window.selecionarModoPrevisao = (tipoItem, modo) => {
     if (!domReady) return; 
     console.log(`Modo Previsão (${tipoItem}): ${modo}`);
@@ -967,7 +964,7 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
          `;
          document.querySelector(`#${alertId} .alert-success`).style.display = 'block'; 
     }
-     lucide.createIcons(); 
+     if (typeof lucide !== 'undefined') { lucide.createIcons(); } 
 }
 
 function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
@@ -1031,7 +1028,6 @@ function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
 
 
 // --- LÓGICA DE CONTROLE DE MATERIAIS ---
-// ... (restante das funções com check domReady adicionado no início) ...
 async function handleMateriaisSubmit(e) {
     e.preventDefault();
     if (!isAuthReady) { showAlert('alert-materiais', 'Erro: Não autenticado.', 'error'); return; }
@@ -1232,7 +1228,7 @@ function renderMateriaisStatus() {
 
         return linhaPrincipal + linhaObservacao + linhaSeparador;
     }).join('');
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 3: Garante que lucide existe
 
      // Reaplicar filtro se houver
      const filtroMateriaisEl = document.getElementById('filtro-status-materiais');
@@ -1456,7 +1452,6 @@ async function handleDownloadPedido(materialId, fileURL) {
 
 
 // --- LÓGICA DE GESTÃO DE UNIDADES ---
-// ... (restante das funções com check domReady adicionado no início) ...
 function renderGestaoUnidades() {
     if (!tableGestaoUnidades) return;
      if (!domReady) { console.warn("renderGestaoUnidades chamada antes do DOM pronto."); return; }
@@ -1495,7 +1490,7 @@ function renderGestaoUnidades() {
                 </td>
             </tr>`
     }).join('');
-    lucide.createIcons(); 
+    if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 4: Garante que lucide existe
 }
 
 async function handleGestaoToggle(e) {
@@ -1541,7 +1536,7 @@ function handleEditUnidadeClick(e) {
         </div>
     `;
     row.classList.add('editing-row'); 
-    lucide.createIcons(); 
+    if (typeof lucide !== 'undefined') { lucide.createIcons(); } 
     td.querySelector('input').focus(); 
 }
 
@@ -1559,7 +1554,7 @@ function handleCancelEditUnidadeClick(e) {
         <button class="btn-icon btn-edit-unidade ml-1" title="Editar nome"><i data-lucide="pencil"></i></button>
     `;
     row.classList.remove('editing-row'); 
-    lucide.createIcons(); 
+    if (typeof lucide !== 'undefined') { lucide.createIcons(); } 
 }
 
 async function handleSaveUnidadeClick(e) {
@@ -1567,7 +1562,7 @@ async function handleSaveUnidadeClick(e) {
     if (!button) return;
     
     const td = button.closest('td');
-    const row = td.closest('tr');
+    const row = button.closest('tr'); // Corrigido para encontrar a linha
     const unidadeId = row.dataset.unidadeId;
     const input = td.querySelector('.edit-input');
     const newName = capitalizeString(input.value.trim()); 
@@ -1592,7 +1587,7 @@ async function handleSaveUnidadeClick(e) {
             <button class="btn-icon btn-edit-unidade ml-1" title="Editar nome"><i data-lucide="pencil"></i></button>
         `;
          row.classList.remove('editing-row'); 
-        lucide.createIcons(); 
+        if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 5: Garante que lucide existe
         showAlert('alert-gestao', 'Nome da unidade atualizado!', 'success', 2000);
     
     } catch (error) {
@@ -1601,7 +1596,7 @@ async function handleSaveUnidadeClick(e) {
         button.disabled = false;
          if(cancelButton) cancelButton.disabled = false;
         button.innerHTML = '<i data-lucide="save"></i>'; 
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 6: Garante que lucide existe
     }
 }
 
@@ -1721,7 +1716,7 @@ function getChartDataLast30Days(movimentacoes) {
 }
 
 
-// ... (restante das funções do dashboard com check domReady adicionado no início) ...
+// ... (restante das funções do dashboard) ...
 function switchDashboardView(viewName) {
      if (!domReady) { console.warn("switchDashboardView chamada antes do DOM pronto."); return; } 
     document.querySelectorAll('#dashboard-nav-controls .dashboard-nav-btn').forEach(btn => {
@@ -2077,7 +2072,6 @@ function stopDashboardRefresh() {
 }
 
 // --- LÓGICA DE RELATÓRIO PDF ---
-// ... (restante das funções com check domReady adicionado no início) ...
 function handleGerarPdf() {
      if (!domReady) { showAlert('alert-relatorio', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
     if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined' || typeof window.jspdf.AutoTable === 'undefined') {
@@ -2174,7 +2168,6 @@ function handleGerarPdf() {
 
 
 // --- LÓGICA DE EXCLUSÃO ---
-// ... (restante das funções com check domReady adicionado no início) ...
 async function openConfirmDeleteModal(id, type, details = null) {
     if (!id || !type) return; 
      if (!domReady) return; 
@@ -2315,7 +2308,6 @@ async function deleteUnitHistory(unidadeId) {
 
 
 // --- LÓGICA DE CONTROLE DE ESTOQUE (ENTRADA) ---
-// ... (restante das funções com check domReady adicionado no início) ...
 async function handleInicialEstoqueSubmit(e) {
     e.preventDefault();
      if (!domReady) return; 
@@ -2510,7 +2502,7 @@ function renderHistoricoAgua() {
             </td>
         </tr>
     `}).join('');
-    lucide.createIcons(); 
+    if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 7: Garante que lucide existe
 
     const filtroHistoricoAguaEl = document.getElementById('filtro-historico-agua');
     if (filtroHistoricoAguaEl && filtroHistoricoAguaEl.value) { filterTable(filtroHistoricoAguaEl, 'table-historico-agua'); }
@@ -2540,7 +2532,7 @@ function renderHistoricoGas() {
             </td>
         </tr>
     `}).join('');
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 8: Garante que lucide existe
 
     const filtroHistoricoGasEl = document.getElementById('filtro-historico-gas');
     if (filtroHistoricoGasEl && filtroHistoricoGasEl.value) { filterTable(filtroHistoricoGasEl, 'table-historico-gas'); }
@@ -2556,7 +2548,7 @@ function switchSubTabView(tabPrefix, subViewName) {
     document.querySelectorAll(`#content-${tabPrefix} > div[id^="subview-"]`).forEach(pane => {
          pane.classList.toggle('hidden', pane.id !== `subview-${subViewName}`);
     });
-     lucide.createIcons(); 
+     if (typeof lucide !== 'undefined') { lucide.createIcons(); } 
 }
 
 function switchTab(tabName) {
@@ -2621,7 +2613,9 @@ function switchTab(tabName) {
         }, 100);
     }
 
-    setTimeout(() => { if(typeof lucide !== 'undefined') lucide.createIcons(); }, 50); 
+    setTimeout(() => { 
+        if(typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 9: Garante que lucide existe
+    }, 50); 
 }
 
 // <<< Nova função para configurar a UI após autenticação >>>
@@ -2762,7 +2756,7 @@ function setupApp() {
         btnClearFilter.addEventListener('click', () => filterDashboardMateriais(null));
     }
 
-    if(typeof lucide !== 'undefined') lucide.createIcons();
+    if(typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 10: Garante que lucide existe
     toggleAguaFormInputs(); toggleGasFormInputs();
 
     // <<< MARCA domReady como TRUE >>>
