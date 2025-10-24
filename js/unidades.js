@@ -1,6 +1,7 @@
 /* =============================================================
    MÓDULO: Gestão de Unidades
    Funções:
+     - initUnidades() -> NOVO: Chamado pelo app.js
      - renderGestaoUnidades()
      - handleGestaoToggle()
      - handleEditUnidadeClick()
@@ -13,7 +14,10 @@
 // Importa funções do Firestore necessárias para este módulo
 import { doc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-document.addEventListener('DOMContentLoaded', () => {
+// **CORREÇÃO**: Removemos o 'DOMContentLoaded' e criamos a função initUnidades()
+// que será chamada pelo app.js quando o DOM e o Firebase estiverem prontos.
+function initUnidades() {
+    console.log("Inicializando módulo de Unidades...");
     // Adiciona listeners específicos de Gestão de Unidades
     if (tableGestaoUnidades) { 
         // Usa delegação de eventos para os botões dentro da tabela
@@ -34,7 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filtroUnidadeNome) filtroUnidadeNome.addEventListener('input', renderGestaoUnidades); 
     if (filtroUnidadeTipo) filtroUnidadeTipo.addEventListener('input', renderGestaoUnidades); 
     if (btnBulkAddUnidades) btnBulkAddUnidades.addEventListener('click', handleBulkAddUnidades);
-});
+}
+
+// **NOVO**: Torna a função initUnidades acessível globalmente para o app.js
+window.initUnidades = initUnidades;
 
 
 // --- LÓGICA DE GESTÃO DE UNIDADES ---
