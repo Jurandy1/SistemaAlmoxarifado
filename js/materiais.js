@@ -1,6 +1,7 @@
 /* =============================================================
    MÓDULO: Controle de Materiais
    Funções:
+     - initMateriais() -> NOVO: Chamado pelo app.js
      - handleMateriaisSubmit()
      - renderMateriaisStatus()
      - handleMarcarRetirada()
@@ -17,8 +18,10 @@
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js"; 
 import { doc, updateDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-
-document.addEventListener('DOMContentLoaded', () => {
+// **CORREÇÃO**: Removemos o 'DOMContentLoaded' e criamos a função initMateriais()
+// que será chamada pelo app.js quando o DOM e o Firebase estiverem prontos.
+function initMateriais() {
+    console.log("Inicializando módulo de Materiais...");
     // Adiciona listeners específicos de Materiais
     if (formMateriais) formMateriais.addEventListener('submit', handleMateriaisSubmit); 
     document.getElementById('filtro-status-materiais')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-materiais'));
@@ -41,8 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnCancelarResponsavelSeparacao) btnCancelarResponsavelSeparacao.addEventListener('click', fecharModalResponsavel);
     if (btnConfirmarResponsavelSeparacao) btnConfirmarResponsavelSeparacao.addEventListener('click', confirmarResponsavelSeparacao);
     if (document.getElementById('btn-fechar-modal-responsavel')) document.getElementById('btn-fechar-modal-responsavel').addEventListener('click', fecharModalResponsavel);
+}
 
-});
+// **NOVO**: Torna a função initMateriais acessível globalmente para o app.js
+window.initMateriais = initMateriais;
 
 
 // --- LÓGICA DE CONTROLE DE MATERIAIS ---
