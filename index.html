@@ -27,8 +27,8 @@
         // NOVO: Import do Firebase Storage
         import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-        // Import principal do App
-        import "app.js"; // Tentativa de corrigir erro de URL não hierárquica
+        // Import principal do App - CORRIGIDO para usar "./" conforme exigido pelo erro
+        import "./app.js"; 
     </script>
     
 </head>
@@ -1010,3 +1010,4 @@
     -->
 </body>
 </html>
+
