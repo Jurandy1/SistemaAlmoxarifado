@@ -11,14 +11,18 @@
    ============================================================= */
 
 // Importa apenas Timestamp, pois as outras funções/vars são globais
+// **CORREÇÃO DE ESCOPO**: Não precisamos mais importar,
+// pois app.js irá anexá-los à 'window'.
+/*
 import { Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
+*/
 
 // **CORREÇÃO**: Removemos o 'DOMContentLoaded' e criamos a função initRelatorio()
 // que será chamada pelo app.js quando o DOM e o Firebase estiverem prontos.
 function initRelatorio() {
     console.log("Inicializando módulo de Relatório...");
-    // Adiciona listener específico para o botão de gerar PDF
-    if (btnGerarPdf) btnGerarPdf.addEventListener('click', handleGerarPdf);
+    // **CORREÇÃO DE ESCOPO**: Usa window.btnGerarPdf
+    if (window.btnGerarPdf) window.btnGerarPdf.addEventListener('click', handleGerarPdf);
 }
 
 // **NOVO**: Torna a função initRelatorio acessível globalmente para o app.js
@@ -29,11 +33,12 @@ window.initRelatorio = initRelatorio;
 
 // Gera o relatório PDF baseado nas seleções do usuário
 function handleGerarPdf() {
-     if (!domReady) { showAlert('alert-relatorio', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
+     // **CORREÇÃO DE ESCOPO**: Usa window.domReady, window.showAlert, etc.
+     if (!window.domReady) { window.showAlert('alert-relatorio', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
     
     // Verifica se as bibliotecas jsPDF e autoTable estão carregadas
     if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined' || typeof window.jspdf.AutoTable === 'undefined') {
-        showAlert('alert-relatorio', 'Erro: Bibliotecas PDF não carregadas. Tente recarregar a página.', 'error'); 
+        window.showAlert('alert-relatorio', 'Erro: Bibliotecas PDF não carregadas. Tente recarregar a página.', 'error'); 
         console.error("jsPDF ou jsPDF-AutoTable não encontrados no window.");
         return;
     }
@@ -41,24 +46,24 @@ function handleGerarPdf() {
     const autoTable = window.jspdf.AutoTable; // Acessa via window.jspdf
 
     // Obtém valores dos inputs (referências globais)
-    const tipo = relatorioTipo.value; 
-    const dataInicioStr = relatorioDataInicio.value;
-    const dataFimStr = relatorioDataFim.value;
+    const tipo = window.relatorioTipo.value; 
+    const dataInicioStr = window.relatorioDataInicio.value;
+    const dataFimStr = window.relatorioDataFim.value;
 
-    if (!dataInicioStr || !dataFimStr) { showAlert('alert-relatorio', 'Selecione a data de início e fim.', 'warning'); return; }
+    if (!dataInicioStr || !dataFimStr) { window.showAlert('alert-relatorio', 'Selecione a data de início e fim.', 'warning'); return; }
 
     // Converte datas para timestamps (função global)
-    const dataInicioTs = dateToTimestamp(dataInicioStr);
-    const dataFimTs = dateToTimestamp(dataFimStr);
+    const dataInicioTs = window.dateToTimestamp(dataInicioStr);
+    const dataFimTs = window.dateToTimestamp(dataFimStr);
 
-    if (!dataInicioTs || !dataFimTs) { showAlert('alert-relatorio', 'Datas inválidas.', 'error'); return;}
+    if (!dataInicioTs || !dataFimTs) { window.showAlert('alert-relatorio', 'Datas inválidas.', 'error'); return;}
 
     const dataInicio = dataInicioTs.toMillis();
     // Adiciona 1 dia menos 1ms ao fim para incluir todo o último dia
     const dataFim = dataFimTs.toMillis() + (24 * 60 * 60 * 1000 - 1); 
 
     // Seleciona o array de movimentações correto (arrays globais)
-    const movimentacoes = (tipo === 'agua' ? fb_agua_movimentacoes : fb_gas_movimentacoes);
+    const movimentacoes = (tipo === 'agua' ? window.fb_agua_movimentacoes : window.fb_gas_movimentacoes);
     const tipoLabel = (tipo === 'agua' ? 'Água' : 'Gás');
 
     // Filtra movimentações do tipo 'entrega' dentro do período selecionado
@@ -67,9 +72,9 @@ function handleGerarPdf() {
         return m.tipo === 'entrega' && mData >= dataInicio && mData <= dataFim; 
     });
 
-    if (movsFiltradas.length === 0) { showAlert('alert-relatorio', 'Nenhum dado de entrega encontrado para este período.', 'info'); return; }
+    if (movsFiltradas.length === 0) { window.showAlert('alert-relatorio', 'Nenhum dado de entrega encontrado para este período.', 'info'); return; }
     
-    btnGerarPdf.disabled = true; btnGerarPdf.innerHTML = '<div class="loading-spinner-small mx-auto"></div> Gerando...';
+    window.btnGerarPdf.disabled = true; window.btnGerarPdf.innerHTML = '<div class="loading-spinner-small mx-auto"></div> Gerando...';
     
     try {
         const doc = new jsPDF(); 
@@ -101,8 +106,8 @@ function handleGerarPdf() {
         // --- Montagem do PDF ---
         doc.setFontSize(16); doc.text(`Relatório de Fornecimento - ${tipoLabel}`, 14, 20);
         doc.setFontSize(10); 
-        // Usa formatTimestamp (global) e Timestamp (importado)
-        doc.text(`Período: ${formatTimestamp(Timestamp.fromMillis(dataInicio))} a ${formatTimestamp(Timestamp.fromMillis(dataFim))}`, 14, 26);
+        // Usa formatTimestamp (global) e Timestamp (global)
+        doc.text(`Período: ${window.formatTimestamp(window.Timestamp.fromMillis(dataInicio))} a ${window.formatTimestamp(window.Timestamp.fromMillis(dataFim))}`, 14, 26);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 32);
 
         // Tabela por Unidade
@@ -137,11 +142,11 @@ function handleGerarPdf() {
 
         // Salva o PDF
         doc.save(`Relatorio_${tipoLabel}_${dataInicioStr}_a_${dataFimStr}.pdf`);
-        showAlert('alert-relatorio', 'Relatório PDF gerado com sucesso!', 'success');
+        window.showAlert('alert-relatorio', 'Relatório PDF gerado com sucesso!', 'success');
     } catch (error) { 
         console.error("Erro ao gerar PDF:", error); 
-        showAlert('alert-relatorio', `Erro ao gerar PDF: ${error.message}`, 'error');
+        window.showAlert('alert-relatorio', `Erro ao gerar PDF: ${error.message}`, 'error');
     } finally { 
-        btnGerarPdf.disabled = false; btnGerarPdf.textContent = 'Gerar Relatório PDF'; 
+        window.btnGerarPdf.disabled = false; window.btnGerarPdf.textContent = 'Gerar Relatório PDF'; 
     }
 }
