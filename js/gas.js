@@ -1,6 +1,7 @@
 /* =============================================================
    MÓDULO: Controle de Gás
    Funções:
+     - initGas() -> NOVO: Chamado pelo app.js
      - toggleGasFormInputs()
      - handleGasSubmit()
      - renderGasStatus()
@@ -17,8 +18,11 @@
    Autor: Jurandy Santana (Refatorado por Gemini)
    ============================================================= */
 
-// Espera o DOM estar pronto e as variáveis globais do app.js estarem definidas
-document.addEventListener('DOMContentLoaded', () => {
+// **CORREÇÃO**: Removemos o 'DOMContentLoaded' e criamos a função initGas()
+// que será chamada pelo app.js quando o DOM e o Firebase estiverem prontos.
+
+function initGas() {
+    console.log("Inicializando módulo de Gás...");
     // Adiciona listeners específicos de Gás
     if (formGas) formGas.addEventListener('submit', handleGasSubmit); 
     if (selectTipoGas) selectTipoGas.addEventListener('change', toggleGasFormInputs);
@@ -30,7 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Inicializa a visibilidade correta dos inputs Qtd
     toggleGasFormInputs();
-});
+}
+
+// **NOVO**: Torna a função initGas acessível globalmente para o app.js
+window.initGas = initGas;
 
 
 // --- LÓGICA DE CONTROLE DE GÁS ---
@@ -350,7 +357,14 @@ function renderHistoricoGas() {
 // A função agora usa as variáveis globais modoPrevisao, listaExclusoes, tipoSelecionadoPrevisao
 // e chama as funções globais populateUnidadeSelects e renderizarListaExclusoes
 window.selecionarModoPrevisao = (tipoItem, modo) => {
-    if (tipoItem !== 'gas' || !domReady) return; 
+    // **CORREÇÃO**: Verifica ambos os tipos, mas só atua se for o tipo correto
+    if (tipoItem !== 'agua' && tipoItem !== 'gas') return;
+    if (!domReady) return; 
+    
+    // Se for 'agua', o agua.js (que também tem essa função) vai pegar.
+    // Este arquivo só deve tratar 'gas'.
+    if (tipoItem !== 'gas') return; 
+    
     console.log(`Modo Previsão (Gás): ${modo}`);
     modoPrevisao.gas = modo;
     
@@ -406,7 +420,11 @@ function handleTipoPrevisaoChangeGas(event) {
 
 // Adiciona unidade à lista de exclusão (chamado pelo HTML)
 window.adicionarExclusao = (tipoItem) => {
-    if (tipoItem !== 'gas' || !domReady) return; 
+    // **CORREÇÃO**: Verifica ambos os tipos, mas só atua se for o tipo correto
+    if (tipoItem !== 'agua' && tipoItem !== 'gas') return;
+    if (!domReady) return; 
+    if (tipoItem !== 'gas') return; 
+    
     const selectExclusao = document.getElementById(`select-exclusao-gas`);
     const unidadeId = selectExclusao.value;
     if (!unidadeId || unidadeId === 'todas') return; 
@@ -437,14 +455,22 @@ function renderizarListaExclusoes(tipoItem) {
 
 // Remove unidade da lista de exclusão (chamado pelo HTML)
 window.removerExclusao = (tipoItem, index) => {
-     if (tipoItem !== 'gas' || !domReady) return; 
+     // **CORREÇÃO**: Verifica ambos os tipos, mas só atua se for o tipo correto
+    if (tipoItem !== 'agua' && tipoItem !== 'gas') return;
+    if (!domReady) return; 
+    if (tipoItem !== 'gas') return; 
+    
     listaExclusoes.gas.splice(index, 1); 
     renderizarListaExclusoes('gas'); 
 }
 
 // Calcula a previsão inteligente (chamado pelo HTML)
 window.calcularPrevisaoInteligente = (tipoItem) => {
-     if (tipoItem !== 'gas' || !domReady) return; 
+    // **CORREÇÃO**: Verifica ambos os tipos, mas só atua se for o tipo correto
+    if (tipoItem !== 'agua' && tipoItem !== 'gas') return;
+    if (!domReady) return; 
+    if (tipoItem !== 'gas') return; 
+    
     console.log(`Calculando previsão para Gás...`);
     const alertId = `alertas-previsao-gas`;
     const resultadoContainerId = `resultado-previsao-gas-v2`;
