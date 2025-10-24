@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.7.2 - Uploads)</title>
+    <title>CONTROLE DE ALMOXARIFADO - SEMCAS (v.7.3 - Fluxo Separador)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
@@ -55,7 +55,7 @@
                     </div>
                     <div>
                         <h2 class="font-bold text-lg text-slate-800">Sistema de Almoxarifado</h2>
-                        <p class="text-sm text-slate-500">v.1.1 by Jurandy Santana</p> </div>
+                        <p class="text-sm text-slate-500">v.1.2 by Jurandy Santana</p> </div>
                 </div>
                 <div class="flex items-center space-x-4 text-sm">
                     <div id="connectionStatus" class="flex items-center gap-2"></div>
@@ -80,8 +80,9 @@
 
     <main class="container mx-auto p-4 sm:p-6 lg:p-8">
         
+        <!-- Conteúdo do Dashboard -->
         <div id="content-dashboard" class="fade-in">
-            <div class="flex justify-between items-start mb-6 flex-wrap gap-4">
+             <div class="flex justify-between items-start mb-6 flex-wrap gap-4">
                  <div>
                     <h3 class="text-2xl font-bold text-slate-800">Visão Geral do Almoxarifado</h3>
                     <p class="text-sm text-slate-500 mt-1">A página atualiza automaticamente a cada 2 minutos.</p>
@@ -206,6 +207,7 @@
             </div>
         </div>
 
+        <!-- Conteúdo do Controle de Água -->
         <div id="content-agua" class="hidden fade-in">
              <div class="flex flex-wrap gap-2 mb-6" id="sub-nav-agua">
                  <button class="sub-nav-btn active" data-subview="movimentacao-agua">Lançamentos / Status</button>
@@ -498,6 +500,7 @@
 
         </div>
 
+        <!-- Conteúdo do Controle de Gás -->
         <div id="content-gas" class="hidden fade-in">
              <div class="flex flex-wrap gap-2 mb-6" id="sub-nav-gas">
                  <button class="sub-nav-btn active" data-subview="movimentacao-gas">Lançamentos / Status</button>
@@ -790,10 +793,11 @@
 
         </div>
 
+        <!-- Conteúdo da Entrega de Materiais -->
         <div id="content-materiais" class="hidden fade-in">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-1 card">
-                    <h2 class="text-xl font-bold text-slate-800 mb-4">Registrar Separação de Material</h2>
+                    <h2 class="text-xl font-bold text-slate-800 mb-4">Registrar Requisição de Material</h2>
                     <form id="form-materiais">
                         <div class="mb-4">
                             <label for="select-unidade-materiais" class="form-label">Unidade (Apenas habilitadas)</label>
@@ -809,7 +813,7 @@
                             </select>
                         </div>
                         <div class="mb-4">
-                            <label for="input-data-separacao" class="form-label">Data da Separação</label>
+                            <label for="input-data-separacao" class="form-label">Data da Requisição</label>
                             <input type="date" id="input-data-separacao" class="form-input" required>
                         </div>
                         
@@ -822,26 +826,27 @@
                         
                         <div class="mb-4">
                              <label for="textarea-itens-materiais" class="form-label">Observação:</label>
-                             <textarea id="textarea-itens-materiais" class="form-textarea" placeholder="Alguma observação sobre esta separação... (Opcional)"></textarea>
+                             <textarea id="textarea-itens-materiais" class="form-textarea" placeholder="Alguma observação sobre esta requisição... (Opcional)"></textarea>
                         </div>
 
                          <div class="mb-4">
-                             <label for="input-responsavel-materiais" class="form-label">Responsável (Separação)</label>
-                             <input type="text" id="input-responsavel-materiais" class="form-input" placeholder="Nome de quem separou" required>
+                             <!-- LABEL ATUALIZADO -->
+                             <label for="input-responsavel-materiais" class="form-label">Responsável pelo Lançamento</label>
+                             <input type="text" id="input-responsavel-materiais" class="form-input" placeholder="Nome de quem lançou" required>
                         </div>
-                        <button type="submit" id="btn-submit-materiais" class="btn btn-primary w-full">Registrar Separação</button>
+                        <button type="submit" id="btn-submit-materiais" class="btn btn-primary w-full">Registrar Requisição</button>
                     </form>
                     <div id="alert-materiais" class="alert mt-4"></div>
                 </div>
                 
                 <div class="lg:col-span-2 card">
                     <h2 class="text-xl font-bold text-slate-800 mb-4">Status dos Materiais</h2>
-                    <p class="text-sm text-slate-500 mb-4">Controle de materiais em separação, disponíveis para retirada e já entregues.</p>
+                    <p class="text-sm text-slate-500 mb-4">Controle de materiais requisitados, em separação, disponíveis e entregues.</p>
                     <div id="alert-materiais-lista" class="alert mb-4"></div>
                     
                     <div class="mb-4">
                         <label for="filtro-status-materiais" class="form-label text-xs">Buscar Status ou Unidade:</label>
-                        <input type="text" id="filtro-status-materiais" data-table="table-status-materiais" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Digite 'separacao', 'retirada' ou nome...">
+                        <input type="text" id="filtro-status-materiais" data-table="table-status-materiais" class="form-input form-input-sm py-1 px-2 text-sm" placeholder="Digite 'requisitado', 'separacao' ou nome...">
                     </div>
 
                     <div class="overflow-x-auto">
@@ -850,7 +855,7 @@
                                 <tr>
                                     <th>Unidade</th>
                                     <th>Tipo</th>
-                                    <th>Data Separação</th>
+                                    <th>Data Requisição</th>
                                     <th>Status</th>
                                     <!-- Coluna de Ações atualizada -->
                                     <th class="text-center">Ações</th>
@@ -865,6 +870,7 @@
             </div>
         </div>
 
+        <!-- Conteúdo da Gestão de Unidades -->
         <div id="content-gestao" class="hidden fade-in">
             <div class="card max-w-4xl mx-auto">
                 <h2 class="text-xl font-bold text-slate-800 mb-4">Gestão de Unidades de Atendimento</h2>
@@ -912,6 +918,7 @@
             </div>
         </div>
 
+        <!-- Conteúdo do Relatório -->
         <div id="content-relatorio" class="hidden fade-in">
             <div class="card max-w-2xl mx-auto">
                 <h2 class="text-xl font-bold text-slate-800 mb-4">Gerar Relatório em PDF</h2>
@@ -947,6 +954,7 @@
         <p>Jurandy Santana</p>
     </footer>
     
+    <!-- Modal de Confirmação de Exclusão -->
      <div id="confirm-delete-modal" class="modal">
       <div class="modal-content" style="max-width: 400px;">
         <div class="modal-header">
@@ -966,6 +974,29 @@
         <div class="modal-footer space-x-2">
           <button id="btn-cancel-delete" class="btn-secondary">Cancelar</button>
           <button id="btn-confirm-delete" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">Confirmar Exclusão</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOVO: Modal para Inserir Nome do Separador -->
+    <div id="separador-modal" class="modal">
+      <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+          <h2 class="modal-title">Iniciar Separação</h2>
+          <button class="modal-close" onclick="document.getElementById('separador-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="mb-4 text-sm">Informe seu nome para registrar quem está separando este material e liberar o download/impressão do pedido.</p>
+            <div>
+                 <label for="input-separador-nome" class="form-label">Nome do Separador:</label>
+                 <input type="text" id="input-separador-nome" class="form-input" placeholder="Digite seu nome completo" required>
+                 <input type="hidden" id="separador-material-id"> 
+            </div>
+             <div id="alert-separador" class="alert mt-3 text-xs p-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="document.getElementById('separador-modal').style.display='none'">Cancelar</button>
+          <button id="btn-salvar-separador" class="btn btn-primary">Salvar Nome e Liberar</button>
         </div>
       </div>
     </div>
