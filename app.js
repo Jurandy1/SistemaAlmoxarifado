@@ -601,7 +601,7 @@ function renderAguaStatus() {
             </td>
         </tr>
     `}).join('');
-     if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 1: Garante que lucide existe
+     if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 1: Garante que lucide existe
 
     const filtroStatusAguaEl = document.getElementById('filtro-status-agua');
     if (filtroStatusAguaEl && filtroStatusAguaEl.value) {
@@ -741,7 +741,7 @@ function renderGasStatus() {
             </td>
         </tr>
     `}).join('');
-     if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 2: Garante que lucide existe
+     if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 2: Garante que lucide existe
 
     const filtroStatusGasEl = document.getElementById('filtro-status-gas');
     if (filtroStatusGasEl && filtroStatusGasEl.value) {
@@ -964,7 +964,7 @@ window.calcularPrevisaoInteligente = (tipoItem) => {
          `;
          document.querySelector(`#${alertId} .alert-success`).style.display = 'block'; 
     }
-     if (typeof lucide !== 'undefined') { lucide.createIcons(); } 
+     if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } 
 }
 
 function renderizarGraficoPrevisao(tipoItem, movsFiltradas) {
@@ -1228,7 +1228,7 @@ function renderMateriaisStatus() {
 
         return linhaPrincipal + linhaObservacao + linhaSeparador;
     }).join('');
-    if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 3: Garante que lucide existe
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 3: Garante que lucide existe
 
      // Reaplicar filtro se houver
      const filtroMateriaisEl = document.getElementById('filtro-status-materiais');
@@ -1490,7 +1490,7 @@ function renderGestaoUnidades() {
                 </td>
             </tr>`
     }).join('');
-    if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 4: Garante que lucide existe
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 4: Garante que lucide existe
 }
 
 async function handleGestaoToggle(e) {
@@ -1536,7 +1536,7 @@ function handleEditUnidadeClick(e) {
         </div>
     `;
     row.classList.add('editing-row'); 
-    if (typeof lucide !== 'undefined') { lucide.createIcons(); } 
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } 
     td.querySelector('input').focus(); 
 }
 
@@ -1554,7 +1554,7 @@ function handleCancelEditUnidadeClick(e) {
         <button class="btn-icon btn-edit-unidade ml-1" title="Editar nome"><i data-lucide="pencil"></i></button>
     `;
     row.classList.remove('editing-row'); 
-    if (typeof lucide !== 'undefined') { lucide.createIcons(); } 
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } 
 }
 
 async function handleSaveUnidadeClick(e) {
@@ -1587,7 +1587,7 @@ async function handleSaveUnidadeClick(e) {
             <button class="btn-icon btn-edit-unidade ml-1" title="Editar nome"><i data-lucide="pencil"></i></button>
         `;
          row.classList.remove('editing-row'); 
-        if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 5: Garante que lucide existe
+        if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 5: Garante que lucide existe
         showAlert('alert-gestao', 'Nome da unidade atualizado!', 'success', 2000);
     
     } catch (error) {
@@ -1596,7 +1596,7 @@ async function handleSaveUnidadeClick(e) {
         button.disabled = false;
          if(cancelButton) cancelButton.disabled = false;
         button.innerHTML = '<i data-lucide="save"></i>'; 
-        if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 6: Garante que lucide existe
+        if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 6: Garante que lucide existe
     }
 }
 
@@ -2000,7 +2000,7 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
         const currentContainer = document.getElementById('dashboard-materiais-prontos');
         if(currentContainer) { 
              currentContainer.innerHTML = contentHtml;
-            if (typeof lucide !== 'undefined') {
+            if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
                 lucide.createIcons(); 
             }
         } else {
@@ -2502,7 +2502,7 @@ function renderHistoricoAgua() {
             </td>
         </tr>
     `}).join('');
-    if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 7: Garante que lucide existe
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 7: Garante que lucide existe
 
     const filtroHistoricoAguaEl = document.getElementById('filtro-historico-agua');
     if (filtroHistoricoAguaEl && filtroHistoricoAguaEl.value) { filterTable(filtroHistoricoAguaEl, 'table-historico-agua'); }
@@ -2532,7 +2532,7 @@ function renderHistoricoGas() {
             </td>
         </tr>
     `}).join('');
-    if (typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 8: Garante que lucide existe
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 8: Garante que lucide existe
 
     const filtroHistoricoGasEl = document.getElementById('filtro-historico-gas');
     if (filtroHistoricoGasEl && filtroHistoricoGasEl.value) { filterTable(filtroHistoricoGasEl, 'table-historico-gas'); }
@@ -2548,21 +2548,13 @@ function switchSubTabView(tabPrefix, subViewName) {
     document.querySelectorAll(`#content-${tabPrefix} > div[id^="subview-"]`).forEach(pane => {
          pane.classList.toggle('hidden', pane.id !== `subview-${subViewName}`);
     });
-     if (typeof lucide !== 'undefined') { lucide.createIcons(); } 
+     if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } 
 }
 
 function switchTab(tabName) {
     if (!domReady) { 
-        console.warn(`switchTab(${tabName}) chamada antes do DOM pronto.`); 
-        // Adia a chamada se o DOM não estiver pronto
-        document.addEventListener('DOMContentLoaded', () => {
-             if (!domReady) { // Checa de novo, caso algo tenha falhado
-                  console.error("DOM ainda não pronto ao tentar executar switchTab adiado.");
-                  return;
-             }
-             console.log(`Executando switchTab(${tabName}) adiado...`);
-             switchTab(tabName);
-        });
+        console.warn(`switchTab(${tabName}) chamada antes do DOM pronto. Ignorando.`); 
+        // Remoção da lógica de adiamento que causava spam de logs
         return; 
     }
     console.log(`Executando switchTab(${tabName})...`);
@@ -2614,7 +2606,7 @@ function switchTab(tabName) {
     }
 
     setTimeout(() => { 
-        if(typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 9: Garante que lucide existe
+        if(typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 9: Garante que lucide existe
     }, 50); 
 }
 
@@ -2756,7 +2748,7 @@ function setupApp() {
         btnClearFilter.addEventListener('click', () => filterDashboardMateriais(null));
     }
 
-    if(typeof lucide !== 'undefined') { lucide.createIcons(); } // CORREÇÃO 10: Garante que lucide existe
+    if(typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 10: Garante que lucide existe
     toggleAguaFormInputs(); toggleGasFormInputs();
 
     // <<< MARCA domReady como TRUE >>>
