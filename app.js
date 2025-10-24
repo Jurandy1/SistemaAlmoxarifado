@@ -185,6 +185,8 @@ async function initFirebase() {
      try {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
+        // --- ADICIONADO LOG DE DEBUG ---
+        setLogLevel('debug'); 
         auth = getAuth(app);
         storage = getStorage(app);
         
@@ -1279,8 +1281,9 @@ function filterDashboardMateriais(status) {
 
 
 // --- INICIALIZAÇÃO GERAL ---
-document.addEventListener('DOMContentLoaded', () => { 
-    console.log("DOM Carregado. Iniciando setupApp...");
+// --- MUDANÇA DE DOMContentLoaded PARA window.onload ---
+window.addEventListener('load', () => { 
+    console.log("PÁGINA COMPLETAMENTE CARREGADA (window.load). Iniciando setupApp...");
     
     // --- CORREÇÃO DE INICIALIZAÇÃO ---
     // 1. Roda o setupApp() PRIMEIRO para encontrar todos os elementos
@@ -1288,6 +1291,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupApp(); 
     
     // 2. Inicia o Firebase DEPOIS que o DOM está pronto.
-    console.log("setupApp concluído. Iniciando Firebase...");
+    console.log("setupApp concluído. Iniciando Firebase..."); 
     initFirebase(); 
 });
+
