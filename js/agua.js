@@ -1,6 +1,7 @@
 /* =============================================================
    MÓDULO: Controle de Água
    Funções:
+     - initAgua() -> NOVO: Chamado pelo app.js
      - toggleAguaFormInputs()
      - handleAguaSubmit()
      - renderAguaStatus()
@@ -17,8 +18,10 @@
    Autor: Jurandy Santana (Refatorado por Gemini)
    ============================================================= */
 
-// Espera o DOM estar pronto e as variáveis globais do app.js estarem definidas
-document.addEventListener('DOMContentLoaded', () => {
+// **CORREÇÃO**: Removemos o 'DOMContentLoaded' e criamos a função initAgua()
+// que será chamada pelo app.js quando o DOM e o Firebase estiverem prontos.
+function initAgua() {
+    console.log("Inicializando módulo de Água...");
     // Adiciona listeners específicos de Água
     if (formAgua) formAgua.addEventListener('submit', handleAguaSubmit); 
     if (selectTipoAgua) selectTipoAgua.addEventListener('change', toggleAguaFormInputs);
@@ -30,7 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Inicializa a visibilidade correta dos inputs Qtd
     toggleAguaFormInputs();
-});
+}
+
+// **NOVO**: Torna a função initAgua acessível globalmente para o app.js
+window.initAgua = initAgua;
 
 
 // --- LÓGICA DE CONTROLE DE ÁGUA ---
