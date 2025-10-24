@@ -885,14 +885,145 @@ function switchTab(tabName) {
 function setupApp() {
     console.log("Executando setupApp...");
     
-    // --- Busca elementos do DOM ---
-    // (O código que busca os elementos permanece o mesmo)
-    navButtons = document.querySelectorAll('.nav-btn'); 
-    // ... (todas as outras atribuições de getElementById) ...
-    tableHistoricoGas = document.getElementById('table-historico-gas'); 
-    alertHistoricoGas = document.getElementById('alert-historico-gas');
+    // --- *** INÍCIO DA CORREÇÃO *** ---
+    // Busca elementos do DOM
+    navButtons = document.querySelectorAll('.nav-btn');
+    contentPanes = document.querySelectorAll('main > div[id^="content-"]');
+    connectionStatusEl = document.getElementById('connectionStatus');
+    lastUpdateTimeEl = document.getElementById('last-update-time');
 
-    // Verificação crítica (permanece a mesma)
+    // Dashboard
+    dashboardNavControls = document.getElementById('dashboard-nav-controls');
+    summaryAguaPendente = document.getElementById('summary-agua-pendente');
+    summaryAguaEntregue = document.getElementById('summary-agua-entregue');
+    summaryAguaRecebido = document.getElementById('summary-agua-recebido');
+    summaryGasPendente = document.getElementById('summary-gas-pendente');
+    summaryGasEntregue = document.getElementById('summary-gas-entregue');
+    summaryGasRecebido = document.getElementById('summary-gas-recebido');
+    dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos');
+    loadingMateriaisProntos = document.getElementById('loading-materiais-prontos');
+    btnClearDashboardFilter = document.getElementById('btn-clear-dashboard-filter');
+    dashboardMateriaisTitle = document.getElementById('dashboard-materiais-title');
+    dashboardMateriaisListContainer = document.getElementById('dashboard-materiais-list');
+    loadingMateriaisDashboard = document.getElementById('loading-materiais-dashboard');
+    dashboardEstoqueAguaEl = document.getElementById('dashboard-estoque-agua');
+    dashboardEstoqueGasEl = document.getElementById('dashboard-estoque-gas');
+    dashboardMateriaisSeparacaoCountEl = document.getElementById('dashboard-materiais-separacao-count');
+    dashboardMateriaisRetiradaCountEl = document.getElementById('dashboard-materiais-retirada-count');
+
+    // Água
+    formAgua = document.getElementById('form-agua');
+    selectUnidadeAgua = document.getElementById('select-unidade-agua');
+    selectTipoAgua = document.getElementById('select-tipo-agua');
+    inputDataAgua = document.getElementById('input-data-agua');
+    inputResponsavelAgua = document.getElementById('input-responsavel-agua');
+    btnSubmitAgua = document.getElementById('btn-submit-agua');
+    alertAgua = document.getElementById('alert-agua');
+    tableStatusAgua = document.getElementById('table-status-agua');
+    alertAguaLista = document.getElementById('alert-agua-lista');
+    inputQtdEntregueAgua = document.getElementById('input-qtd-entregue-agua');
+    inputQtdRetornoAgua = document.getElementById('input-qtd-retorno-agua');
+    formGroupQtdEntregueAgua = document.getElementById('form-group-qtd-entregue-agua');
+    formGroupQtdRetornoAgua = document.getElementById('form-group-qtd-retorno-agua');
+
+    // Gás
+    formGas = document.getElementById('form-gas');
+    selectUnidadeGas = document.getElementById('select-unidade-gas');
+    selectTipoGas = document.getElementById('select-tipo-gas');
+    inputDataGas = document.getElementById('input-data-gas');
+    inputResponsavelGas = document.getElementById('input-responsavel-gas');
+    btnSubmitGas = document.getElementById('btn-submit-gas');
+    alertGas = document.getElementById('alert-gas');
+    tableStatusGas = document.getElementById('table-status-gas');
+    alertGasLista = document.getElementById('alert-gas-lista');
+    inputQtdEntregueGas = document.getElementById('input-qtd-entregue-gas');
+    inputQtdRetornoGas = document.getElementById('input-qtd-retorno-gas');
+    formGroupQtdEntregueGas = document.getElementById('form-group-qtd-entregue-gas');
+    formGroupQtdRetornoGas = document.getElementById('form-group-qtd-retorno-gas');
+
+    // Materiais
+    formMateriais = document.getElementById('form-materiais');
+    selectUnidadeMateriais = document.getElementById('select-unidade-materiais');
+    selectTipoMateriais = document.getElementById('select-tipo-materiais');
+    inputDataSeparacao = document.getElementById('input-data-separacao');
+    textareaItensMateriais = document.getElementById('textarea-itens-materiais');
+    inputResponsavelMateriais = document.getElementById('input-responsavel-materiais');
+    btnSubmitMateriais = document.getElementById('btn-submit-materiais');
+    alertMateriais = document.getElementById('alert-materiais');
+    tableStatusMateriais = document.getElementById('table-status-materiais');
+    alertMateriaisLista = document.getElementById('alert-materiais-lista');
+    inputArquivoMateriais = document.getElementById('input-arquivo-materiais');
+    modalDefinirResponsavelSeparacao = document.getElementById('modal-definir-responsavel-separacao');
+    inputNomeResponsavelSeparacao = document.getElementById('input-nome-responsavel-separacao');
+    btnConfirmarResponsavelSeparacao = document.getElementById('btn-confirmar-responsavel-separacao');
+    btnCancelarResponsavelSeparacao = document.getElementById('btn-cancelar-responsavel-separacao');
+
+    // Gestão de Unidades
+    tableGestaoUnidades = document.getElementById('table-gestao-unidades');
+    alertGestao = document.getElementById('alert-gestao');
+    textareaBulkUnidades = document.getElementById('textarea-bulk-unidades');
+    btnBulkAddUnidades = document.getElementById('btn-bulk-add-unidades');
+    filtroUnidadeNome = document.getElementById('filtro-unidade-nome');
+    filtroUnidadeTipo = document.getElementById('filtro-unidade-tipo');
+
+    // Relatório
+    relatorioTipo = document.getElementById('relatorio-tipo');
+    relatorioDataInicio = document.getElementById('relatorio-data-inicio');
+    relatorioDataFim = document.getElementById('relatorio-data-fim');
+    btnGerarPdf = document.getElementById('btn-gerar-pdf');
+    alertRelatorio = document.getElementById('alert-relatorio');
+
+    // Modal de Exclusão
+    confirmDeleteModal = document.getElementById('confirm-delete-modal');
+    btnCancelDelete = document.getElementById('btn-cancel-delete');
+    btnConfirmDelete = document.getElementById('btn-confirm-delete');
+    deleteDetailsEl = document.getElementById('delete-details');
+    deleteWarningUnidadeEl = document.getElementById('delete-warning-unidade');
+    deleteWarningInicialEl = document.getElementById('delete-warning-inicial');
+
+    // Estoque Água
+    estoqueAguaInicialEl = document.getElementById('estoque-agua-inicial');
+    estoqueAguaEntradasEl = document.getElementById('estoque-agua-entradas');
+    estoqueAguaSaidasEl = document.getElementById('estoque-agua-saidas');
+    estoqueAguaAtualEl = document.getElementById('estoque-agua-atual');
+    loadingEstoqueAguaEl = document.getElementById('loading-estoque-agua');
+    resumoEstoqueAguaEl = document.getElementById('resumo-estoque-agua');
+    formEntradaAgua = document.getElementById('form-entrada-agua');
+    inputDataEntradaAgua = document.getElementById('input-data-entrada-agua');
+    btnSubmitEntradaAgua = document.getElementById('btn-submit-entrada-agua');
+    formInicialAguaContainer = document.getElementById('form-inicial-agua-container');
+    formInicialAgua = document.getElementById('form-inicial-agua');
+    inputInicialQtdAgua = document.getElementById('input-inicial-qtd-agua');
+    inputInicialResponsavelAgua = document.getElementById('input-inicial-responsavel-agua');
+    btnSubmitInicialAgua = document.getElementById('btn-submit-inicial-agua');
+    alertInicialAgua = document.getElementById('alert-inicial-agua');
+    btnAbrirInicialAgua = document.getElementById('btn-abrir-inicial-agua');
+    tableHistoricoAgua = document.getElementById('table-historico-agua');
+    alertHistoricoAgua = document.getElementById('alert-historico-agua');
+
+    // Estoque Gás
+    estoqueGasInicialEl = document.getElementById('estoque-gas-inicial');
+    estoqueGasEntradasEl = document.getElementById('estoque-gas-entradas');
+    estoqueGasSaidasEl = document.getElementById('estoque-gas-saidas');
+    estoqueGasAtualEl = document.getElementById('estoque-gas-atual');
+    loadingEstoqueGasEl = document.getElementById('loading-estoque-gas');
+    resumoEstoqueGasEl = document.getElementById('resumo-estoque-gas');
+    formEntradaGas = document.getElementById('form-entrada-gas');
+    inputDataEntradaGas = document.getElementById('input-data-entrada-gas');
+    btnSubmitEntradaGas = document.getElementById('btn-submit-entrada-gas');
+    formInicialGasContainer = document.getElementById('form-inicial-gas-container');
+    formInicialGas = document.getElementById('form-inicial-gas');
+    inputInicialQtdGas = document.getElementById('input-inicial-qtd-gas');
+    inputInicialResponsavelGas = document.getElementById('input-inicial-responsavel-gas');
+    btnSubmitInicialGas = document.getElementById('btn-submit-inicial-gas');
+    alertInicialGas = document.getElementById('alert-inicial-gas');
+    btnAbrirInicialGas = document.getElementById('btn-abrir-inicial-gas');
+    tableHistoricoGas = document.getElementById('table-historico-gas');
+    alertHistoricoGas = document.getElementById('alert-historico-gas');
+    // --- *** FIM DA CORREÇÃO *** ---
+
+
+    // Verificação crítica (agora deve funcionar)
     if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos) {
         console.error("ERRO CRÍTICO: Container ou loader do dashboard de materiais NÃO encontrados DENTRO de setupApp!");
         showAlert('alert-agua', 'Erro crítico ao carregar interface. Recarregue a página (Erro Setup).', 'error', 60000);
@@ -902,21 +1033,65 @@ function setupApp() {
     
     // Define datas padrão (permanece o mesmo)
     const todayStr = getTodayDateString();
-    // ... (código que define as datas) ...
+    if(inputDataAgua) inputDataAgua.value = todayStr;
+    if(inputDataGas) inputDataGas.value = todayStr;
+    if(inputDataSeparacao) inputDataSeparacao.value = todayStr;
+    if(inputDataEntradaAgua) inputDataEntradaAgua.value = todayStr;
+    if(inputDataEntradaGas) inputDataEntradaGas.value = todayStr;
+    if(relatorioDataInicio) relatorioDataInicio.value = todayStr;
+    if(relatorioDataFim) relatorioDataFim.value = todayStr;
+
 
     // --- Adiciona Event Listeners Globais ---
     // (Listeners permanecem os mesmos)
     navButtons.forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
-    // ... (todos os outros addEventListener) ...
-    if (btnClearFilter) btnClearFilter.addEventListener('click', () => filterDashboardMateriais(null));
+    
+    // Listeners do Dashboard
+    if(dashboardNavControls) {
+        dashboardNavControls.addEventListener('click', (e) => {
+            const btn = e.target.closest('.dashboard-nav-btn');
+            if(btn) switchDashboardView(btn.dataset.view);
+        });
+    }
+    document.getElementById('dashboard-card-separacao')?.addEventListener('click', () => filterDashboardMateriais('separacao'));
+    document.getElementById('dashboard-card-retirada')?.addEventListener('click', () => filterDashboardMateriais('retirada'));
+    
+    // Listeners das Abas de Estoque
+    document.querySelectorAll('.form-tab-btn[data-form="saida-agua"]')?.forEach(b => b.addEventListener('click', () => switchEstoqueForm('saida-agua')));
+    document.querySelectorAll('.form-tab-btn[data-form="entrada-agua"]')?.forEach(b => b.addEventListener('click', () => switchEstoqueForm('entrada-agua')));
+    document.querySelectorAll('.form-tab-btn[data-form="saida-gas"]')?.forEach(b => b.addEventListener('click', () => switchEstoqueForm('saida-gas')));
+    document.querySelectorAll('.form-tab-btn[data-form="entrada-gas"]')?.forEach(b => b.addEventListener('click', () => switchEstoqueForm('entrada-gas')));
+
+    // Listeners das Sub-Abas
+    document.querySelectorAll('#sub-nav-agua .sub-nav-btn').forEach(btn => btn.addEventListener('click', () => switchSubTabView('agua', btn.dataset.subview)));
+    document.querySelectorAll('#sub-nav-gas .sub-nav-btn').forEach(btn => btn.addEventListener('click', () => switchSubTabView('gas', btn.dataset.subview)));
+
+    // Listeners do Modal de Exclusão
+    if (btnCancelDelete) btnCancelDelete.addEventListener('click', () => confirmDeleteModal.style.display = 'none');
+    if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', handleConfirmDelete);
+    
+    // Listener de delegação para botões de remoção
+    document.querySelector('main')?.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('button.btn-remove[data-id]');
+        if (removeBtn) {
+            openConfirmDeleteModal(
+                removeBtn.dataset.id, 
+                removeBtn.dataset.type, 
+                removeBtn.dataset.details
+            );
+        }
+    });
+
+    if (btnClearDashboardFilter) btnClearDashboardFilter.addEventListener('click', () => filterDashboardMateriais(null));
 
 
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     // --- INICIALIZA OS MÓDULOS ---
-    // (Chamadas initAgua, initGas etc. permanecem as mesmas)
     if (typeof initAgua === 'function') initAgua();
-    // ... (outras chamadas init) ...
+    if (typeof initGas === 'function') initGas();
+    if (typeof initMateriais === 'function') initMateriais();
+    if (typeof initUnidades === 'function') initUnidades();
     if (typeof initRelatorio === 'function') initRelatorio();
 
     // --- MARCA domReady como TRUE ---
@@ -926,12 +1101,180 @@ function setupApp() {
     // Chama funções de renderização inicial (permanece o mesmo)
     updateLastUpdateTime(); 
     renderDashboardMateriaisProntos(currentDashboardMaterialFilter); // Agora usa a versão ajustada
-    // ... (outras chamadas de render inicial) ...
+    renderDashboardAguaSummary();
+    renderDashboardGasSummary();
+    renderDashboardVisaoGeralSummary();
     renderDashboardMateriaisCounts();
 
     // Chama switchTab por último (permanece o mesmo)
     console.log("Chamando switchTab('dashboard') após setupApp...");
     switchTab('dashboard'); 
+}
+
+
+// --- LÓGICA DE EXCLUSÃO (GENÉRICA) ---
+// (Esta seção não precisa de alterações, mas deve estar presente)
+
+function openConfirmDeleteModal(id, type, details = '') {
+    if (!confirmDeleteModal) return;
+    deleteInfo = { id, type, details, collectionRef: null, isInicial: false };
+    
+    deleteWarningUnidadeEl.style.display = 'none';
+    deleteWarningInicialEl.style.display = 'none';
+
+    switch (type) {
+        case 'agua':
+            deleteInfo.collectionRef = aguaCollection;
+            deleteDetailsEl.textContent = `Movimentação de Água (ID: ...${id.slice(-6)})`;
+            break;
+        case 'gas':
+            deleteInfo.collectionRef = gasCollection;
+            deleteDetailsEl.textContent = `Movimentação de Gás (ID: ...${id.slice(-6)})`;
+            break;
+        case 'materiais':
+            deleteInfo.collectionRef = materiaisCollection;
+            deleteDetailsEl.textContent = `Registro de Material (ID: ...${id.slice(-6)})`;
+            break;
+        case 'unidade':
+            deleteInfo.collectionRef = unidadesCollection;
+            deleteDetailsEl.textContent = `Unidade: ${details}`;
+            deleteWarningUnidadeEl.style.display = 'block';
+            break;
+        case 'entrada-agua':
+            deleteInfo.collectionRef = estoqueAguaCollection;
+            deleteDetailsEl.textContent = `Entrada de Estoque de Água (ID: ...${id.slice(-6)})`;
+            deleteInfo.isInicial = fb_estoque_agua.find(e => e.id === id)?.tipo === 'inicial';
+             if(deleteInfo.isInicial) deleteWarningInicialEl.style.display = 'block';
+            break;
+        case 'entrada-gas':
+            deleteInfo.collectionRef = estoqueGasCollection;
+            deleteDetailsEl.textContent = `Entrada de Estoque de Gás (ID: ...${id.slice(-6)})`;
+            deleteInfo.isInicial = fb_estoque_gas.find(e => e.id === id)?.tipo === 'inicial';
+            if(deleteInfo.isInicial) deleteWarningInicialEl.style.display = 'block';
+            break;
+        default:
+            console.error("Tipo de exclusão desconhecido:", type);
+            return;
+    }
+    confirmDeleteModal.style.display = 'flex';
+}
+
+async function handleConfirmDelete() {
+    const { id, type, collectionRef } = deleteInfo;
+    if (!id || !type || !collectionRef || !isAuthReady) {
+        showAlert('alert-gestao', 'Erro ao identificar item para exclusão.', 'error');
+        return;
+    }
+
+    btnConfirmDelete.disabled = true;
+    btnConfirmDelete.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
+
+    try {
+        const docRef = doc(collectionRef, id);
+        
+        if (type === 'materiais') {
+            const materialDoc = await getDoc(docRef);
+            const materialData = materialDoc.data();
+            if (materialData && materialData.storagePath) {
+                console.log(`Removendo arquivo anexado: ${materialData.storagePath}`);
+                const fileRef = ref(storage, materialData.storagePath);
+                await deleteObject(fileRef);
+            }
+        }
+        
+        if (type === 'unidade') {
+            await deleteRelatedData(id);
+        }
+
+        await deleteDoc(docRef);
+        
+        let alertId = 'alert-gestao'; 
+        if (type.includes('agua')) alertId = 'alert-agua-lista';
+        if (type.includes('gas')) alertId = 'alert-gas-lista';
+        if (type === 'materiais') alertId = 'alert-materiais-lista';
+        
+        showAlert(alertId, 'Item removido com sucesso!', 'success');
+        
+    } catch (error) {
+        console.error("Erro ao remover item:", error);
+        showAlert('alert-gestao', `Erro ao remover: ${error.message}`, 'error');
+    } finally {
+        confirmDeleteModal.style.display = 'none';
+        btnConfirmDelete.disabled = false;
+        btnConfirmDelete.textContent = 'Confirmar Exclusão';
+        deleteInfo = { id: null, type: null, collectionRef: null, details: null, isInicial: false };
+    }
+}
+
+async function deleteRelatedData(unidadeId) {
+    console.warn(`Iniciando exclusão de dados relacionados para Unidade ID: ${unidadeId}`);
+    const collectionsToClean = [aguaCollection, gasCollection, materiaisCollection];
+    
+    for (const collRef of collectionsToClean) {
+        try {
+            const q = query(collRef, where("unidadeId", "==", unidadeId));
+            const snapshot = await getDocs(q);
+            if (snapshot.empty) continue;
+
+            const batch = writeBatch(db);
+            snapshot.docs.forEach(async (docSnapshot) => {
+                 if (collRef === materiaisCollection) {
+                    const materialData = docSnapshot.data();
+                    if (materialData && materialData.storagePath) {
+                        try {
+                            const fileRef = ref(storage, materialData.storagePath);
+                            await deleteObject(fileRef);
+                        } catch (fileError) {
+                            console.error(`Falha ao remover arquivo ${materialData.storagePath}: ${fileError.message}`);
+                        }
+                    }
+                }
+                batch.delete(docSnapshot.ref);
+            });
+            await batch.commit();
+            console.log(`Removidos ${snapshot.size} documentos da coleção ${collRef.id} para a unidade ${unidadeId}`);
+        } catch (error) {
+            console.error(`Erro ao limpar coleção ${collRef.id} para unidade ${unidadeId}:`, error);
+        }
+    }
+}
+
+// --- CONTROLE DE REFRESH DO DASHBOARD ---
+// (Esta seção não precisa de alterações)
+
+function startDashboardRefresh() {
+    if (dashboardRefreshInterval) clearInterval(dashboardRefreshInterval); 
+    dashboardRefreshInterval = setInterval(() => {
+        if (visaoAtiva === 'dashboard') {
+            console.log("Atualização automática do Dashboard...");
+            updateLastUpdateTime(); 
+            
+            // Força a re-renderização dos componentes do dashboard
+            // que dependem dos dados do Firestore (que já estão atualizados pelos listeners)
+            renderDashboardAguaSummary();
+            renderDashboardGasSummary();
+            renderDashboardMateriaisList();
+            renderDashboardMateriaisProntos(currentDashboardMaterialFilter);
+            renderDashboardVisaoGeralSummary();
+            renderDashboardMateriaisCounts();
+        }
+    }, 120000); // 2 minutos
+}
+
+function stopDashboardRefresh() {
+    if (dashboardRefreshInterval) {
+        clearInterval(dashboardRefreshInterval);
+        dashboardRefreshInterval = null;
+    }
+}
+
+function filterDashboardMateriais(status) {
+    currentDashboardMaterialFilter = status; 
+    renderDashboardMateriaisProntos(status); 
+    if(status) { 
+        switchTab('dashboard'); 
+        switchDashboardView('geral');
+    }
 }
 
 
@@ -948,4 +1291,3 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("setupApp concluído. Iniciando Firebase...");
     initFirebase(); 
 });
-
