@@ -1165,6 +1165,16 @@ function setupApp() {
 
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
+    // --- CORREÇÃO: INICIALIZA OS MÓDULOS ---
+    // Chama as funções de inicialização dos outros scripts
+    // agora que todos os elementos (formAgua, etc.) estão definidos.
+    if (typeof initAgua === 'function') initAgua();
+    if (typeof initGas === 'function') initGas();
+    if (typeof initMateriais === 'function') initMateriais();
+    if (typeof initUnidades === 'function') initUnidades();
+    if (typeof initRelatorio === 'function') initRelatorio();
+    // --- FIM DA CORREÇÃO ---
+
     // --- MARCA domReady como TRUE ---
     console.log("setupApp concluído! Marcando domReady = true");
     domReady = true; 
@@ -1191,3 +1201,4 @@ document.addEventListener('DOMContentLoaded', () => {
     initFirebase(); 
     // Não chama setupApp aqui, espera o onAuthStateChanged
 });
+
