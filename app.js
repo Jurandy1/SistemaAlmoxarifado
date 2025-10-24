@@ -1096,18 +1096,18 @@ async function handleMateriaisSubmit(e) {
         await addDoc(materiaisCollection, {
             unidadeId, unidadeNome, tipoUnidade, tipoMaterial,
             dataSeparacao: dataSeparacao, // Data da Requisição
+            status: 'para-separar', // <<< CORREÇÃO: Status inicial agora é 'para-separar'
             itens,
-            status: 'requisitado', // <<< NOVO STATUS INICIAL
-            dataInicioSeparacao: null, // <<< NOVO
+            dataInicioSeparacao: null, 
             dataRetirada: null,
             dataEntrega: null,
-            responsavelLancamento: responsavelLancamento, // <<< NOME ATUALIZADO
-            responsavelSeparador: null, // <<< NOVO
+            responsavelLancamento: responsavelLancamento, 
+            responsavelSeparador: null, 
             responsavelEntrega: null,
             registradoEm: serverTimestamp(),
             fileURL: fileURL,
             storagePath: storagePath,
-            downloadInfo: { count: 0, lastDownload: null, blockedUntil: null } // <<< NOVO para controle download
+            downloadInfo: { count: 0, lastDownload: null, blockedUntil: null } 
         });
         showAlert('alert-materiais', 'Requisição registrada!', 'success'); // Mensagem atualizada
         formMateriais.reset(); 
@@ -1126,7 +1126,8 @@ function renderMateriaisStatus() {
      if (!domReady) { console.warn("renderMateriaisStatus chamada antes do DOM pronto."); return; }
 
     const materiaisOrdenados = [...fb_materiais].sort((a,b) => {
-        const statusOrder = { 'requisitado': 0, 'separacao': 1, 'retirada': 2, 'entregue': 3 };
+        // CORREÇÃO: Ordem de status atualizada
+        const statusOrder = { 'para-separar': 0, 'separacao': 1, 'retirada': 2, 'entregue': 3 };
         const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
         if (statusCompare !== 0) return statusCompare;
         // Ordena por data de requisição (dataSeparacao no BD) decrescente dentro do mesmo status
@@ -1151,7 +1152,7 @@ function renderMateriaisStatus() {
 
         // 1. Botão de Download / Iniciar Separação
         if (m.fileURL) {
-            if (m.status === 'requisitado') {
+            if (m.status === 'para-separar') { // CORREÇÃO: Usa o novo status
                 downloadBtnHtml = `<button class="btn-icon btn-start-separacao text-orange-600 hover:text-orange-800" data-id="${m.id}" title="Iniciar Separação (Requer Nome)"><i data-lucide="play-circle"></i></button>`;
             } else if (m.status === 'separacao' || m.status === 'retirada' || m.status === 'entregue') {
                  if (isBlocked) {
@@ -1168,7 +1169,7 @@ function renderMateriaisStatus() {
             }
         } else {
             // Se não tem anexo
-            if (m.status === 'requisitado') {
+            if (m.status === 'para-separar') { // CORREÇÃO: Usa o novo status
                  downloadBtnHtml = `<button class="btn-icon btn-start-separacao text-orange-600 hover:text-orange-800" data-id="${m.id}" title="Iniciar Separação (Sem anexo)"><i data-lucide="play-circle"></i></button>`;
             } else {
                 downloadBtnHtml = `<span class="btn-icon text-slate-300" title="Nenhum pedido anexado"><i data-lucide="file-x"></i></span>`;
@@ -1177,10 +1178,10 @@ function renderMateriaisStatus() {
 
 
         // 2. Status e Ações principais
-        if (m.status === 'requisitado') {
-             statusClass = 'badge-purple'; // Cor nova para requisitado
-             statusText = 'Requisitado';
-             acoesHtml = ''; // Ação principal é iniciar separação (no lugar do download)
+        if (m.status === 'para-separar') { // CORREÇÃO: Usa o novo status
+             statusClass = 'badge-purple'; 
+             statusText = 'Para Separar'; // CORREÇÃO: Texto atualizado
+             acoesHtml = ''; 
         } else if (m.status === 'separacao') {
             statusClass = 'badge-yellow';
             statusText = 'Em Separação';
@@ -1754,8 +1755,8 @@ function renderDashboardVisaoGeralSummary() {
 function renderDashboardMateriaisCounts() {
     if (!domReady) { return; } 
     if (!dashboardMateriaisSeparacaoCountEl || !dashboardMateriaisRetiradaCountEl) return;
-    // O status agora é 'requisitado' ou 'separacao' que conta como 'Em Separação'
-    const separacaoCount = fb_materiais.filter(m => m.status === 'separacao' || m.status === 'requisitado').length;
+    // CORREÇÃO: Conta 'para-separar' como material 'Em Separação' (junto com o 'separacao')
+    const separacaoCount = fb_materiais.filter(m => m.status === 'separacao' || m.status === 'para-separar').length;
     const retiradaCount = fb_materiais.filter(m => m.status === 'retirada').length;
     
     dashboardMateriaisSeparacaoCountEl.textContent = separacaoCount;
@@ -1843,9 +1844,10 @@ function renderDashboardMateriaisList() {
      loadingMateriaisDashboard.style.display = 'none'; 
      
     const pendentes = fb_materiais
-        .filter(m => m.status === 'requisitado' || m.status === 'separacao' || m.status === 'retirada')
+        .filter(m => m.status === 'para-separar' || m.status === 'separacao' || m.status === 'retirada')
         .sort((a,b) => { 
-            const statusOrder = { 'requisitado': 1, 'separacao': 2, 'retirada': 3 }; 
+            // CORREÇÃO: Ordem de status atualizada
+            const statusOrder = { 'para-separar': 1, 'separacao': 2, 'retirada': 3 }; 
             const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
             if (statusCompare !== 0) return statusCompare;
             return (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0); 
@@ -1856,12 +1858,12 @@ function renderDashboardMateriaisList() {
         return; 
     }
     dashboardMateriaisListContainer.innerHTML = pendentes.map(m => {
-        const isRequisitado = m.status === 'requisitado';
+        const isParaSeparar = m.status === 'para-separar';
         const isSeparacao = m.status === 'separacao';
         const isRetirada = m.status === 'retirada';
         
         let badgeClass = 'badge-purple';
-        let badgeText = 'Requisitado';
+        let badgeText = 'Para Separar';
         let bgColor = 'bg-purple-50'; 
         let borderColor = 'border-purple-300';
         
@@ -1912,13 +1914,14 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     
     container.innerHTML = '<div class="text-center p-10 col-span-full"><div class="loading-spinner-small mx-auto mb-2"></div><p class="text-sm text-slate-500">Atualizando...</p></div>';
 
-    let pendentes = fb_materiais.filter(m => m.status === 'requisitado' || m.status === 'separacao' || m.status === 'retirada');
+    // CORREÇÃO: Filtra por 'para-separar' (novo status)
+    let pendentes = fb_materiais.filter(m => m.status === 'para-separar' || m.status === 'separacao' || m.status === 'retirada');
     
     let filterToDisplay = filterStatus;
     if (filterStatus === 'separacao') {
-         // Se o filtro for 'separacao', inclui também 'requisitado' na exibição da contagem geral
-         pendentes = pendentes.filter(m => m.status === 'separacao' || m.status === 'requisitado');
-         filterToDisplay = 'Em Separação/Requisitado';
+         // Se o filtro for 'separacao', inclui também 'para-separar' na exibição da contagem geral
+         pendentes = pendentes.filter(m => m.status === 'separacao' || m.status === 'para-separar');
+         filterToDisplay = 'Para Separar / Em Separação';
     } else if (filterStatus) {
          pendentes = pendentes.filter(m => m.status === filterStatus);
          filterToDisplay = filterStatus === 'retirada' ? 'Disponíveis p/ Retirada' : filterStatus;
@@ -1929,7 +1932,7 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     if (clearButton) clearButton.classList.toggle('hidden', !filterStatus); 
     if (titleEl) {
         if (filterStatus === 'separacao') {
-             titleEl.textContent = 'Materiais em Separação e Requisitados';
+             titleEl.textContent = 'Materiais em Separação/Para Separar'; // CORREÇÃO: Título atualizado
         } else if (filterStatus === 'retirada') {
             titleEl.textContent = 'Materiais Disponíveis p/ Retirada';
         } else {
@@ -1963,7 +1966,8 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
                 colunasHtml += `<div class="materiais-prontos-col"><h4>${tipoUnidade}</h4><ul class="space-y-3">`; 
                 
                 const materiaisOrdenados = gruposTipoUnidade[tipoUnidade].sort((a,b) => {
-                    const statusOrder = { 'requisitado': 1, 'separacao': 2, 'retirada': 3 };
+                    // CORREÇÃO: Ordem de status atualizada
+                    const statusOrder = { 'para-separar': 1, 'separacao': 2, 'retirada': 3 };
                     const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
                     if (statusCompare !== 0) return statusCompare;
                     return (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0);
@@ -1974,8 +1978,8 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
                     let statusIndicator = '';
                     let itemClass = '';
                     
-                    if (m.status === 'requisitado') {
-                         statusIndicator = `<span class="status-indicator separando" style="background-color: #f3e8ff; color: #6b21a8;">📝 Requisitado</span>`;
+                    if (m.status === 'para-separar') { // CORREÇÃO: Novo status
+                         statusIndicator = `<span class="status-indicator requisitado">📝 Para Separar</span>`;
                          itemClass = 'item-requisitado';
                     } else if (m.status === 'separacao') {
                         statusIndicator = `<span class="status-indicator separando">⏳ Separando...</span>`;
@@ -2752,7 +2756,7 @@ function setupApp() {
     const btnClearFilter = btnClearDashboardFilter; 
     
     if (cardSeparacao) {
-        // Agora, clicar em 'Em Separação' filtra por status 'separacao' E 'requisitado' (lógica interna)
+        // Agora, clicar em 'Em Separação' filtra por status 'separacao' E 'para-separar' (lógica interna)
         cardSeparacao.addEventListener('click', () => filterDashboardMateriais('separacao')); 
     }
     if (cardRetirada) {
