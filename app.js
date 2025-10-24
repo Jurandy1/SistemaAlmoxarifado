@@ -2657,12 +2657,17 @@ function setupApp() {
     if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos) {
         console.error("ERRO CRÍTICO: Container ou loader do dashboard de materiais NÃO encontrados DENTRO de setupApp!");
         showAlert('alert-agua', 'Erro crítico ao carregar interface. Recarregue a página (Erro Setup).', 'error', 60000);
-        domReady = false; 
+        // O domReady não é alterado, o que impediria a inicialização do app.
         return; 
     } else {
         console.log("Elementos essenciais (container, loader) encontrados DENTRO de setupApp.");
     }
     
+    // CORREÇÃO CRÍTICA: Se o setup chegou até aqui, o DOM está pronto.
+    // Marcamos domReady=true IMEDIATAMENTE para evitar que switchTab() rejeite as chamadas subsequentes.
+    domReady = true; 
+    console.log("setupApp: domReady marcado como TRUE.");
+
     const todayStr = getTodayDateString();
     [inputDataAgua, inputDataGas, inputDataSeparacao, relatorioDataInicio, relatorioDataFim, inputDataEntradaAgua, inputDataEntradaGas].forEach(input => {
         if(input) input.value = todayStr;
@@ -2751,10 +2756,8 @@ function setupApp() {
     if(typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 10: Garante que lucide existe
     toggleAguaFormInputs(); toggleGasFormInputs();
 
-    // <<< MARCA domReady como TRUE >>>
-    console.log("setupApp concluído! Marcando domReady = true");
-    domReady = true; 
-
+    // <<< Removemos a marcação de domReady do final para evitar o race condition >>>
+    
     // Chama funções que podem depender de dados do Firebase (listeners podem ter rodado antes)
     console.log("Chamando funções de renderização inicial pós-setupApp...");
     updateLastUpdateTime(); 
