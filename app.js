@@ -26,7 +26,7 @@ const userFallbackConfig = {
     apiKey: "AIzaSyD7VCxaHo8veaHnM8RwY60EX_DEh3hOVHk", 
     authDomain: "controle-almoxarifado-semcas.firebaseapp.com", 
     projectId: "controle-almoxarifado-semcas", 
-    storageBucket: "controle-almoxarifado-semcas.appspot.com", 
+    storageBucket: "controle-almoxarifado-semcas.firebasestorage.app", // <-- CORRIGIDO AQUI
     messagingSenderId: "916615427315", 
     appId: "1:916615427315:web:6823897ed065c50d413386" 
 };
@@ -942,4 +942,5 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM Carregado. Iniciando Firebase...");
     initFirebase(); 
 });
+
 
