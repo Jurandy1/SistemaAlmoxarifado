@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
     <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js" defer></script>
-    <script src="https://unpkg.com/lucide@latest" defer></script> <!-- Adicionado 'defer' para corrigir o erro de inicialização de ícones -->
+    <script src="https://unpkg.com/lucide@latest" defer></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,7 +28,7 @@
         import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         // Import principal do App
-        import "app.js"; // CORREÇÃO: Removido o "./" para evitar erro de resolução de caminho em ambientes de execução não-hierárquicos.
+        import "./app.js"; <!-- CORREÇÃO APLICADA AQUI: Adicionado "./" para resolver o módulo -->
     </script>
     
 </head>
