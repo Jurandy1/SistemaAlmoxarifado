@@ -28,7 +28,7 @@
         import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         // Import principal do App
-        import "./app.js"; <!-- CORREÇÃO APLICADA AQUI: Adicionado "./" para resolver o módulo -->
+        import "app.js"; // Tentativa de corrigir erro de URL não hierárquica
     </script>
     
 </head>
@@ -211,7 +211,7 @@
         </div>
 
         <!-- Conteúdo do Controle de Água -->
-        <div id="content-agua" class="hidden fade-in">
+        <div id="content-agua" class="fade-in hidden">
              <div class="flex flex-wrap gap-2 mb-6" id="sub-nav-agua">
                  <button class="sub-nav-btn active" data-subview="movimentacao-agua">Lançamentos / Status</button>
                  <button class="sub-nav-btn" data-subview="previsao-agua">Previsão</button>
@@ -504,7 +504,7 @@
         </div>
 
         <!-- Conteúdo do Controle de Gás -->
-        <div id="content-gas" class="hidden fade-in">
+        <div id="content-gas" class="fade-in hidden">
              <div class="flex flex-wrap gap-2 mb-6" id="sub-nav-gas">
                  <button class="sub-nav-btn active" data-subview="movimentacao-gas">Lançamentos / Status</button>
                  <button class="sub-nav-btn" data-subview="previsao-gas">Previsão</button>
@@ -797,7 +797,7 @@
         </div>
 
         <!-- Conteúdo da Entrega de Materiais -->
-        <div id="content-materiais" class="hidden fade-in">
+        <div id="content-materiais" class="fade-in hidden">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-1 card">
                     <h2 class="text-xl font-bold text-slate-800 mb-4">Registrar Requisição de Material</h2>
@@ -874,7 +874,7 @@
         </div>
 
         <!-- Conteúdo da Gestão de Unidades -->
-        <div id="content-gestao" class="hidden fade-in">
+        <div id="content-gestao" class="fade-in hidden">
             <div class="card max-w-4xl mx-auto">
                 <h2 class="text-xl font-bold text-slate-800 mb-4">Gestão de Unidades de Atendimento</h2>
                 <div id="alert-gestao" class="alert mb-4"></div>
@@ -922,7 +922,7 @@
         </div>
 
         <!-- Conteúdo do Relatório -->
-        <div id="content-relatorio" class="hidden fade-in">
+        <div id="content-relatorio" class="fade-in hidden">
             <div class="card max-w-2xl mx-auto">
                 <h2 class="text-xl font-bold text-slate-800 mb-4">Gerar Relatório em PDF</h2>
                 <p class="text-sm text-slate-500 mb-6">Selecione o tipo de relatório e o período desejado. O relatório será gerado e baixado automaticamente.</p>
