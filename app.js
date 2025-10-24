@@ -204,6 +204,10 @@ async function initFirebase() {
             if (user) {
                 isAuthReady = true;
                 userId = user.uid;
+                // --- CORREÇÃO DE ESCOPO (propagação de estado) ---
+                window.isAuthReady = true;
+                window.userId = user.uid;
+                // --- FIM DA CORREÇÃO ---
                 console.log("Autenticado com UID:", userId, "Anônimo:", user.isAnonymous);
                 if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-green-500 rounded-full"></span> <span class="text-green-700">Conectado</span>`;
                 
@@ -227,6 +231,10 @@ async function initFirebase() {
             } else {
                 isAuthReady = false;
                 userId = null; 
+                // --- CORREÇÃO DE ESCOPO (propagação de estado) ---
+                window.isAuthReady = false;
+                window.userId = null;
+                // --- FIM DA CORREÇÃO ---
                 console.log("Usuário deslogado.");
                 if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-red-500 rounded-full"></span> <span class="text-red-700">Desconectado</span>`;
                 clearAlmoxarifadoData();
@@ -259,6 +267,7 @@ function initFirestoreListeners() {
     // Listener de Unidades
     onSnapshot(query(unidadesCollection), (snapshot) => { 
         fb_unidades = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        window.fb_unidades = fb_unidades; // <-- CORREÇÃO: Propaga atualização
         console.log("Unidades recebidas:", fb_unidades.length);
         if (domReady) {
             console.log("DOM pronto, atualizando selects e tabelas de unidades...");
@@ -284,6 +293,7 @@ function initFirestoreListeners() {
     // Listener de Água
     onSnapshot(query(aguaCollection), (snapshot) => {
         fb_agua_movimentacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        window.fb_agua_movimentacoes = fb_agua_movimentacoes; // <-- CORREÇÃO: Propaga atualização
         console.log("Mov. Água recebidas:", fb_agua_movimentacoes.length);
         if (domReady) {
             console.log("DOM pronto, atualizando UI de água...");
@@ -297,6 +307,7 @@ function initFirestoreListeners() {
     // Listener de Gás
     onSnapshot(query(gasCollection), (snapshot) => {
         fb_gas_movimentacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        window.fb_gas_movimentacoes = fb_gas_movimentacoes; // <-- CORREÇÃO: Propaga atualização
         console.log("Mov. Gás recebidas:", fb_gas_movimentacoes.length);
          if (domReady) {
             console.log("DOM pronto, atualizando UI de gás...");
@@ -310,6 +321,7 @@ function initFirestoreListeners() {
     // Listener de Materiais
     onSnapshot(query(materiaisCollection), (snapshot) => {
         fb_materiais = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        window.fb_materiais = fb_materiais; // <-- CORREÇÃO: Propaga atualização
         console.log("Materiais recebidos:", fb_materiais.length);
          if (domReady) {
             console.log("DOM pronto, atualizando UI de materiais...");
@@ -323,7 +335,9 @@ function initFirestoreListeners() {
     // Listener de Estoque de Água
     onSnapshot(query(estoqueAguaCollection), (snapshot) => {
         fb_estoque_agua = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        window.fb_estoque_agua = fb_estoque_agua; // <-- CORREÇÃO: Propaga atualização
         estoqueInicialDefinido.agua = fb_estoque_agua.some(e => e.tipo === 'inicial');
+        window.estoqueInicialDefinido.agua = estoqueInicialDefinido.agua; // <-- CORREÇÃO: Propaga atualização
         console.log("Estoque Água recebido:", fb_estoque_agua.length, "Inicial definido:", estoqueInicialDefinido.agua);
          if (domReady) {
             console.log("DOM pronto, atualizando UI de estoque de água...");
@@ -335,7 +349,9 @@ function initFirestoreListeners() {
     // Listener de Estoque de Gás
     onSnapshot(query(estoqueGasCollection), (snapshot) => {
         fb_estoque_gas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        window.fb_estoque_gas = fb_estoque_gas; // <-- CORREÇÃO: Propaga atualização
         estoqueInicialDefinido.gas = fb_estoque_gas.some(e => e.tipo === 'inicial');
+        window.estoqueInicialDefinido.gas = estoqueInicialDefinido.gas; // <-- CORREÇÃO: Propaga atualização
         console.log("Estoque Gás recebido:", fb_estoque_gas.length, "Inicial definido:", estoqueInicialDefinido.gas);
          if (domReady) {
             console.log("DOM pronto, atualizando UI de estoque de gás...");
@@ -1093,16 +1109,10 @@ function setupApp() {
     // Isso é necessário porque estamos usando 'type="module"',
     // que cria escopos separados para cada arquivo.
     
-    // Globais da UI
-    window.navButtons = navButtons;
-    window.contentPanes = contentPanes;
-    window.connectionStatusEl = connectionStatusEl;
-    window.lastUpdateTimeEl = lastUpdateTimeEl;
-
     // Globais de Estado
-    window.domReady = domReady;
-    window.isAuthReady = isAuthReady;
-    window.userId = userId;
+    // window.domReady = domReady; // <-- CORREÇÃO: Removida (setada como 'true' acima)
+    window.isAuthReady = isAuthReady; // (Será atualizada por onAuthStateChanged)
+    window.userId = userId; // (Será atualizada por onAuthStateChanged)
     window.appId = appId;
     window.db = db;
     window.auth = auth;
@@ -1482,5 +1492,6 @@ window.addEventListener('load', () => {
     console.log("setupApp concluído. Iniciando Firebase..."); 
     initFirebase(); 
 });
+
 
 
