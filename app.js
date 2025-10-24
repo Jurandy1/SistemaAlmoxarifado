@@ -258,15 +258,19 @@ function initFirestoreListeners() {
         console.log("Unidades recebidas:", fb_unidades.length);
         if (domReady) { // <<< Só atualiza a UI se o setupApp já rodou >>>
             console.log("DOM pronto, atualizando selects e tabelas de unidades...");
-            populateUnidadeSelects(selectUnidadeAgua, 'atendeAgua');
-            populateUnidadeSelects(selectUnidadeGas, 'atendeGas');
-            populateUnidadeSelects(selectUnidadeMateriais, 'atendeMateriais');
-            populateUnidadeSelects(document.getElementById('select-previsao-unidade-agua-v2'), 'atendeAgua', false); 
-            populateUnidadeSelects(document.getElementById('select-previsao-unidade-gas-v2'), 'atendeGas', false); 
+            // CORREÇÃO: Adicionada checagem para evitar erro de elemento null
+            if (selectUnidadeAgua) populateUnidadeSelects(selectUnidadeAgua, 'atendeAgua');
+            if (selectUnidadeGas) populateUnidadeSelects(selectUnidadeGas, 'atendeGas');
+            if (selectUnidadeMateriais) populateUnidadeSelects(selectUnidadeMateriais, 'atendeMateriais');
+            if (document.getElementById('select-previsao-unidade-agua-v2')) populateUnidadeSelects(document.getElementById('select-previsao-unidade-agua-v2'), 'atendeAgua', false); 
+            if (document.getElementById('select-previsao-unidade-gas-v2')) populateUnidadeSelects(document.getElementById('select-previsao-unidade-gas-v2'), 'atendeGas', false); 
+            
             populateTipoSelects('agua');
             populateTipoSelects('gas');
-            populateUnidadeSelects(document.getElementById('select-exclusao-agua'), 'atendeAgua', false, true, null); 
-            populateUnidadeSelects(document.getElementById('select-exclusao-gas'), 'atendeGas', false, true, null); 
+            
+            if (document.getElementById('select-exclusao-agua')) populateUnidadeSelects(document.getElementById('select-exclusao-agua'), 'atendeAgua', false, true, null); 
+            if (document.getElementById('select-exclusao-gas')) populateUnidadeSelects(document.getElementById('select-exclusao-gas'), 'atendeGas', false, true, null); 
+            
             renderGestaoUnidades(); 
             renderAguaStatus(); 
             renderGasStatus(); 
@@ -410,6 +414,11 @@ function updateLastUpdateTime() {
 
 function populateUnidadeSelects(selectEl, serviceField, includeAll = false, includeSelecione = true, filterType = null) {
     if (!domReady || !selectEl) return; 
+    // CORREÇÃO: Adiciona uma verificação extra para garantir que o elemento não é nulo/undefined
+    if (!selectEl) {
+        console.warn(`populateUnidadeSelects: Elemento de seleção não encontrado para o campo ${serviceField}.`);
+        return;
+    }
 
     let unidadesFiltradas = fb_unidades.filter(u => {
         const atendeServico = serviceField ? (u[serviceField] ?? true) : true;
@@ -1130,6 +1139,7 @@ function renderMateriaisStatus() {
     });
 
     if (materiaisOrdenados.length === 0) {
+        // CORREÇÃO: Remove o spinner de carregamento persistente
         tableStatusMateriais.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-500">Nenhuma requisição registrada.</td></tr>';
         return;
     }
@@ -2606,7 +2616,7 @@ function switchTab(tabName) {
     }
 
     setTimeout(() => { 
-        if(typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 9: Garante que lucide existe
+        if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 9: Garante que lucide existe
     }, 50); 
 }
 
