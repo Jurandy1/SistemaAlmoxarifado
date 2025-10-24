@@ -413,7 +413,8 @@ function populateUnidadeSelects(selectEl, serviceField, includeAll = false, incl
 
     let unidadesFiltradas = fb_unidades.filter(u => {
         const atendeServico = serviceField ? (u[serviceField] ?? true) : true;
-        const tipoUnidadeNormalizado = (u.tipo || '').toUpperCase() === 'SEMCAS' ? 'SEDE' : (u.tipo || '').toUpperCase();
+        let tipoUnidadeNormalizado = (u.tipo || '').toUpperCase();
+        if (tipoUnidadeNormalizado === 'SEMCAS') tipoUnidadeNormalizado = 'SEDE';
         const tipoCorreto = !filterType || tipoUnidadeNormalizado === (filterType || '').toUpperCase();
         return atendeServico && tipoCorreto;
     });
@@ -1734,7 +1735,8 @@ function switchDashboardView(viewName) {
     if(viewName === 'gas') renderDashboardGasChart();
     if(viewName === 'geral') {
         renderDashboardVisaoGeralSummary(); 
-        filterDashboardMateriais(null); 
+        // Não chama filterDashboardMateriais aqui para evitar recursão
+        // filterDashboardMateriais(null); 
     }
     if(viewName === 'materiais') renderDashboardMateriaisList();
 }
@@ -2013,10 +2015,16 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
 }
 
 function filterDashboardMateriais(status) {
-    // Se o status for 'separacao' o filtro deve ser aplicado a 'requisitado' e 'separacao'
+    // CORREÇÃO CRÍTICA:
+    // Esta função NÃO deve mais chamar switchTab ou switchDashboardView,
+    // pois isso está causando a recursão infinita.
+    // Ela deve apenas atualizar o filtro e chamar a função de renderização
+    // da lista de materiais do dashboard.
+    
     currentDashboardMaterialFilter = status;
-    switchTab('dashboard'); 
-    switchDashboardView('geral');
+    // Removidas chamadas a switchTab e switchDashboardView
+    // switchTab('dashboard'); // <-- REMOVIDO
+    // switchDashboardView('geral'); // <-- REMOVIDO
     renderDashboardMateriaisProntos(status);
 }
 
