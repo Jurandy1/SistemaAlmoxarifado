@@ -12,16 +12,21 @@
    ============================================================= */
 
 // Importa funções do Firestore necessárias para este módulo
+// **CORREÇÃO DE ESCOPO**: Não precisamos mais importar,
+// pois app.js irá anexá-los à 'window'.
+/*
 import { doc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+*/
 
 // **CORREÇÃO**: Removemos o 'DOMContentLoaded' e criamos a função initUnidades()
 // que será chamada pelo app.js quando o DOM e o Firebase estiverem prontos.
 function initUnidades() {
     console.log("Inicializando módulo de Unidades...");
-    // Adiciona listeners específicos de Gestão de Unidades
-    if (tableGestaoUnidades) { 
+    
+    // **CORREÇÃO DE ESCOPO**: Usa window.tableGestaoUnidades, etc.
+    if (window.tableGestaoUnidades) { 
         // Usa delegação de eventos para os botões dentro da tabela
-        tableGestaoUnidades.addEventListener('click', (e) => {
+        window.tableGestaoUnidades.addEventListener('click', (e) => {
             if (e.target.closest('.btn-edit-unidade')) {
                 handleEditUnidadeClick(e);
             } else if (e.target.closest('.btn-cancel-edit-unidade')) {
@@ -31,13 +36,13 @@ function initUnidades() {
             }
         });
         // Listener para os toggles
-        tableGestaoUnidades.addEventListener('change', handleGestaoToggle);
+        window.tableGestaoUnidades.addEventListener('change', handleGestaoToggle);
     }
     
     // Listeners dos filtros e botão de adicionar em lote
-    if (filtroUnidadeNome) filtroUnidadeNome.addEventListener('input', renderGestaoUnidades); 
-    if (filtroUnidadeTipo) filtroUnidadeTipo.addEventListener('input', renderGestaoUnidades); 
-    if (btnBulkAddUnidades) btnBulkAddUnidades.addEventListener('click', handleBulkAddUnidades);
+    if (window.filtroUnidadeNome) window.filtroUnidadeNome.addEventListener('input', renderGestaoUnidades); 
+    if (window.filtroUnidadeTipo) window.filtroUnidadeTipo.addEventListener('input', renderGestaoUnidades); 
+    if (window.btnBulkAddUnidades) window.btnBulkAddUnidades.addEventListener('click', handleBulkAddUnidades);
 }
 
 // **NOVO**: Torna a função initUnidades acessível globalmente para o app.js
@@ -48,17 +53,18 @@ window.initUnidades = initUnidades;
 
 // Renderiza a tabela de gestão de unidades
 function renderGestaoUnidades() {
-    if (!tableGestaoUnidades) return;
-     if (!domReady) { console.warn("renderGestaoUnidades chamada antes do DOM pronto."); return; }
+    // **CORREÇÃO DE ESCOPO**: Usa window.tableGestaoUnidades, window.domReady, etc.
+    if (!window.tableGestaoUnidades) return;
+     if (!window.domReady) { console.warn("renderGestaoUnidades chamada antes do DOM pronto."); return; }
     
     // Usa filtros globais
-    const filtroNome = normalizeString(filtroUnidadeNome.value);
-    const filtroTipo = normalizeString(filtroUnidadeTipo.value);
+    const filtroNome = window.normalizeString(window.filtroUnidadeNome.value);
+    const filtroTipo = window.normalizeString(window.filtroUnidadeTipo.value);
     
     // Usa fb_unidades (global)
-    const unidadesFiltradas = fb_unidades.filter(unidade => {
-        const nomeNormalizado = normalizeString(unidade.nome);
-        let tipoNormalizado = normalizeString(unidade.tipo);
+    const unidadesFiltradas = window.fb_unidades.filter(unidade => {
+        const nomeNormalizado = window.normalizeString(unidade.nome);
+        let tipoNormalizado = window.normalizeString(unidade.tipo);
         if (tipoNormalizado === 'semcas') tipoNormalizado = 'sede';
         
         const nomeMatch = !filtroNome || nomeNormalizado.includes(filtroNome);
@@ -67,10 +73,10 @@ function renderGestaoUnidades() {
     });
 
     if (unidadesFiltradas.length === 0) { 
-        tableGestaoUnidades.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma unidade encontrada ${ (filtroNome || filtroTipo) ? 'com estes filtros' : 'cadastrada. Adicione abaixo.'}</td></tr>`; 
+        window.tableGestaoUnidades.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma unidade encontrada ${ (filtroNome || filtroTipo) ? 'com estes filtros' : 'cadastrada. Adicione abaixo.'}</td></tr>`; 
         return; 
     }
-    tableGestaoUnidades.innerHTML = unidadesFiltradas.map(unidade => {
+    window.tableGestaoUnidades.innerHTML = unidadesFiltradas.map(unidade => {
          let tipoDisplay = (unidade.tipo || 'N/A').toUpperCase();
          if (tipoDisplay === 'SEMCAS') tipoDisplay = 'SEDE';
          // Os data-* attributes são usados pelos handlers de clique/change
@@ -89,7 +95,7 @@ function renderGestaoUnidades() {
                 </td>
             </tr>`
     }).join('');
-    lucide.createIcons(); 
+    window.lucide.createIcons(); 
 }
 
 // Handler para mudança no status (checkbox toggle)
@@ -102,18 +108,19 @@ async function handleGestaoToggle(e) {
     const field = checkbox.dataset.field; 
     const value = checkbox.checked; 
     
-    if (!isAuthReady || !id || !field) return; 
+    // **CORREÇÃO DE ESCOPO**: Usa window.isAuthReady, window.doc, etc.
+    if (!window.isAuthReady || !id || !field) return; 
     
     checkbox.disabled = true; 
     
     try {
-        const docRef = doc(unidadesCollection, id); // Usa collection global
-        await updateDoc(docRef, { [field]: value });
-        showAlert('alert-gestao', 'Status atualizado!', 'success', 2000); // Usa função global
+        const docRef = window.doc(window.unidadesCollection, id); // Usa collection global
+        await window.updateDoc(docRef, { [field]: value });
+        window.showAlert('alert-gestao', 'Status atualizado!', 'success', 2000); // Usa função global
         // O listener do Firestore atualizará o array fb_unidades e chamará renderGestaoUnidades
     } catch (error) { 
         console.error("Erro atualizar unidade:", error); 
-        showAlert('alert-gestao', `Erro: ${error.message}`, 'error'); // Usa função global
+        window.showAlert('alert-gestao', `Erro: ${error.message}`, 'error'); // Usa função global
         checkbox.checked = !value; // Reverte visualmente em caso de erro
     } finally { 
         checkbox.disabled = false; 
@@ -129,7 +136,8 @@ function handleEditUnidadeClick(e) {
     const row = td.closest('tr');
     // Não permite editar outra linha se uma já estiver em edição
     if (document.querySelector('.editing-row') && !row.classList.contains('editing-row')) {
-        showAlert('alert-gestao', 'Salve ou cancele a edição atual antes de editar outra unidade.', 'warning');
+        // **CORREÇÃO DE ESCOPO**: Usa window.showAlert
+        window.showAlert('alert-gestao', 'Salve ou cancele a edição atual antes de editar outra unidade.', 'warning');
         return;
     }
 
@@ -145,7 +153,7 @@ function handleEditUnidadeClick(e) {
         </div>
     `;
     row.classList.add('editing-row'); // Marca a linha como em edição
-    lucide.createIcons(); 
+    window.lucide.createIcons(); 
     td.querySelector('input').focus(); 
     td.querySelector('input').select(); // Seleciona o texto
 }
@@ -158,7 +166,8 @@ function handleCancelEditUnidadeClick(e) {
     const td = button.closest('td');
     const row = td.closest('tr');
     const unidadeId = row.dataset.unidadeId;
-    const unidade = fb_unidades.find(u => u.id === unidadeId); // Busca nome original no array global
+    // **CORREÇÃO DE ESCOPO**: Usa window.fb_unidades
+    const unidade = window.fb_unidades.find(u => u.id === unidadeId); // Busca nome original no array global
     
     // Restaura o conteúdo original da célula
     td.innerHTML = `
@@ -166,7 +175,7 @@ function handleCancelEditUnidadeClick(e) {
         <button class="btn-icon btn-edit-unidade ml-1" title="Editar nome"><i data-lucide="pencil"></i></button>
     `;
     row.classList.remove('editing-row'); 
-    lucide.createIcons(); 
+    window.lucide.createIcons(); 
 }
 
 // Handler para clique no botão de salvar edição
@@ -178,10 +187,11 @@ async function handleSaveUnidadeClick(e) {
     const row = td.closest('tr');
     const unidadeId = row.dataset.unidadeId;
     const input = td.querySelector('.edit-input');
-    const newName = capitalizeString(input.value.trim()); // Usa função global
+    // **CORREÇÃO DE ESCOPO**: Usa window.capitalizeString, window.showAlert, etc.
+    const newName = window.capitalizeString(input.value.trim()); // Usa função global
 
     if (!newName) {
-        showAlert('alert-gestao', 'O nome da unidade não pode ser vazio.', 'warning'); // Usa função global
+        window.showAlert('alert-gestao', 'O nome da unidade não pode ser vazio.', 'warning'); // Usa função global
         input.focus();
         return;
     }
@@ -193,8 +203,8 @@ async function handleSaveUnidadeClick(e) {
     button.innerHTML = '<div class="loading-spinner-small inline-block" style="width: 1em; height: 1em; border-width: 2px;"></div>';
 
     try {
-        const docRef = doc(unidadesCollection, unidadeId); // Usa collection global
-        await updateDoc(docRef, { nome: newName });
+        const docRef = window.doc(window.unidadesCollection, unidadeId); // Usa collection global
+        await window.updateDoc(docRef, { nome: newName });
         
         // Atualiza a célula visualmente (o listener do Firestore fará isso também, mas isso é mais rápido)
         td.innerHTML = `
@@ -202,27 +212,28 @@ async function handleSaveUnidadeClick(e) {
             <button class="btn-icon btn-edit-unidade ml-1" title="Editar nome"><i data-lucide="pencil"></i></button>
         `;
          row.classList.remove('editing-row'); 
-        lucide.createIcons(); 
-        showAlert('alert-gestao', 'Nome da unidade atualizado!', 'success', 2000); // Usa função global
+        window.lucide.createIcons(); 
+        window.showAlert('alert-gestao', 'Nome da unidade atualizado!', 'success', 2000); // Usa função global
     
     } catch (error) {
         console.error("Erro ao salvar nome da unidade:", error);
-        showAlert('alert-gestao', `Erro ao salvar: ${error.message}`, 'error'); // Usa função global
+        window.showAlert('alert-gestao', `Erro ao salvar: ${error.message}`, 'error'); // Usa função global
         // Reabilita botões em caso de erro
         button.disabled = false;
          if(cancelButton) cancelButton.disabled = false;
         button.innerHTML = '<i data-lucide="check"></i>'; 
-        lucide.createIcons();
+        window.lucide.createIcons();
     }
 }
 
 // Handler para adicionar unidades em lote
 async function handleBulkAddUnidades() {
-     if (!isAuthReady || !textareaBulkUnidades) return;
-     if (!domReady) { showAlert('alert-gestao', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
+     // **CORREÇÃO DE ESCOPO**: Usa window.isAuthReady, window.textareaBulkUnidades, etc.
+     if (!window.isAuthReady || !window.textareaBulkUnidades) return;
+     if (!window.domReady) { window.showAlert('alert-gestao', 'Erro: Aplicação não totalmente carregada.', 'error'); return; } 
      
-     const text = textareaBulkUnidades.value.trim();
-     if (!text) { showAlert('alert-gestao', 'A área de texto está vazia.', 'warning'); return; }
+     const text = window.textareaBulkUnidades.value.trim();
+     if (!text) { window.showAlert('alert-gestao', 'A área de texto está vazia.', 'warning'); return; }
      
      const lines = text.split('\n');
      const unidadesParaAdd = [];
@@ -233,14 +244,14 @@ async function handleBulkAddUnidades() {
          if (parts.length === 2) {
              let tipo = parts[0].trim().toUpperCase(); 
              if (tipo === 'SEMCAS') tipo = 'SEDE'; // Normaliza SEMCAS para SEDE
-             const nome = capitalizeString(parts[1].trim()); // Usa função global
+             const nome = window.capitalizeString(parts[1].trim()); // Usa função global
              
              if (tipo && nome) {
                  // Verifica se já existe (case-insensitive e tipo normalizado)
-                 const existe = fb_unidades.some(u => { // Usa array global
+                 const existe = window.fb_unidades.some(u => { // Usa array global
                      let uTipo = (u.tipo || '').toUpperCase();
                      if (uTipo === 'SEMCAS') uTipo = 'SEDE';
-                     return normalizeString(u.nome) === normalizeString(nome) && uTipo === tipo;
+                     return window.normalizeString(u.nome) === window.normalizeString(nome) && uTipo === tipo;
                  });
                  if (!existe) {
                      // Adiciona com serviços habilitados por padrão
@@ -256,32 +267,32 @@ async function handleBulkAddUnidades() {
      });
 
      if (unidadesParaAdd.length === 0) {
-         showAlert('alert-gestao', 'Nenhuma unidade nova para adicionar (verifique formato e duplicados).', 'info');
+         window.showAlert('alert-gestao', 'Nenhuma unidade nova para adicionar (verifique formato e duplicados).', 'info');
          if(erros.length > 0) console.warn("Erros/Avisos na importação em lote:", erros);
          return;
      }
      
-     btnBulkAddUnidades.disabled = true; btnBulkAddUnidades.innerHTML = '<div class="loading-spinner-small mx-auto"></div> Adicionando...';
+     window.btnBulkAddUnidades.disabled = true; window.btnBulkAddUnidades.innerHTML = '<div class="loading-spinner-small mx-auto"></div> Adicionando...';
      let adicionadasCount = 0;
      
      try {
          // Adiciona uma por uma (mais simples que batch write aqui)
          for (const unidade of unidadesParaAdd) {
-             await addDoc(unidadesCollection, unidade); // Usa collection global
+             await window.addDoc(window.unidadesCollection, unidade); // Usa collection global
              adicionadasCount++;
          }
-         showAlert('alert-gestao', `${adicionadasCount} unidade(s) adicionada(s) com sucesso!`, 'success');
-         textareaBulkUnidades.value = ''; 
+         window.showAlert('alert-gestao', `${adicionadasCount} unidade(s) adicionada(s) com sucesso!`, 'success');
+         window.textareaBulkUnidades.value = ''; 
          
          if(erros.length > 0) {
-              showAlert('alert-gestao', `Algumas linhas foram ignoradas. Verifique o console (F12) para detalhes.`, 'warning', 8000);
+              window.showAlert('alert-gestao', `Algumas linhas foram ignoradas. Verifique o console (F12) para detalhes.`, 'warning', 8000);
               console.warn("Erros/Avisos na importação em lote:", erros);
          }
          // O listener do Firestore atualizará a tabela
      } catch (error) {
          console.error("Erro ao adicionar unidades em lote:", error);
-         showAlert('alert-gestao', `Erro ao adicionar unidades: ${error.message}. ${adicionadasCount} foram adicionadas antes do erro.`, 'error');
+         window.showAlert('alert-gestao', `Erro ao adicionar unidades: ${error.message}. ${adicionadasCount} foram adicionadas antes do erro.`, 'error');
      } finally {
-         btnBulkAddUnidades.disabled = false; btnBulkAddUnidades.textContent = 'Adicionar Unidades';
+         window.btnBulkAddUnidades.disabled = false; window.btnBulkAddUnidades.textContent = 'Adicionar Unidades';
      }
 }
