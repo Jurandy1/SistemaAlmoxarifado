@@ -215,11 +215,10 @@ async function initFirebase() {
                 
                 console.log("Caminho base das coleções:", basePath);
                 
-                // Chama setupApp SOMENTE APÓS AUTENTICAÇÃO
-                if (!domReady) { 
-                    console.log("Usuário autenticado, chamando setupApp...");
-                    setupApp(); 
-                }
+                // ### CORREÇÃO: setupApp() foi movido para DOMContentLoaded ###
+                // O setupApp() agora executa ANTES do initFirebase(),
+                // então domReady já será true quando a autenticação voltar.
+                // Não chamamos mais setupApp() daqui.
                 
                 initFirestoreListeners(); // Inicia listeners
                 
@@ -937,10 +936,16 @@ function setupApp() {
 
 
 // --- INICIALIZAÇÃO GERAL ---
-// (Permanece o mesmo)
 document.addEventListener('DOMContentLoaded', () => { 
-    console.log("DOM Carregado. Iniciando Firebase...");
+    console.log("DOM Carregado. Iniciando setupApp...");
+    
+    // --- CORREÇÃO DE INICIALIZAÇÃO ---
+    // 1. Roda o setupApp() PRIMEIRO para encontrar todos os elementos
+    //    do DOM e marcar domReady = true.
+    setupApp(); 
+    
+    // 2. Inicia o Firebase DEPOIS que o DOM está pronto.
+    console.log("setupApp concluído. Iniciando Firebase...");
     initFirebase(); 
 });
-
 
