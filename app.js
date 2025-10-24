@@ -1087,6 +1087,194 @@ function setupApp() {
     if (btnClearDashboardFilter) btnClearDashboardFilter.addEventListener('click', () => filterDashboardMateriais(null));
 
 
+    // --- *** INÍCIO DA CORREÇÃO DE ESCOPO *** ---
+    // Anexa as variáveis locais do módulo à 'window' para que
+    // os outros scripts (agua.js, gas.js, etc.) possam acessá-las.
+    // Isso é necessário porque estamos usando 'type="module"',
+    // que cria escopos separados para cada arquivo.
+    
+    // Globais da UI
+    window.navButtons = navButtons;
+    window.contentPanes = contentPanes;
+    window.connectionStatusEl = connectionStatusEl;
+    window.lastUpdateTimeEl = lastUpdateTimeEl;
+
+    // Globais de Estado
+    window.domReady = domReady;
+    window.isAuthReady = isAuthReady;
+    window.userId = userId;
+    window.appId = appId;
+    window.db = db;
+    window.auth = auth;
+    window.storage = storage;
+    
+    // Coleções
+    window.unidadesCollection = unidadesCollection;
+    window.aguaCollection = aguaCollection;
+    window.gasCollection = gasCollection;
+    window.materiaisCollection = materiaisCollection;
+    window.estoqueAguaCollection = estoqueAguaCollection;
+    window.estoqueGasCollection = estoqueGasCollection;
+    
+    // Arrays de Dados
+    window.fb_unidades = fb_unidades;
+    window.fb_agua_movimentacoes = fb_agua_movimentacoes;
+    window.fb_gas_movimentacoes = fb_gas_movimentacoes;
+    window.fb_materiais = fb_materiais;
+    window.fb_estoque_agua = fb_estoque_agua;
+    window.fb_estoque_gas = fb_estoque_gas;
+    window.estoqueInicialDefinido = estoqueInicialDefinido;
+    
+    // Estado da UI (Objetos)
+    window.listaExclusoes = listaExclusoes;
+    window.modoPrevisao = modoPrevisao;
+    window.graficoPrevisao = graficoPrevisao;
+    window.tipoSelecionadoPrevisao = tipoSelecionadoPrevisao;
+    
+    // Funções de Utilidade Globais
+    window.showAlert = showAlert;
+    window.getTodayDateString = getTodayDateString;
+    window.dateToTimestamp = dateToTimestamp;
+    window.formatTimestamp = formatTimestamp;
+    window.normalizeString = normalizeString;
+    window.capitalizeString = capitalizeString;
+    window.filterTable = filterTable;
+    window.populateUnidadeSelects = populateUnidadeSelects;
+    window.renderDashboardVisaoGeralSummary = renderDashboardVisaoGeralSummary; // Usado por agua/gas.js
+    
+    // Elementos do DOM (Dashboard)
+    window.dashboardNavControls = dashboardNavControls;
+    window.summaryAguaPendente = summaryAguaPendente;
+    window.summaryAguaEntregue = summaryAguaEntregue;
+    window.summaryAguaRecebido = summaryAguaRecebido;
+    window.summaryGasPendente = summaryGasPendente;
+    window.summaryGasEntregue = summaryGasEntregue;
+    window.summaryGasRecebido = summaryGasRecebido;
+    window.dashboardMateriaisProntosContainer = dashboardMateriaisProntosContainer;
+    window.loadingMateriaisProntos = loadingMateriaisProntos;
+    window.btnClearDashboardFilter = btnClearDashboardFilter;
+    window.dashboardMateriaisTitle = dashboardMateriaisTitle;
+    window.dashboardMateriaisListContainer = dashboardMateriaisListContainer;
+    window.loadingMateriaisDashboard = loadingMateriaisDashboard;
+    window.dashboardEstoqueAguaEl = dashboardEstoqueAguaEl;
+    window.dashboardEstoqueGasEl = dashboardEstoqueGasEl;
+    window.dashboardMateriaisSeparacaoCountEl = dashboardMateriaisSeparacaoCountEl;
+    window.dashboardMateriaisRetiradaCountEl = dashboardMateriaisRetiradaCountEl;
+
+    // Elementos do DOM (Água)
+    window.formAgua = formAgua;
+    window.selectUnidadeAgua = selectUnidadeAgua;
+    window.selectTipoAgua = selectTipoAgua;
+    window.inputDataAgua = inputDataAgua;
+    window.inputResponsavelAgua = inputResponsavelAgua;
+    window.btnSubmitAgua = btnSubmitAgua;
+    window.alertAgua = alertAgua;
+    window.tableStatusAgua = tableStatusAgua;
+    window.alertAguaLista = alertAguaLista;
+    window.inputQtdEntregueAgua = inputQtdEntregueAgua;
+    window.inputQtdRetornoAgua = inputQtdRetornoAgua;
+    window.formGroupQtdEntregueAgua = formGroupQtdEntregueAgua;
+    window.formGroupQtdRetornoAgua = formGroupQtdRetornoAgua;
+    window.estoqueAguaInicialEl = estoqueAguaInicialEl;
+    window.estoqueAguaEntradasEl = estoqueAguaEntradasEl;
+    window.estoqueAguaSaidasEl = estoqueAguaSaidasEl;
+    window.estoqueAguaAtualEl = estoqueAguaAtualEl;
+    window.loadingEstoqueAguaEl = loadingEstoqueAguaEl;
+    window.resumoEstoqueAguaEl = resumoEstoqueAguaEl;
+    window.formEntradaAgua = formEntradaAgua;
+    window.inputDataEntradaAgua = inputDataEntradaAgua;
+    window.btnSubmitEntradaAgua = btnSubmitEntradaAgua;
+    window.formInicialAguaContainer = formInicialAguaContainer;
+    window.formInicialAgua = formInicialAgua;
+    window.inputInicialQtdAgua = inputInicialQtdAgua;
+    window.inputInicialResponsavelAgua = inputInicialResponsavelAgua;
+    window.btnSubmitInicialAgua = btnSubmitInicialAgua;
+    window.alertInicialAgua = alertInicialAgua;
+    window.btnAbrirInicialAgua = btnAbrirInicialAgua;
+    window.tableHistoricoAgua = tableHistoricoAgua;
+    window.alertHistoricoAgua = alertHistoricoAgua;
+
+    // Elementos do DOM (Gás)
+    window.formGas = formGas;
+    window.selectUnidadeGas = selectUnidadeGas;
+    window.selectTipoGas = selectTipoGas;
+    window.inputDataGas = inputDataGas;
+    window.inputResponsavelGas = inputResponsavelGas;
+    window.btnSubmitGas = btnSubmitGas;
+    window.alertGas = alertGas;
+    window.tableStatusGas = tableStatusGas;
+    window.alertGasLista = alertGasLista;
+    window.inputQtdEntregueGas = inputQtdEntregueGas;
+    window.inputQtdRetornoGas = inputQtdRetornoGas;
+    window.formGroupQtdEntregueGas = formGroupQtdEntregueGas;
+    window.formGroupQtdRetornoGas = formGroupQtdRetornoGas;
+    window.estoqueGasInicialEl = estoqueGasInicialEl;
+    window.estoqueGasEntradasEl = estoqueGasEntradasEl;
+    window.estoqueGasSaidasEl = estoqueGasSaidasEl;
+    window.estoqueGasAtualEl = estoqueGasAtualEl;
+    window.loadingEstoqueGasEl = loadingEstoqueGasEl;
+    window.resumoEstoqueGasEl = resumoEstoqueGasEl;
+    window.formEntradaGas = formEntradaGas;
+    window.inputDataEntradaGas = inputDataEntradaGas;
+    window.btnSubmitEntradaGas = btnSubmitEntradaGas;
+    window.formInicialGasContainer = formInicialGasContainer;
+    window.formInicialGas = formInicialGas;
+    window.inputInicialQtdGas = inputInicialQtdGas;
+    window.inputInicialResponsavelGas = inputInicialResponsavelGas;
+    window.btnSubmitInicialGas = btnSubmitInicialGas;
+    window.alertInicialGas = alertInicialGas;
+    window.btnAbrirInicialGas = btnAbrirInicialGas;
+    window.tableHistoricoGas = tableHistoricoGas;
+    window.alertHistoricoGas = alertHistoricoGas;
+
+    // Elementos do DOM (Materiais)
+    window.formMateriais = formMateriais;
+    window.selectUnidadeMateriais = selectUnidadeMateriais;
+    window.selectTipoMateriais = selectTipoMateriais;
+    window.inputDataSeparacao = inputDataSeparacao;
+    window.textareaItensMateriais = textareaItensMateriais;
+    window.inputResponsavelMateriais = inputResponsavelMateriais;
+    window.btnSubmitMateriais = btnSubmitMateriais;
+    window.alertMateriais = alertMateriais;
+    window.tableStatusMateriais = tableStatusMateriais;
+    window.alertMateriaisLista = alertMateriaisLista;
+    window.inputArquivoMateriais = inputArquivoMateriais;
+    window.modalDefinirResponsavelSeparacao = modalDefinirResponsavelSeparacao;
+    window.inputNomeResponsavelSeparacao = inputNomeResponsavelSeparacao;
+    window.btnConfirmarResponsavelSeparacao = btnConfirmarResponsavelSeparacao;
+    window.btnCancelarResponsavelSeparacao = btnCancelarResponsavelSeparacao;
+    window.materialAtualParaLiberacao = materialAtualParaLiberacao;
+
+    // Elementos do DOM (Gestão)
+    window.tableGestaoUnidades = tableGestaoUnidades;
+    window.alertGestao = alertGestao;
+    window.textareaBulkUnidades = textareaBulkUnidades;
+    window.btnBulkAddUnidades = btnBulkAddUnidades;
+    window.filtroUnidadeNome = filtroUnidadeNome;
+    window.filtroUnidadeTipo = filtroUnidadeTipo;
+
+    // Elementos do DOM (Relatório)
+    window.relatorioTipo = relatorioTipo;
+    window.relatorioDataInicio = relatorioDataInicio;
+    window.relatorioDataFim = relatorioDataFim;
+    window.btnGerarPdf = btnGerarPdf;
+    window.alertRelatorio = alertRelatorio;
+    
+    // Funções e vars importadas do Firebase (para os módulos que não importam)
+    window.serverTimestamp = serverTimestamp;
+    window.Timestamp = Timestamp;
+    window.addDoc = addDoc;
+    window.doc = doc;
+    window.updateDoc = updateDoc;
+    window.getDoc = getDoc;
+    window.deleteDoc = deleteDoc;
+    window.ref = ref;
+    window.uploadBytesResumable = uploadBytesResumable;
+    window.getDownloadURL = getDownloadURL;
+    window.deleteObject = deleteObject;
+    
+    // --- *** FIM DA CORREÇÃO DE ESCOPO *** ---
+
     if(typeof lucide !== 'undefined') lucide.createIcons();
 
     // --- INICIALIZA OS MÓDULOS ---
@@ -1294,4 +1482,5 @@ window.addEventListener('load', () => {
     console.log("setupApp concluído. Iniciando Firebase..."); 
     initFirebase(); 
 });
+
 
