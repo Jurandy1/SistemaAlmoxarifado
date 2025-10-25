@@ -1421,7 +1421,7 @@ async function calcularPrevisaoInteligente(itemType) {
     btn.disabled = true;
     btn.innerHTML = '<div class="loading-spinner-small inline-block" style="width:1em; height:1em;"></div> Calculando...';
     
-    // Declarações antecipadas para evitar o erro de sintaxe
+    // Variáveis que serão atribuídas após a chamada da função
     let consumoResult, consumoTotal, consumoMedioDiario, dias;
 
     try {
@@ -1460,11 +1460,12 @@ async function calcularPrevisaoInteligente(itemType) {
             exclusoes: exclusoes
         };
 
-        // CORREÇÃO CRÍTICA DO ERRO DE SINTAXE (Removida a desestruturação e movido para let/atribuição):
+        // CORREÇÃO CRÍTICA DO ERRO DE SINTAXE: Evitando desestruturação e usando atribuição direta
         consumoResult = getConsumoDiarioMedio(itemType, filterConfig);
         consumoTotal = consumoResult.consumoTotal;
         consumoMedioDiario = consumoResult.consumoMedioDiario;
         dias = consumoResult.dias;
+        // FIM DA CORREÇÃO CRÍTICA
         
         if (consumoTotal === 0) {
             showAlert(`alertas-previsao-${itemType}`, 'Não há dados de consumo para os últimos 30 dias com os filtros selecionados.', 'info');
