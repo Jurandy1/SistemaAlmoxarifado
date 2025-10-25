@@ -1027,8 +1027,12 @@ function renderMovimentacoesHistory(itemType) {
         tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-slate-500">Nenhuma movimentação de unidade registrada.</td></tr>`;
         return;
     }
-
-    tableBody.innerHTML = historicoOrdenado.map(m => {
+    
+    // CORREÇÃO DE ERRO: Removendo o template literal longo e usando concatenação de strings
+    // para evitar o erro "unescaped line break"
+    let html = '';
+    
+    historicoOrdenado.forEach(m => {
         const isEntrega = m.tipo === 'entrega';
         const tipoClass = isEntrega ? 'badge-red' : 'badge-green';
         const tipoText = isEntrega ? 'Entrega' : 'Retirada';
@@ -1041,20 +1045,21 @@ function renderMovimentacoesHistory(itemType) {
         const respAlmox = m.responsavelAlmoxarifado || 'N/A';
         const respUnidade = m.responsavel || 'N/A';
 
-        return `
-        <tr title="Lançado por: ${respAlmox}">
-            <td>${m.unidadeNome || 'N/A'}</td>
-            <td><span class="badge ${tipoClass}">${tipoText}</span></td>
-            <td class="text-center font-medium">${m.quantidade}</td>
-            <td class="whitespace-nowrap">${dataMov}</td>
-            <td>${respAlmox}</td>
-            <td>${respUnidade}</td>
-            <td class="text-center whitespace-nowrap text-xs">${dataLancamento}</td>
-            <td class="text-center">
-                <button class="btn-danger btn-remove" data-id="${m.id}" data-type="${itemType}" title="Remover este lançamento"><i data-lucide="trash-2"></i></button>
-            </td>
-        </tr>
-    `}).join('');
+        html += '<tr title="Lançado por: ' + respAlmox + '">';
+        html += '<td>' + (m.unidadeNome || 'N/A') + '</td>';
+        html += '<td><span class="badge ' + tipoClass + '">' + tipoText + '</span></td>';
+        html += '<td class="text-center font-medium">' + m.quantidade + '</td>';
+        html += '<td class="whitespace-nowrap">' + dataMov + '</td>';
+        html += '<td>' + respAlmox + '</td>';
+        html += '<td>' + respUnidade + '</td>';
+        html += '<td class="text-center whitespace-nowrap text-xs">' + dataLancamento + '</td>';
+        html += '<td class="text-center">';
+        html += '    <button class="btn-danger btn-remove" data-id="' + m.id + '" data-type="' + itemType + '" title="Remover este lançamento"><i data-lucide="trash-2"></i></button>';
+        html += '</td>';
+        html += '</tr>';
+    });
+
+    tableBody.innerHTML = html;
     if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
 
     const filtroEl = document.getElementById(`filtro-historico-${itemType}`);
@@ -1303,11 +1308,15 @@ function renderMaterialSubTable(tableBody, data, status) {
         else if (status === 'separacao') msg = 'Nenhuma requisição em separação.';
         else if (status === 'retirada') msg = 'Nenhum material pronto para entrega.';
         else if (status === 'entregue') msg = 'Nenhuma entrega finalizada.';
-        tableBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-slate-500">${msg}</td></tr>`;
+        tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-slate-500">' + msg + '</td></tr>';
         return;
     }
 
-    tableBody.innerHTML = data.map(m => {
+    // CORREÇÃO DE ERRO: Removendo o template literal longo e usando concatenação de strings
+    // para evitar o erro "unescaped line break"
+    let html = '';
+    
+    data.map(m => {
         let acoesHtml = '';
         let rowContent = '';
         const dataRequisicao = formatTimestamp(m.dataSeparacao);
@@ -1318,50 +1327,44 @@ function renderMaterialSubTable(tableBody, data, status) {
         if (status === 'requisitado') {
             const hasFile = m.fileURL;
             const downloadBtn = hasFile 
-                ? `<button class="btn-icon btn-download-pedido text-blue-600 hover:text-blue-800" data-id="${m.id}" data-url="${m.fileURL}" title="Baixar Pedido"><i data-lucide="download-cloud"></i></button>`
-                : `<span class="btn-icon text-gray-400" title="Sem anexo"><i data-lucide="file-x"></i></span>`;
+                ? '<button class="btn-icon btn-download-pedido text-blue-600 hover:text-blue-800" data-id="' + m.id + '" data-url="' + m.fileURL + '" title="Baixar Pedido"><i data-lucide="download-cloud"></i></button>'
+                : '<span class="btn-icon text-gray-400" title="Sem anexo"><i data-lucide="file-x"></i></span>';
             
-            acoesHtml = `
-                 ${downloadBtn}
-                 <button class="btn-icon btn-start-separacao text-green-600 hover:text-green-800" data-id="${m.id}" title="Informar Separador e Iniciar"><i data-lucide="play-circle"></i></button>
-                 <button class="btn-icon btn-remove text-red-600 hover:text-red-800" data-id="${m.id}" data-type="materiais" title="Remover Requisição"><i data-lucide="trash-2"></i></button>
-            `;
-            rowContent = `
-                <td>${m.unidadeNome}</td>
-                <td class="capitalize">${m.tipoMaterial}</td>
-                <td>${dataRequisicao}</td>
-                <td>${responsavelLancamento}</td>
-                <td class="text-center space-x-2">${acoesHtml}</td>
-            `;
+            acoesHtml = downloadBtn + 
+                ' <button class="btn-icon btn-start-separacao text-green-600 hover:text-green-800" data-id="' + m.id + '" title="Informar Separador e Iniciar"><i data-lucide="play-circle"></i></button>' +
+                ' <button class="btn-icon btn-remove text-red-600 hover:text-red-800" data-id="' + m.id + '" data-type="materiais" title="Remover Requisição"><i data-lucide="trash-2"></i></button>';
+            
+            rowContent = '<td>' + m.unidadeNome + '</td>' +
+                '<td class="capitalize">' + m.tipoMaterial + '</td>' +
+                '<td>' + dataRequisicao + '</td>' +
+                '<td>' + responsavelLancamento + '</td>' +
+                '<td class="text-center space-x-2">' + acoesHtml + '</td>';
             
         } else if (status === 'separacao') {
              const hasFile = m.fileURL;
              const downloadBtn = hasFile 
-                ? `<button class="btn-icon btn-download-pedido text-blue-600 hover:text-blue-800" data-id="${m.id}" data-url="${m.fileURL}" title="Baixar Pedido"><i data-lucide="download-cloud"></i></button>`
-                : `<span class="btn-icon text-gray-400" title="Sem anexo"><i data-lucide="file-x"></i></span>`;
+                ? '<button class="btn-icon btn-download-pedido text-blue-600 hover:text-blue-800" data-id="' + m.id + '" data-url="' + m.fileURL + '" title="Baixar Pedido"><i data-lucide="download-cloud"></i></button>'
+                : '<span class="btn-icon text-gray-400" title="Sem anexo"><i data-lucide="file-x"></i></span>';
             
-            acoesHtml = `
-                 ${downloadBtn}
-                 <button class="btn-success btn-retirada text-xs py-1 px-2" data-id="${m.id}" title="Marcar como pronto para entrega">Pronto para Entrega</button>
-            `;
-            rowContent = `
-                <td>${m.unidadeNome}</td>
-                <td class="capitalize">${m.tipoMaterial}</td>
-                <td>${separador}</td>
-                <td class="text-xs">${dataInicioSeparacao}</td>
-                <td class="text-center space-x-2">${acoesHtml}</td>
-            `;
+            acoesHtml = downloadBtn + 
+                ' <button class="btn-success btn-retirada text-xs py-1 px-2" data-id="' + m.id + '" title="Marcar como pronto para entrega">Pronto para Entrega</button>';
+            
+            rowContent = '<td>' + m.unidadeNome + '</td>' +
+                '<td class="capitalize">' + m.tipoMaterial + '</td>' +
+                '<td>' + separador + '</td>' +
+                '<td class="text-xs">' + dataInicioSeparacao + '</td>' +
+                '<td class="text-center space-x-2">' + acoesHtml + '</td>';
+            
         } else if (status === 'retirada') {
-            acoesHtml = `
-                 <button class="btn-success btn-entregue text-xs py-1 px-2" data-id="${m.id}" title="Finalizar entrega e registrar responsáveis">Entregue</button>
-            `;
-            rowContent = `
-                <td>${m.unidadeNome}</td>
-                <td class="capitalize">${m.tipoMaterial}</td>
-                <td>${separador}</td>
-                <td>${formatTimestamp(m.dataRetirada) || 'N/A'}</td>
-                <td class="text-center space-x-2">${acoesHtml}</td>
-            `;
+            acoesHtml = 
+                ' <button class="btn-success btn-entregue text-xs py-1 px-2" data-id="' + m.id + '" title="Finalizar entrega e registrar responsáveis">Entregue</button>';
+            
+            rowContent = '<td>' + m.unidadeNome + '</td>' +
+                '<td class="capitalize">' + m.tipoMaterial + '</td>' +
+                '<td>' + separador + '</td>' +
+                '<td>' + (formatTimestamp(m.dataRetirada) || 'N/A') + '</td>' +
+                '<td class="text-center space-x-2">' + acoesHtml + '</td>';
+            
         } else if (status === 'entregue') {
             const dataEntrega = formatTimestamp(m.dataEntrega);
             // Ponto 4: Usa os novos campos de responsável
@@ -1369,27 +1372,29 @@ function renderMaterialSubTable(tableBody, data, status) {
             const respAlmox = m.responsavelEntrega || m.responsavelSeparador || 'N/A';
             const dataLancamento = formatTimestampComTempo(m.registradoEm);
 
-            rowContent = `
-                <td>${m.unidadeNome}</td>
-                <td class="capitalize">${m.tipoMaterial}</td>
-                <td>${dataEntrega}</td>
-                <td>${respUnidade}</td>
-                <td>${respAlmox}</td>
-                <td class="text-center text-xs">${dataLancamento}</td>
-                 <td class="text-center">
-                    <button class="btn-icon btn-remove text-red-600 hover:text-red-800" data-id="${m.id}" data-type="materiais" title="Remover Requisição"><i data-lucide="trash-2"></i></button>
-                 </td>
-            `;
+            rowContent = '<td>' + m.unidadeNome + '</td>' +
+                '<td class="capitalize">' + m.tipoMaterial + '</td>' +
+                '<td>' + dataEntrega + '</td>' +
+                '<td>' + respUnidade + '</td>' +
+                '<td>' + respAlmox + '</td>' +
+                '<td class="text-center text-xs">' + dataLancamento + '</td>' +
+                 '<td class="text-center">' +
+                    '<button class="btn-icon btn-remove text-red-600 hover:text-red-800" data-id="' + m.id + '" data-type="materiais" title="Remover Requisição"><i data-lucide="trash-2"></i></button>' +
+                 '</td>';
         }
         
+        // Linha principal
+        html += '<tr>' + rowContent + '</tr>';
+        
         // Incluir linha de observação se houver
-        const obsRow = m.itens ? `
-            <tr class="obs-row ${status === 'entregue' ? 'opacity-60' : ''} border-b border-slate-200">
-                <td colspan="7" class="pt-0 pb-1 px-6 text-xs text-slate-500 whitespace-pre-wrap italic">Obs: ${m.itens}</td>
-            </tr>` : '';
+        if (m.itens) {
+            html += '<tr class="obs-row ' + (status === 'entregue' ? 'opacity-60' : '') + ' border-b border-slate-200">' +
+                '<td colspan="7" class="pt-0 pb-1 px-6 text-xs text-slate-500 whitespace-pre-wrap italic">Obs: ' + m.itens + '</td>' +
+                '</tr>';
+        }
+    });
 
-        return `<tr>${rowContent}</tr>` + obsRow;
-    }).join('');
+    tableBody.innerHTML = html;
     
     if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
 }
