@@ -370,7 +370,14 @@ function clearAlmoxarifadoData() {
         const dashMateriaisProntos = document.getElementById('dashboard-materiais-prontos');
         if (dashMateriaisList) dashMateriaisList.innerHTML = '<p class="text-center py-4 text-red-500">Desconectado</p>';
         if (dashMateriaisProntos) {
-             dashMateriaisProntos.innerHTML = '<div class="text-center p-10 col-span-full" id="loading-materiais-prontos"><div class="loading-spinner-small mx-auto mb-2"></div><p class="text-sm text-slate-500">Carregando...</p></div>'; 
+             // MODIFICADO: Apenas limpa as colunas UL, não substitui o container
+             const colunasUL = dashMateriaisProntos.querySelectorAll('ul[id^="coluna-"]');
+             if (colunasUL.length > 0) {
+                 colunasUL.forEach(ul => ul.innerHTML = '');
+             } else {
+                 // Fallback se as colunas não existirem (o que não deve acontecer com o index.html corrigido)
+                 dashMateriaisProntos.innerHTML = '<p class="text-center py-4 text-red-500 col-span-full">Desconectado</p>';
+             }
         }
         
         [dashboardAguaChartInstance, dashboardGasChartInstance, graficoPrevisao.agua, graficoPrevisao.gas].forEach(chartInstance => { 
@@ -1894,6 +1901,14 @@ function renderDashboardMateriaisList() {
     }).join('');
 }
 
+//
+// ===================================================================================
+// FUNÇÃO MODIFICADA (renderDashboardMateriaisProntos)
+// Esta função foi alterada para seguir as instruções do DSASDSD.txt.
+// Ela agora popula as 5 colunas UL (coluna-CT, coluna-SEDE, etc.)
+// que existem estaticamente no index.html, em vez de recriar o HTML.
+// ===================================================================================
+//
 function renderDashboardMateriaisProntos(filterStatus = null) {
     if (!domReady) {
         console.warn("renderDashboardMateriaisProntos chamada antes do DOM estar pronto (domReady=false). Aguardando...");
@@ -1901,27 +1916,21 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     }
 
     const container = dashboardMateriaisProntosContainer;
-    const titleEl = dashboardMateriaisTitle; // <<< Pode ser null
-    const clearButton = btnClearDashboardFilter; // <<< Pode ser null
-    const loaderOriginal = loadingMateriaisProntos; 
+    const titleEl = dashboardMateriaisTitle; 
+    const clearButton = btnClearDashboardFilter; 
+    // O 'loadingMateriaisProntos' (do HTML antigo) não é mais usado aqui,
+    // pois as colunas estão sempre visíveis.
 
-     // Apenas container e loader são essenciais para a função rodar minimamente
-     if (!container || !loaderOriginal) {
-        console.error("Elementos CRÍTICOS (container ou loader) do Dashboard Materiais Prontos não encontrados!");
+     if (!container) {
+        console.error("Elemento CRÍTICO (container dashboard-materiais-prontos) não encontrado!");
         return; 
     }
     
-    if (loaderOriginal.style.display !== 'none') {
-         loaderOriginal.style.display = 'none'; 
-    }
-    
-    container.innerHTML = '<div class="text-center p-10 col-span-full"><div class="loading-spinner-small mx-auto mb-2"></div><p class="text-sm text-slate-500">Atualizando...</p></div>';
-
+    // --- Lógica de filtragem (igual à anterior) ---
     let pendentes = fb_materiais.filter(m => m.status === 'requisitado' || m.status === 'separacao' || m.status === 'retirada');
     
     let filterToDisplay = filterStatus;
     if (filterStatus === 'separacao') {
-         // Se o filtro for 'separacao', inclui também 'requisitado' na exibição da contagem geral
          pendentes = pendentes.filter(m => m.status === 'separacao' || m.status === 'requisitado');
          filterToDisplay = 'Em Separação/Requisitado';
     } else if (filterStatus) {
@@ -1929,8 +1938,6 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
          filterToDisplay = filterStatus === 'retirada' ? 'Disponíveis p/ Retirada' : filterStatus;
     }
 
-
-    // Só manipula se existir
     if (clearButton) clearButton.classList.toggle('hidden', !filterStatus); 
     if (titleEl) {
         if (filterStatus === 'separacao') {
@@ -1942,82 +1949,113 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
         }
     }
     
-    let contentHtml = ''; 
+    // --- NOVA LÓGICA (Baseada no .txt) ---
+
+    // 1. Encontrar as colunas UL do index.html
+    // As colunas agora são estáticas no index.html
+    const colunas = {
+        CT: document.getElementById("coluna-CT"),
+        SEDE: document.getElementById("coluna-SEDE"),
+        CRAS: document.getElementById("coluna-CRAS"),
+        CREAS: document.getElementById("coluna-CREAS"),
+        ABRIGO: document.getElementById("coluna-ABRIGO"),
+    };
+
+    // 2. Limpar o conteúdo anterior
+    let totalPendentesVisiveis = 0;
+    Object.keys(colunas).forEach(key => {
+        if (colunas[key]) {
+            colunas[key].innerHTML = ""; // Limpa a lista
+        }
+    });
     
-    if (pendentes.length === 0) {
-        contentHtml = `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</p>`;
-    } else {
-        const gruposTipoUnidade = pendentes.reduce((acc, m) => {
-            let tipoUnidade = (m.tipoUnidade || 'OUTROS').toUpperCase();
-            if (tipoUnidade === 'SEMCAS') tipoUnidade = 'SEDE'; 
-            
-            if (!acc[tipoUnidade]) acc[tipoUnidade] = [];
-            acc[tipoUnidade].push(m);
-            return acc;
-        }, {});
-
-        const ordemColunas = ['CT', 'SEDE', 'CRAS', 'CREAS', 'ABRIGO'];
-        Object.keys(gruposTipoUnidade).forEach(tipo => { if (!ordemColunas.includes(tipo)) ordemColunas.push(tipo); });
-
-        let colunasHtml = '';
-        let colunasRenderizadas = 0;
+    // 3. Agrupar os 'pendentes' filtrados (lógica movida da função antiga)
+    const gruposTipoUnidade = pendentes.reduce((acc, m) => {
+        let tipoUnidade = (m.tipoUnidade || 'OUTROS').toUpperCase();
+        if (tipoUnidade === 'SEMCAS') tipoUnidade = 'SEDE'; 
         
-        ordemColunas.forEach(tipoUnidade => {
-            if (gruposTipoUnidade[tipoUnidade] && gruposTipoUnidade[tipoUnidade].length > 0) {
-                colunasRenderizadas++;
-                colunasHtml += `<div class="materiais-prontos-col"><h4>${tipoUnidade}</h4><ul class="space-y-3">`; 
+        if (!acc[tipoUnidade]) acc[tipoUnidade] = [];
+        acc[tipoUnidade].push(m);
+        return acc;
+    }, {});
+
+
+    // 4. Iterar sobre os grupos de unidades e popular as ULs
+    Object.keys(gruposTipoUnidade).forEach(tipoUnidade => {
+        const ulDestino = colunas[tipoUnidade]; // Encontra a UL (CT, SEDE, etc.)
+        
+        if (ulDestino) { // Se achou a coluna UL correspondente
+            const materiaisOrdenados = gruposTipoUnidade[tipoUnidade].sort((a,b) => {
+                 const statusOrder = { 'requisitado': 1, 'separacao': 2, 'retirada': 3 };
+                 const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
+                 if (statusCompare !== 0) return statusCompare;
+                 return (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0);
+            });
+            
+            totalPendentesVisiveis += materiaisOrdenados.length;
+
+            materiaisOrdenados.forEach(m => {
+                const tiposMateriais = m.tipoMaterial || 'N/D';
                 
-                const materiaisOrdenados = gruposTipoUnidade[tipoUnidade].sort((a,b) => {
-                    const statusOrder = { 'requisitado': 1, 'separacao': 2, 'retirada': 3 };
-                    const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
-                    if (statusCompare !== 0) return statusCompare;
-                    return (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0);
-                });
+                // Lógica de Estilo (Baseado no .txt e no style.css)
+                let liClass = '';
+                let spanClass = 'status-indicator';
+                let spanText = '';
 
-                materiaisOrdenados.forEach(m => {
-                    const tiposMateriais = m.tipoMaterial || 'N/D';
-                    let statusIndicator = '';
-                    let itemClass = '';
-                    
-                    if (m.status === 'requisitado') {
-                         statusIndicator = `<span class="status-indicator separando" style="background-color: #f3e8ff; color: #6b21a8;">📝 Requisitado</span>`;
-                         itemClass = 'item-requisitado';
-                    } else if (m.status === 'separacao') {
-                        statusIndicator = `<span class="status-indicator separando">⏳ Separando...</span>`;
-                    } else if (m.status === 'retirada') {
-                        statusIndicator = `<span class="status-indicator pronto">✅ Pronto</span>`;
-                        itemClass = 'item-retirada';
-                    }
+                if (m.status === 'requisitado') {
+                    liClass = 'item-requisitado'; // Usa a classe do style.css (linha 123)
+                    spanClass += ' requisitado'; // Usa a classe do style.css (linha 160)
+                    spanText = '📝 Requisitado';
+                } else if (m.status === 'separacao') {
+                    // Nenhuma classe de li, style.css (linha 129) pega por negação
+                    spanClass += ' separando'; // Usa a classe do style.css (linha 166)
+                    spanText = '⏳ Separando...';
+                } else if (m.status === 'retirada') {
+                    liClass = 'item-retirada'; // Usa a classe do style.css (linha 135)
+                    spanClass += ' pronto'; // Usa a classe do style.css (linha 173)
+                    spanText = '✅ Pronto';
+                }
 
-                    colunasHtml += `
-                        <li class="${itemClass}">
-                            <strong>${m.unidadeNome}</strong><br>
-                            <span class="capitalize">(${tiposMateriais})</span>
-                            <div>${statusIndicator}</div>
-                        </li>`; 
-                });
+                // Criar o <li>
+                const li = document.createElement('li');
+                li.className = liClass; // 'item-requisitado' ou 'item-retirada' ou ''
                 
-                colunasHtml += `</ul></div>`;
-            }
-        });
+                // InnerHTML baseado no .txt (Spec 2) e adaptado
+                li.innerHTML = `
+                    <strong class="text-sm text-gray-800">${m.unidadeNome}</strong>
+                    <p class="text-xs text-gray-500 capitalize">(${tiposMateriais})</p>
+                    <div><span class="${spanClass}">${spanText}</span></div>
+                `;
+                ulDestino.appendChild(li);
+            });
+        } else {
+             // Se um tipo (ex: 'OUTROS') não tiver uma coluna UL, é ignorado
+             console.warn(`Tipo de unidade "${tipoUnidade}" não tem coluna no HTML. Itens ignorados.`);
+        }
+    });
 
-        contentHtml = colunasRenderizadas > 0 ? colunasHtml : `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</p>`;
+    // 5. Se não houver NENHUM pendente, mostrar mensagem.
+    if (totalPendentesVisiveis === 0) {
+        const placeholder = `<li class="text-sm text-slate-500 text-center py-4">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</li>`;
+        if (colunas.CT) {
+             // Coloca o placeholder na primeira coluna (CT)
+             colunas.CT.innerHTML = placeholder;
+        } else {
+            // Fallback se a coluna CT não for encontrada
+            container.innerHTML = `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</p>`;
+        }
     }
     
-    // Usar setTimeout 0 para garantir que a renderização ocorra após o fluxo atual
-    setTimeout(() => {
-        // Re-verificar container no caso de alguma remoção inesperada
-        const currentContainer = document.getElementById('dashboard-materiais-prontos');
-        if(currentContainer) { 
-             currentContainer.innerHTML = contentHtml;
-            if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
-                lucide.createIcons(); 
-            }
-        } else {
-            console.error("Container 'dashboard-materiais-prontos' desapareceu antes da renderização final.");
-        }
-    }, 0);
+    // 6. Recriar ícones (se houver algum)
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+        lucide.createIcons(); 
+    }
+    // --- FIM DA NOVA LÓGICA ---
 }
+// ===================================================================================
+// FIM DA FUNÇÃO MODIFICADA
+// ===================================================================================
+
 
 function filterDashboardMateriais(status) {
     // CORREÇÃO CRÍTICA:
@@ -2067,7 +2105,8 @@ function startDashboardRefresh() {
         updateLastUpdateTime(); 
         
         if (!currentDashboardMaterialFilter) {
-            autoScrollView(dashboardMateriaisProntosContainer); 
+            // A rolagem automática agora deve ser verificada no container que tem as colunas
+             autoScrollView(dashboardMateriaisProntosContainer); 
         }
 
     }, 120000);
@@ -2633,7 +2672,8 @@ function setupApp() {
     summaryAguaPendente = document.getElementById('summary-agua-pendente'); summaryAguaEntregue = document.getElementById('summary-agua-entregue'); summaryAguaRecebido = document.getElementById('summary-agua-recebido');
     summaryGasPendente = document.getElementById('summary-gas-pendente'); summaryGasEntregue = document.getElementById('summary-gas-entregue'); summaryGasRecebido = document.getElementById('summary-gas-recebido');
     dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos'); 
-    loadingMateriaisProntos = document.getElementById('loading-materiais-prontos'); 
+    // loadingMateriaisProntos não é mais necessário pois o HTML é estático
+    // loadingMateriaisProntos = document.getElementById('loading-materiais-prontos'); 
     btnClearDashboardFilter = document.getElementById('btn-clear-dashboard-filter'); 
     dashboardMateriaisTitle = document.getElementById('dashboard-materiais-title'); 
     dashboardMateriaisListContainer = document.getElementById('dashboard-materiais-list'); loadingMateriaisDashboard = document.getElementById('loading-materiais-dashboard');
@@ -2664,13 +2704,13 @@ function setupApp() {
     tableHistoricoGas = document.getElementById('table-historico-gas'); alertHistoricoGas = document.getElementById('alert-historico-gas');
 
     // <<< VERIFICAÇÃO CRÍTICA >>>
-    if (!dashboardMateriaisProntosContainer || !loadingMateriaisProntos) {
+    if (!dashboardMateriaisProntosContainer) {
         console.error("ERRO CRÍTICO: Container ou loader do dashboard de materiais NÃO encontrados DENTRO de setupApp!");
         showAlert('alert-agua', 'Erro crítico ao carregar interface. Recarregue a página (Erro Setup).', 'error', 60000);
         // O domReady não é alterado, o que impediria a inicialização do app.
         return; 
     } else {
-        console.log("Elementos essenciais (container, loader) encontrados DENTRO de setupApp.");
+        console.log("Elementos essenciais (container) encontrados DENTRO de setupApp.");
     }
     
     // CORREÇÃO CRÍTICA: Se o setup chegou até aqui, o DOM está pronto.
