@@ -1424,7 +1424,7 @@ async function calcularPrevisaoInteligente(itemType) {
     btn.innerHTML = '<div class="loading-spinner-small inline-block" style="width:1em; height:1em;"></div> Calculando...';
     
     // Variáveis que serão atribuídas após a chamada da função
-    let consumoResult, consumoTotal, consumoMedioDiario, dias;
+    let consumoResult; // Não precisa declarar as internas aqui
 
     try {
         const diasPrevisao = parseInt(document.getElementById(`dias-previsao-${itemType}`)?.value, 10) || 7;
@@ -1462,11 +1462,9 @@ async function calcularPrevisaoInteligente(itemType) {
             exclusoes: exclusoes
         };
 
-        // CORREÇÃO CRÍTICA DO ERRO DE SINTAXE: Usando desestruturação aqui
-        consumoResult = getConsumoDiarioMedio(itemType, filterConfig);
-        // Desestruturação correta
-        ({ consumoTotal, consumoMedioDiario, dias } = consumoResult); 
-        // FIM DA CORREÇÃO CRÍTICA
+        // CORREÇÃO FINAL PARA INVALID ASSIGNMENT:
+        // Usa a desestruturação no momento da declaração para evitar o erro.
+        const { consumoTotal, consumoMedioDiario, dias } = getConsumoDiarioMedio(itemType, filterConfig);
         
         if (consumoTotal === 0) {
             showAlert(`alertas-previsao-${itemType}`, 'Não há dados de consumo para os últimos 30 dias com os filtros selecionados.', 'info');
