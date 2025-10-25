@@ -349,23 +349,23 @@
         <!-- PAINEL CONTROLE DE ÁGUA (ID: content-agua)    -->
         <!-- ============================================= -->
         <div id="content-agua" class="fade-in hidden">
-             <!-- Sub-navegação MODIFICADA -->
+             <!-- Sub-navegação MODIFICADA (Ícones Lucide) -->
              <div class="flex flex-wrap gap-2 mb-6" id="sub-nav-agua">
                  <button class="sub-nav-btn active" data-subview="movimentacao-agua">
-                    <i data-lucide="edit"></i>
-                    <span>✍️ Lançamento</span>
+                    <i data-lucide="edit-3"></i>
+                    <span>Lançamento</span>
                  </button>
                  <button class="sub-nav-btn" data-subview="status-agua">
-                    <i data-lucide="layers-3"></i>
-                    <span>💧 Status de Galões (Saldo nas Unidades)</span>
+                    <i data-lucide="droplets"></i>
+                    <span>Status de Galões (Saldo nas Unidades)</span>
                  </button>
                  <button class="sub-nav-btn" data-subview="historico-agua">
                     <i data-lucide="archive"></i>
-                    <span>📦 Histórico de Entradas no Estoque</span>
+                    <span>Histórico de Entradas no Estoque</span>
                  </button>
                  <button class="sub-nav-btn" data-subview="previsao-agua">
                     <i data-lucide="bar-chart-3"></i>
-                    <span>📈 Previsão</span>
+                    <span>Previsão</span>
                  </button>
              </div>
 
@@ -464,9 +464,10 @@
                                 <label for="input-data-agua" class="form-label">Data</label>
                                 <input type="date" id="input-data-agua" class="form-input" required>
                             </div>
+                            <!-- CORREÇÃO 1: Campo de Responsável da Unidade -->
                             <div>
                                  <label for="input-responsavel-agua" class="form-label">Nome de quem Recebeu/Devolveu (Unidade)</label>
-                                 <input type="text" id="input-responsavel-agua" class="form-input" placeholder="Nome do Responsável da Unidade" required>
+                                 <input type="text" id="input-responsavel-agua" class="form-input" placeholder="Nome do Responsável da Unidade (quem recebeu ou devolveu)" required>
                             </div>
                             <button type="submit" id="btn-submit-agua" class="btn-primary w-full !mt-6">
                                 <i data-lucide="save"></i> <span>Salvar Movimentação</span>
@@ -506,7 +507,7 @@
             <!-- Sub-view: Status de Galões (Saldo nas Unidades) - NOVO -->
             <div id="subview-status-agua" class="hidden">
                  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                     <h2 class="text-xl font-bold text-gray-800 mb-4">💧 Status de Galões (Saldo nas Unidades)</h2>
+                     <h2 class="text-xl font-bold text-gray-800 mb-4"><i data-lucide="droplets" class="inline-block -mt-1 mr-2"></i> Status de Galões (Saldo nas Unidades)</h2>
                      <p class="text-sm text-gray-600 mb-4">Veja o saldo atual de galões cheios pendentes de devolução ou crédito nas unidades.</p>
                      <div id="alert-agua-lista" class="alert mb-4"></div>
                      
@@ -538,7 +539,7 @@
             <!-- Sub-view: Histórico de Entradas no Estoque - NOVO -->
              <div id="subview-historico-agua" class="hidden">
                  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4">📦 Histórico de Entradas no Estoque (Água)</h2>
+                    <h2 class="text-xl font-bold text-gray-800 mb-4"><i data-lucide="archive" class="inline-block -mt-1 mr-2"></i> Histórico de Entradas no Estoque (Água)</h2>
                     <p class="text-sm text-gray-600 mb-4">Detalhes das entradas de galões no almoxarifado (inicial e compras).</p>
                     <div id="alert-historico-agua" class="alert mb-4"></div>
                     
@@ -669,23 +670,23 @@
         <!-- PAINEL CONTROLE DE GÁS (ID: content-gas)      -->
         <!-- ============================================= -->
         <div id="content-gas" class="fade-in hidden">
-            <!-- Sub-navegação MODIFICADA -->
+            <!-- Sub-navegação MODIFICADA (Ícones Lucide) -->
             <div class="flex flex-wrap gap-2 mb-6" id="sub-nav-gas">
                 <button class="sub-nav-btn active" data-subview="movimentacao-gas">
-                   <i data-lucide="edit"></i>
-                   <span>✍️ Lançamento</span>
+                   <i data-lucide="edit-3"></i>
+                   <span>Lançamento</span>
                 </button>
                 <button class="sub-nav-btn" data-subview="status-gas">
-                   <i data-lucide="layers-3"></i>
-                   <span>🔥 Status de Botijões (Saldo nas Unidades)</span>
+                   <i data-lucide="flame"></i>
+                   <span>Status de Botijões (Saldo nas Unidades)</span>
                 </button>
                 <button class="sub-nav-btn" data-subview="historico-gas">
                    <i data-lucide="archive"></i>
-                   <span>📦 Histórico de Entradas no Estoque</span>
+                   <span>Histórico de Entradas no Estoque</span>
                 </button>
                 <button class="sub-nav-btn" data-subview="previsao-gas">
                    <i data-lucide="bar-chart-3"></i>
-                   <span>📈 Previsão</span>
+                   <span>Previsão</span>
                 </button>
             </div>
 
@@ -781,9 +782,10 @@
                                <label for="input-data-gas" class="form-label">Data</label>
                                <input type="date" id="input-data-gas" class="form-input" required>
                            </div>
+                           <!-- CORREÇÃO 1: Campo de Responsável da Unidade -->
                            <div>
                                 <label for="input-responsavel-gas" class="form-label">Nome de quem Recebeu/Devolveu (Unidade)</label>
-                                <input type="text" id="input-responsavel-gas" class="form-input" placeholder="Nome do Responsável da Unidade" required>
+                                <input type="text" id="input-responsavel-gas" class="form-input" placeholder="Nome do Responsável da Unidade (quem recebeu ou devolveu)" required>
                            </div>
                            <button type="submit" id="btn-submit-gas" class="btn-primary w-full !mt-6">
                                <i data-lucide="save"></i> <span>Salvar Movimentação</span>
@@ -821,7 +823,7 @@
             <!-- Sub-view: Status de Botijões (Saldo nas Unidades) - NOVO -->
             <div id="subview-status-gas" class="hidden">
                  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                     <h2 class="text-xl font-bold text-gray-800 mb-4">🔥 Status de Botijões (Saldo nas Unidades)</h2>
+                     <h2 class="text-xl font-bold text-gray-800 mb-4"><i data-lucide="flame" class="inline-block -mt-1 mr-2"></i> Status de Botijões (Saldo nas Unidades)</h2>
                      <p class="text-sm text-gray-600 mb-4">Veja o saldo atual de botijões cheios pendentes de devolução ou crédito nas unidades.</p>
                      <div id="alert-gas-lista" class="alert mb-4"></div>
                      
@@ -853,7 +855,7 @@
             <!-- Sub-view: Histórico de Entradas no Estoque - NOVO -->
             <div id="subview-historico-gas" class="hidden">
                  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4">📦 Histórico de Entradas no Estoque (Gás)</h2>
+                    <h2 class="text-xl font-bold text-gray-800 mb-4"><i data-lucide="archive" class="inline-block -mt-1 mr-2"></i> Histórico de Entradas no Estoque (Gás)</h2>
                     <p class="text-sm text-gray-600 mb-4">Detalhes das entradas de botijões no almoxarifado (inicial e compras).</p>
                     <div id="alert-historico-gas" class="alert mb-4"></div>
                     
@@ -1183,10 +1185,11 @@
                 <button class="modal-close" onclick="document.getElementById('almoxarifado-responsavel-modal').style.display='none'">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="mb-4 text-sm text-gray-700">Informe seu nome (Responsável do Almoxarifado) para registrar quem está realizando a **entrega** desta movimentação. Esta informação é crucial para o histórico de rastreio.</p>
+                <!-- CORREÇÃO 1: Atualizado o texto para refletir a necessidade de quem entrega -->
+                <p class="mb-4 text-sm text-gray-700">Informe seu nome (Responsável do Almoxarifado) para registrar quem está realizando a **entrega** ou **recebimento de vazio** desta movimentação. Esta informação é crucial para o rastreio.</p>
                 <div>
                      <label for="input-almox-responsavel-nome" class="form-label">Seu Nome (Almoxarifado):</label>
-                     <input type="text" id="input-almox-responsavel-nome" class="form-input" placeholder="Nome de quem está entregando" required>
+                     <input type="text" id="input-almox-responsavel-nome" class="form-input" placeholder="Nome de quem está entregando/recebendo o garrafão/botijão" required>
                      <!-- Campos hidden para guardar os dados do formulário principal antes de salvar -->
                      <input type="hidden" id="almox-temp-unidadeId">
                      <input type="hidden" id="almox-temp-unidadeNome">
@@ -1204,7 +1207,7 @@
               <button class="btn-secondary" onclick="document.getElementById('almoxarifado-responsavel-modal').style.display='none'">Cancelar</button>
               <button id="btn-salvar-movimentacao-final" class="btn-primary">
                   <i data-lucide="package-open"></i>
-                  Confirmar Entrega
+                  Confirmar Movimentação
               </button>
             </div>
         </div>
