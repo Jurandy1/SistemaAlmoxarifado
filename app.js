@@ -1575,7 +1575,7 @@ function handleCancelEditUnidadeClick(e) {
     if (!button) return;
     
     const td = button.closest('td');
-    const row = td.closest('tr');
+    const row = button.closest('tr');
     const unidadeId = row.dataset.unidadeId;
     const unidade = fb_unidades.find(u => u.id === unidadeId);
     
@@ -1917,9 +1917,10 @@ function renderDashboardMateriaisList() {
 //
 // ===================================================================================
 // FUNÇÃO MODIFICADA (renderDashboardMateriaisProntos)
-// Esta função foi alterada para seguir as instruções do DSASDSD.txt.
-// Ela agora popula as 5 colunas UL (coluna-CT, coluna-SEDE, etc.)
-// que existem estaticamente no index.html, em vez de recriar o HTML.
+// Esta função foi alterada para seguir as instruções do usuário:
+// 1. Manter a ordem de 5 colunas fixas (CT, SEDE, CRAS, CREAS, ABRIGO).
+// 2. Se uma coluna fixa estiver vazia, ela é substituída por um tipo de unidade 
+//    que tenha materiais pendentes, mas não possui uma coluna fixa própria (ex: Centro Pop).
 // ===================================================================================
 //
 function renderDashboardMateriaisProntos(filterStatus = null) {
@@ -1931,23 +1932,26 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     const container = dashboardMateriaisProntosContainer;
     const titleEl = dashboardMateriaisTitle; 
     const clearButton = btnClearDashboardFilter; 
-    // O 'loadingMateriaisProntos' (do HTML antigo) não é mais usado aqui,
-    // pois as colunas estão sempre visíveis.
 
-     if (!container) {
-        // CORREÇÃO: Este log não deve mais aparecer se setupApp() rodar primeiro.
+    if (!container) {
         console.error("Elemento CRÍTICO (container dashboard-materiais-prontos) não encontrado!");
         return; 
     }
     
-    // --- Lógica de filtragem (igual à anterior) ---
+    // Colunas fixas na ordem do DOM
+    const COLUNAS_DOM = ['CT', 'SEDE', 'CRAS', 'CREAS', 'ABRIGO'];
+    const colunaDOMElements = Array.from(container.querySelectorAll('.materiais-prontos-col'));
+    
+    // --- Lógica de filtragem ---
     let pendentes = fb_materiais.filter(m => m.status === 'requisitado' || m.status === 'separacao' || m.status === 'retirada');
     
     let filterToDisplay = filterStatus;
     if (filterStatus === 'separacao') {
+         // O card de separação inclui requisitado
          pendentes = pendentes.filter(m => m.status === 'separacao' || m.status === 'requisitado');
          filterToDisplay = 'Em Separação/Requisitado';
     } else if (filterStatus) {
+         // O card de retirada (ou outro status, se houver)
          pendentes = pendentes.filter(m => m.status === filterStatus);
          filterToDisplay = filterStatus === 'retirada' ? 'Disponíveis p/ Retirada' : filterStatus;
     }
@@ -1963,120 +1967,135 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
         }
     }
     
-    // --- NOVA LÓGICA (Baseada no .txt) ---
+    // --- Lógica de Agrupamento e Mapeamento de Colunas Dinâmicas ---
 
-    // 1. Encontrar as colunas UL do index.html
-    const colunas = {
-        CT: document.getElementById("coluna-CT"),
-        SEDE: document.getElementById("coluna-SEDE"),
-        CRAS: document.getElementById("coluna-CRAS"),
-        CREAS: document.getElementById("coluna-CREAS"),
-        ABRIGO: document.getElementById("coluna-ABRIGO"),
-    };
-    
-    // Define os tipos de unidade que têm uma coluna estática
-    const TIPOS_DE_COLUNA = Object.keys(colunas); // ['CT', 'SEDE', 'CRAS', 'CREAS', 'ABRIGO']
-
-    // 2. Limpar o conteúdo anterior
-    let totalPendentesVisiveis = 0;
-    Object.keys(colunas).forEach(key => {
-        if (colunas[key]) {
-            colunas[key].innerHTML = ""; // Limpa a lista
-        }
-    });
-    
-    // 3. Agrupar os 'pendentes' filtrados (lógica movida da função antiga)
-    const gruposTipoUnidade = pendentes.reduce((acc, m) => {
-        let tipoUnidade = (m.tipoUnidade || '').toUpperCase();
-        if (tipoUnidade === 'SEMCAS') tipoUnidade = 'SEDE'; 
-        
-        // CORREÇÃO: Usar um filtro explícito para garantir que o tipo da unidade 
-        // corresponda a uma coluna existente. Se não corresponder, ignora.
-        if (!TIPOS_DE_COLUNA.includes(tipoUnidade)) {
-             // console.warn(`Item de material ignorado: Tipo de unidade "${tipoUnidade}" não mapeado para coluna.`);
-             return acc; // Ignora o item se não for um tipo de coluna esperado
-        }
-        
+    // 1. Agrupar todos os materiais pendentes por tipoUnidade
+    const gruposPendentes = pendentes.reduce((acc, m) => {
+        let tipoUnidade = (m.tipoUnidade || 'OUTROS').toUpperCase();
+        if (tipoUnidade === 'SEMCAS') tipoUnidade = 'SEDE';
         if (!acc[tipoUnidade]) acc[tipoUnidade] = [];
         acc[tipoUnidade].push(m);
         return acc;
     }, {});
 
+    // 2. Separar tipos com dados em fixos e não-fixos
+    // Tipos que TEM dados pendentes
+    const tiposComDados = Object.keys(gruposPendentes).filter(tipo => gruposPendentes[tipo].length > 0).sort();
+    
+    // Tipos que tem dados, mas não são colunas fixas (substitutos)
+    const tiposNaoFixosComDados = tiposComDados.filter(tipo => !COLUNAS_DOM.includes(tipo));
+    const tiposSubstitutos = [...tiposNaoFixosComDados]; // Substitutos disponíveis (FIFO)
+    
+    // 3. Determinar o mapeamento final de Coluna DOM -> Tipo de Unidade
+    let totalPendentesVisiveis = 0;
+    const mapeamentoColunas = []; 
 
-    // 4. Iterar sobre os grupos de unidades e popular as ULs
-    Object.keys(gruposTipoUnidade).forEach(tipoUnidade => {
-        const ulDestino = colunas[tipoUnidade]; // Encontra a UL (CT, SEDE, etc.)
+    for (let i = 0; i < COLUNAS_DOM.length; i++) {
+        const tipoFixo = COLUNAS_DOM[i];
         
-        if (ulDestino) { // Se achou a coluna UL correspondente
-            const materiaisOrdenados = gruposTipoUnidade[tipoUnidade].sort((a,b) => {
-                 const statusOrder = { 'requisitado': 1, 'separacao': 2, 'retirada': 3 };
-                 const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
-                 if (statusCompare !== 0) return statusCompare;
-                 return (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0);
-            });
-            
-            totalPendentesVisiveis += materiaisOrdenados.length;
-
-            materiaisOrdenados.forEach(m => {
-                const tiposMateriais = m.tipoMaterial || 'N/D';
-                
-                // Lógica de Estilo (Baseado no .txt e no style.css)
-                let liClass = '';
-                let spanClass = 'status-indicator';
-                let spanText = '';
-
-                if (m.status === 'requisitado') {
-                    liClass = 'item-requisitado'; // Usa a classe do style.css (linha 123)
-                    spanClass += ' requisitado'; // Usa a classe do style.css (linha 160)
-                    spanText = '📝 Requisitado';
-                } else if (m.status === 'separacao') {
-                    // Nenhuma classe de li, style.css (linha 129) pega por negação
-                    spanClass += ' separando'; // Usa a classe do style.css (linha 166)
-                    spanText = '⏳ Separando...';
-                } else if (m.status === 'retirada') {
-                    liClass = 'item-retirada'; // Usa a classe do style.css (linha 135)
-                    spanClass += ' pronto'; // Usa a classe do style.css (linha 173)
-                    spanText = '✅ Pronto';
-                }
-
-                // Criar o <li>
-                const li = document.createElement('li');
-                li.className = liClass; // 'item-requisitado' ou 'item-retirada' ou ''
-                
-                // InnerHTML baseado no .txt (Spec 2) e adaptado
-                li.innerHTML = `
-                    <strong class="text-sm text-gray-800">${m.unidadeNome}</strong>
-                    <p class="text-xs text-gray-500 capitalize">(${tiposMateriais})</p>
-                    <div><span class="${spanClass}">${spanText}</span></div>
-                `;
-                ulDestino.appendChild(li);
-            });
-        } else {
-             // Se um tipo (ex: 'OUTROS') não tiver uma coluna UL, é ignorado
-             console.warn(`Tipo de unidade "${tipoUnidade}" não tem coluna no HTML. Itens ignorados.`);
-        }
-    });
-
-    // 5. Se não houver NENHUM pendente, mostrar mensagem.
-    if (totalPendentesVisiveis === 0) {
-        const placeholder = `<li class="text-sm text-slate-500 text-center py-4">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</li>`;
+        // A coluna fixa tem dados?
+        const fixoTemDados = gruposPendentes[tipoFixo] && gruposPendentes[tipoFixo].length > 0;
         
-        // Tenta encontrar a primeira coluna válida para por o placeholder
-        const primeiraColunaValida = colunas.CT || colunas.SEDE || colunas.CRAS || colunas.CREAS || colunas.ABRIGO;
-
-        if (primeiraColunaValida) {
-             primeiraColunaValida.innerHTML = placeholder;
+        if (fixoTemDados) {
+            mapeamentoColunas.push(tipoFixo);
+            totalPendentesVisiveis += gruposPendentes[tipoFixo].length;
         } else {
-            // Fallback se nenhuma coluna for encontrada (o que não deve acontecer)
-            container.innerHTML = `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</p>`;
+            // Tenta substituição se não há dados para o tipo fixo desta posição
+            if (tiposSubstitutos.length > 0) {
+                const tipoSubstituto = tiposSubstitutos.shift(); 
+                mapeamentoColunas.push(tipoSubstituto);
+                totalPendentesVisiveis += gruposPendentes[tipoSubstituto].length;
+            } else {
+                // Não há substituto nem dados no fixo, a coluna é desativada
+                mapeamentoColunas.push(null); 
+            }
         }
     }
     
-    // 6. Recriar ícones (se houver algum)
+    // 4. Renderizar o DOM
+    
+    colunaDOMElements.forEach((colunaDiv, index) => {
+        const tipoExibido = mapeamentoColunas[index];
+        const ulDestino = colunaDiv.querySelector('ul');
+        const h4Cabecalho = colunaDiv.querySelector('h4');
+        
+        // Limpa e esconde o div pai (coluna)
+        ulDestino.innerHTML = ''; 
+        colunaDiv.classList.add('hidden'); 
+
+        // Restaura o título H4 original
+        h4Cabecalho.textContent = COLUNAS_DOM[index];
+
+        if (tipoExibido) {
+            colunaDiv.classList.remove('hidden'); // Mostra a coluna
+            h4Cabecalho.textContent = tipoExibido; // Define o cabeçalho (Fixo ou Substituto)
+
+            const materiaisDaColuna = gruposPendentes[tipoExibido] || [];
+            
+            if (materiaisDaColuna.length > 0) {
+                 const materiaisOrdenados = materiaisDaColuna.sort((a,b) => {
+                    const statusOrder = { 'requisitado': 1, 'separacao': 2, 'retirada': 3 };
+                    const statusCompare = (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
+                    if (statusCompare !== 0) return statusCompare;
+                    return (a.dataSeparacao?.toMillis() || 0) - (b.dataSeparacao?.toMillis() || 0);
+                 });
+
+                 materiaisOrdenados.forEach(m => {
+                    const tiposMateriais = m.tipoMaterial || 'N/D';
+                    
+                    let liClass = '';
+                    let spanClass = 'status-indicator';
+                    let spanText = '';
+
+                    if (m.status === 'requisitado') {
+                        liClass = 'item-requisitado';
+                        spanClass += ' requisitado'; 
+                        spanText = '📝 Requisitado';
+                    } else if (m.status === 'separacao') {
+                        // Nenhuma classe de li (deixa o padrão definido em style.css)
+                        spanClass += ' separando'; 
+                        spanText = '⏳ Separando...';
+                    } else if (m.status === 'retirada') {
+                        liClass = 'item-retirada';
+                        spanClass += ' pronto'; 
+                        spanText = '✅ Pronto';
+                    }
+
+                    const li = document.createElement('li');
+                    li.className = liClass;
+                    
+                    // InnerHTML adaptado
+                    li.innerHTML = `
+                        <strong class="text-sm text-gray-800">${m.unidadeNome}</strong>
+                        <p class="text-xs text-gray-500 capitalize">(${tiposMateriais})</p>
+                        <div><span class="${spanClass}">${spanText}</span></div>
+                    `;
+                    ulDestino.appendChild(li);
+                 });
+            } else {
+                 ulDestino.innerHTML = `<li class="text-sm text-slate-500 text-center py-4">Nenhum material pendente para ${tipoExibido}.</li>`;
+            }
+        }
+    });
+
+    // 5. Se não houver NENHUM pendente, garante que uma coluna exibe o placeholder.
+    if (totalPendentesVisiveis === 0) {
+        const placeholder = `<li class="text-sm text-slate-500 text-center py-4">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</li>`;
+        
+        // Tenta encontrar a primeira coluna DOM (que é 'CT')
+        const primeiraColunaDiv = colunaDOMElements[0];
+        if (primeiraColunaDiv) {
+            const ulDestino = primeiraColunaDiv.querySelector('ul');
+            ulDestino.innerHTML = placeholder;
+            primeiraColunaDiv.classList.remove('hidden'); // Garante que pelo menos o CT aparece vazio
+            primeiraColunaDiv.querySelector('h4').textContent = COLUNAS_DOM[0]; // Restaura o CT
+        }
+    }
+    
+    // 6. Recriar ícones
     if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
         lucide.createIcons(); 
     }
-    // --- FIM DA NOVA LÓGICA ---
 }
 // ===================================================================================
 // FIM DA FUNÇÃO MODIFICADA
@@ -2807,7 +2826,7 @@ function setupApp() {
     if (formInicialAgua) formInicialAgua.addEventListener('submit', handleInicialEstoqueSubmit);
     if (formInicialGas) formInicialGas.addEventListener('submit', handleInicialEstoqueSubmit);
     document.getElementById('filtro-status-agua')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-agua'));
-    document.getElementById('filtro-historico-agua')?.addEventListener('input', (e) => filterTable(e.target, 'table-historico-agua'));
+    document.getElementById('filtro-historico-agua')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-agua'));
     document.getElementById('filtro-status-gas')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-gas'));
     document.getElementById('filtro-historico-gas')?.addEventListener('input', (e) => filterTable(e.target, 'table-historico-gas'));
     document.getElementById('filtro-status-materiais')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-materiais'));
