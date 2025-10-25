@@ -1457,8 +1457,13 @@ async function calcularPrevisaoInteligente(itemType) {
             exclusoes: exclusoes
         };
 
-        // 1. Calcular consumo médio (CORRIGIDO: A desestruturação deve ser local)
-        const { consumoTotal, consumoMedioDiario, dias } = getConsumoDiarioMedio(itemType, filterConfig);
+        // CORREÇÃO CRÍTICA DO ERRO DE SINTAXE:
+        // Evitando a desestruturação direta aqui para garantir compatibilidade máxima.
+        const consumoResult = getConsumoDiarioMedio(itemType, filterConfig);
+        const consumoTotal = consumoResult.consumoTotal;
+        const consumoMedioDiario = consumoResult.consumoMedioDiario;
+        const dias = consumoResult.dias;
+        // FIM DA CORREÇÃO CRÍTICA
         
         if (consumoTotal === 0) {
             showAlert(`alertas-previsao-${itemType}`, 'Não há dados de consumo para os últimos 30 dias com os filtros selecionados.', 'info');
