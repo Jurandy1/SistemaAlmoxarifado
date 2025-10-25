@@ -608,39 +608,57 @@ async function handleAguaSubmit(e) {
         if (qtdEntregue > estoqueAtual) {
             showAlert('alert-agua', `Erro: Estoque insuficiente. Disponível: ${estoqueAtual}`, 'error'); return;
         }
-        
-        // Se houver saída, abre o modal para pegar o responsável do almoxarifado
-        almoxTempFields = {
-            unidadeId, unidadeNome, tipoUnidadeRaw,
-            tipoMovimentacao, qtdEntregue, qtdRetorno,
-            data, responsavelUnidade, itemType: 'agua'
-        };
-        // Preenche os campos hidden do modal
-        document.getElementById('almox-temp-unidadeId').value = unidadeId;
-        document.getElementById('almox-temp-unidadeNome').value = unidadeNome;
-        document.getElementById('almox-temp-tipoUnidadeRaw').value = tipoUnidadeRaw;
-        document.getElementById('almox-temp-tipoMovimentacao').value = tipoMovimentacao;
-        document.getElementById('almox-temp-qtdEntregue').value = qtdEntregue;
-        document.getElementById('almox-temp-qtdRetorno').value = qtdRetorno;
-        document.getElementById('almox-temp-data').value = data.toMillis();
-        document.getElementById('almox-temp-responsavelUnidade').value = responsavelUnidade;
-        document.getElementById('almox-temp-itemType').value = 'agua';
-
-        // Atualiza título do modal e abre
-        const modalTitle = almoxarifadoResponsavelModal.querySelector('.modal-title');
-        if (modalTitle) modalTitle.innerHTML = `<i data-lucide="box" class="w-5 h-5"></i> Confirmação de Saída de Estoque (Água)`;
-        if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } 
-        
-        // Tenta preencher o nome do almoxarifado a partir da última entrada de estoque, se disponível (opcional)
-        // Não implementado para evitar complexidade, o usuário deve digitar.
-        
-        almoxarifadoResponsavelModal.style.display = 'flex'; // Usar flex para centralizar
-        document.getElementById('input-almox-responsavel-nome').focus();
-        showAlert('alert-agua', 'Quase lá! Agora informe seu nome no pop-up para finalizar a entrega.', 'info');
-        return;
     }
     
-    // Se for APENAS RETORNO, salva diretamente sem modal
+    // CORREÇÃO 1: Vai para o modal para capturar o nome do almoxarifado em QUALQUER movimentação
+    // que impacte o estoque ou o saldo (Troca, Entrega, Retorno), para rastrear a ação.
+    
+    // Se for APENAS RETORNO ou TROCA com Retorno (que exige o nome do almox. para rastreio)
+    // Se for APENAS ENTREGA (também exige nome do almox.)
+    
+    almoxTempFields = {
+        unidadeId, unidadeNome, tipoUnidadeRaw,
+        tipoMovimentacao, qtdEntregue, qtdRetorno,
+        data, responsavelUnidade, itemType: 'agua'
+    };
+    // Preenche os campos hidden do modal
+    document.getElementById('almox-temp-unidadeId').value = unidadeId;
+    document.getElementById('almox-temp-unidadeNome').value = unidadeNome;
+    document.getElementById('almox-temp-tipoUnidadeRaw').value = tipoUnidadeRaw;
+    document.getElementById('almox-temp-tipoMovimentacao').value = tipoMovimentacao;
+    document.getElementById('almox-temp-qtdEntregue').value = qtdEntregue;
+    document.getElementById('almox-temp-qtdRetorno').value = qtdRetorno;
+    document.getElementById('almox-temp-data').value = data.toMillis();
+    document.getElementById('almox-temp-responsavelUnidade').value = responsavelUnidade;
+    document.getElementById('almox-temp-itemType').value = 'agua';
+
+    // Atualiza título do modal e abre
+    const modalTitle = almoxarifadoResponsavelModal.querySelector('.modal-title');
+    const modalBody = almoxarifadoResponsavelModal.querySelector('.modal-body p');
+    const btnConfirm = document.getElementById('btn-salvar-movimentacao-final');
+    
+    if (tipoMovimentacao === 'entrega' || (tipoMovimentacao === 'troca' && qtdEntregue > 0)) {
+         modalBody.innerHTML = `Informe seu nome (Responsável do Almoxarifado) para registrar quem está realizando a **entrega** de **${qtdEntregue}** galão(ões) cheio(s). Esta informação é crucial para o rastreio.`;
+         btnConfirm.innerHTML = `<i data-lucide="package-open"></i> Confirmar Entrega`;
+    } else if (tipoMovimentacao === 'retorno' || (tipoMovimentacao === 'troca' && qtdRetorno > 0)) {
+         modalBody.innerHTML = `Informe seu nome (Responsável do Almoxarifado) para registrar quem está realizando o **recebimento** de **${qtdRetorno}** galão(ões) vazio(s). Esta informação é crucial para o rastreio.`;
+         btnConfirm.innerHTML = `<i data-lucide="package-check"></i> Confirmar Recebimento`;
+    } else {
+        // Nunca deve acontecer com as validações acima, mas por segurança.
+        modalBody.innerHTML = `Informe seu nome (Responsável do Almoxarifado) para finalizar a movimentação.`;
+        btnConfirm.innerHTML = `<i data-lucide="save"></i> Confirmar Movimentação`;
+    }
+
+    if (modalTitle) modalTitle.innerHTML = `<i data-lucide="box" class="w-5 h-5"></i> Confirmação de Movimentação (Água)`;
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } 
+    
+    almoxarifadoResponsavelModal.style.display = 'flex'; // Usar flex para centralizar
+    document.getElementById('input-almox-responsavel-nome').focus();
+    showAlert('alert-agua', 'Quase lá! Agora informe seu nome no pop-up para finalizar.', 'info');
+    return;
+    
+    /*
+    // CÓDIGO ANTIGO REMOVIDO: Salvava direto se fosse Apenas Retorno
     if (tipoMovimentacao === 'retorno' && qtdRetorno > 0) {
          executeFinalMovimentacao({
             unidadeId, unidadeNome, tipoUnidadeRaw,
@@ -649,6 +667,7 @@ async function handleAguaSubmit(e) {
             responsavelAlmoxarifado: 'N/A - Apenas Retorno' // Não precisa de nome do almox.
          });
     }
+    */
 }
 
 // NOVO: Função única para executar o salvamento final (chamada do modal)
@@ -675,7 +694,7 @@ async function executeFinalMovimentacao(data) {
     try {
         const timestamp = serverTimestamp();
         
-        // 1. ENTREGA (SAÍDA DE ESTOQUE)
+        // 1. ENTREGA (SAÍDA DE ESTOQUE) - Salva o nome do almoxarifado em TODAS as movimentações
         if (data.qtdEntregue > 0) {
             await addDoc(collection, { 
                 unidadeId: data.unidadeId, 
@@ -691,7 +710,7 @@ async function executeFinalMovimentacao(data) {
             msgSucesso.push(`${data.qtdEntregue} ${itemType === 'agua' ? 'galão(ões)' : 'botijão(ões)'} entregue(s)`);
         }
         
-        // 2. RETORNO (ENTRADA EM ESTOQUE VAZIO/CRÉDITO)
+        // 2. RETORNO (ENTRADA EM ESTOQUE VAZIO/CRÉDITO) - Salva o nome do almoxarifado em TODAS as movimentações
         if (data.qtdRetorno > 0) {
              await addDoc(collection, { 
                  unidadeId: data.unidadeId, 
@@ -724,12 +743,13 @@ async function executeFinalMovimentacao(data) {
     } finally { 
         if (btnSubmit) {
             btnSubmit.disabled = false; 
-            btnSubmit.textContent = 'Salvar Movimentação'; 
+            btnSubmit.innerHTML = '<i data-lucide="save"></i> <span>Salvar Movimentação</span>'; 
+            if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
         }
         const btnModal = document.getElementById('btn-salvar-movimentacao-final');
          if(btnModal) {
              btnModal.disabled = false;
-             btnModal.innerHTML = '<i data-lucide="package-open"></i> Confirmar Entrega';
+             btnModal.innerHTML = '<i data-lucide="package-open"></i> Confirmar Movimentação';
              if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
          }
     }
@@ -743,7 +763,7 @@ async function handleFinalMovimentacaoSubmit() {
     const itemType = document.getElementById('almox-temp-itemType').value;
     
     if (!nomeAlmoxarifado) {
-        showAlert('alert-almox-responsavel', 'Por favor, informe seu nome (Almoxarifado) para registrar a entrega.', 'warning');
+        showAlert('alert-almox-responsavel', 'Por favor, informe seu nome (Almoxarifado) para registrar a entrega/recebimento.', 'warning');
         return;
     }
     
@@ -769,6 +789,7 @@ async function handleFinalMovimentacaoSubmit() {
     };
     
     await executeFinalMovimentacao(finalData);
+    inputAlmoxResponsavelNome.value = ''; // Limpa o nome no modal após o salvamento
 }
 
 function renderAguaStatus() {
@@ -822,7 +843,9 @@ function renderAguaStatus() {
         if(ultimoLancamento) {
             const item = (ultimoLancamento.tipo === 'entrega' ? 'Entregue' : 'Recebido');
             const responsavelPrincipal = ultimoLancamento.respUnidade;
-            ultimoLancamentoText = `${item} (${ultimoLancamento.quantidade} un.) por ${responsavelPrincipal} em ${ultimoLancamento.data}. Almox: ${ultimoLancamento.respAlmox}`;
+            const responsavelAlmox = ultimoLancamento.respAlmox;
+            
+            ultimoLancamentoText = `${item} (${ultimoLancamento.quantidade} un.) por ${responsavelPrincipal} em ${ultimoLancamento.data}. Almox: ${responsavelAlmox}`;
             remocaoBtn = `<button class="btn-danger btn-remove" data-id="${ultimoLancamento.id}" data-type="agua" title="Remover último lançamento. Responsável da Unidade: ${responsavelPrincipal}"><i data-lucide="trash-2"></i></button>`;
         }
         
@@ -902,36 +925,54 @@ async function handleGasSubmit(e) {
         if (qtdEntregue > estoqueAtual) {
             showAlert('alert-gas', `Erro: Estoque insuficiente. Disponível: ${estoqueAtual}`, 'error'); return;
         }
-        
-        // Se houver saída, abre o modal para pegar o responsável do almoxarifado
-        almoxTempFields = {
-            unidadeId, unidadeNome, tipoUnidadeRaw,
-            tipoMovimentacao, qtdEntregue, qtdRetorno,
-            data, responsavelUnidade, itemType: 'gas'
-        };
-        // Preenche os campos hidden do modal
-        document.getElementById('almox-temp-unidadeId').value = unidadeId;
-        document.getElementById('almox-temp-unidadeNome').value = unidadeNome;
-        document.getElementById('almox-temp-tipoUnidadeRaw').value = tipoUnidadeRaw;
-        document.getElementById('almox-temp-tipoMovimentacao').value = tipoMovimentacao;
-        document.getElementById('almox-temp-qtdEntregue').value = qtdEntregue;
-        document.getElementById('almox-temp-qtdRetorno').value = qtdRetorno;
-        document.getElementById('almox-temp-data').value = data.toMillis();
-        document.getElementById('almox-temp-responsavelUnidade').value = responsavelUnidade;
-        document.getElementById('almox-temp-itemType').value = 'gas';
-
-        // Atualiza título do modal e abre
-        const modalTitle = almoxarifadoResponsavelModal.querySelector('.modal-title');
-        if (modalTitle) modalTitle.innerHTML = `<i data-lucide="box" class="w-5 h-5"></i> Confirmação de Saída de Estoque (Gás)`;
-        if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } 
-
-        almoxarifadoResponsavelModal.style.display = 'flex';
-        document.getElementById('input-almox-responsavel-nome').focus();
-        showAlert('alert-gas', 'Quase lá! Agora informe seu nome no pop-up para finalizar a entrega.', 'info');
-        return;
     }
     
-    // Se for APENAS RETORNO, salva diretamente sem modal
+    // CORREÇÃO 2: Vai para o modal para capturar o nome do almoxarifado em QUALQUER movimentação
+    
+    // Se houver saída, abre o modal para pegar o responsável do almoxarifado
+    almoxTempFields = {
+        unidadeId, unidadeNome, tipoUnidadeRaw,
+        tipoMovimentacao, qtdEntregue, qtdRetorno,
+        data, responsavelUnidade, itemType: 'gas'
+    };
+    // Preenche os campos hidden do modal
+    document.getElementById('almox-temp-unidadeId').value = unidadeId;
+    document.getElementById('almox-temp-unidadeNome').value = unidadeNome;
+    document.getElementById('almox-temp-tipoUnidadeRaw').value = tipoUnidadeRaw;
+    document.getElementById('almox-temp-tipoMovimentacao').value = tipoMovimentacao;
+    document.getElementById('almox-temp-qtdEntregue').value = qtdEntregue;
+    document.getElementById('almox-temp-qtdRetorno').value = qtdRetorno;
+    document.getElementById('almox-temp-data').value = data.toMillis();
+    document.getElementById('almox-temp-responsavelUnidade').value = responsavelUnidade;
+    document.getElementById('almox-temp-itemType').value = 'gas';
+
+    // Atualiza título do modal e abre
+    const modalTitle = almoxarifadoResponsavelModal.querySelector('.modal-title');
+    const modalBody = almoxarifadoResponsavelModal.querySelector('.modal-body p');
+    const btnConfirm = document.getElementById('btn-salvar-movimentacao-final');
+    
+    if (tipoMovimentacao === 'entrega' || (tipoMovimentacao === 'troca' && qtdEntregue > 0)) {
+         modalBody.innerHTML = `Informe seu nome (Responsável do Almoxarifado) para registrar quem está realizando a **entrega** de **${qtdEntregue}** botijão(ões) cheio(s). Esta informação é crucial para o rastreio.`;
+         btnConfirm.innerHTML = `<i data-lucide="package-open"></i> Confirmar Entrega`;
+    } else if (tipoMovimentacao === 'retorno' || (tipoMovimentacao === 'troca' && qtdRetorno > 0)) {
+         modalBody.innerHTML = `Informe seu nome (Responsável do Almoxarifado) para registrar quem está realizando o **recebimento** de **${qtdRetorno}** botijão(ões) vazio(s). Esta informação é crucial para o rastreio.`;
+         btnConfirm.innerHTML = `<i data-lucide="package-check"></i> Confirmar Recebimento`;
+    } else {
+        // Nunca deve acontecer com as validações acima, mas por segurança.
+        modalBody.innerHTML = `Informe seu nome (Responsável do Almoxarifado) para finalizar a movimentação.`;
+        btnConfirm.innerHTML = `<i data-lucide="save"></i> Confirmar Movimentação`;
+    }
+
+    if (modalTitle) modalTitle.innerHTML = `<i data-lucide="box" class="w-5 h-5"></i> Confirmação de Movimentação (Gás)`;
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } 
+
+    almoxarifadoResponsavelModal.style.display = 'flex';
+    document.getElementById('input-almox-responsavel-nome').focus();
+    showAlert('alert-gas', 'Quase lá! Agora informe seu nome no pop-up para finalizar.', 'info');
+    return;
+    
+    /*
+    // CÓDIGO ANTIGO REMOVIDO: Salvava direto se fosse Apenas Retorno
     if (tipoMovimentacao === 'retorno' && qtdRetorno > 0) {
          executeFinalMovimentacao({
             unidadeId, unidadeNome, tipoUnidadeRaw,
@@ -940,6 +981,7 @@ async function handleGasSubmit(e) {
             responsavelAlmoxarifado: 'N/A - Apenas Retorno' // Não precisa de nome do almox.
          });
     }
+    */
 }
 
 function renderGasStatus() {
@@ -992,7 +1034,9 @@ function renderGasStatus() {
         if(ultimoLancamento) {
             const item = (ultimoLancamento.tipo === 'entrega' ? 'Entregue' : 'Recebido');
             const responsavelPrincipal = ultimoLancamento.respUnidade;
-            ultimoLancamentoText = `${item} (${ultimoLancamento.quantidade} un.) por ${responsavelPrincipal} em ${ultimoLancamento.data}. Almox: ${ultimoLancamento.respAlmox}`;
+            const responsavelAlmox = ultimoLancamento.respAlmox;
+            
+            ultimoLancamentoText = `${item} (${ultimoLancamento.quantidade} un.) por ${responsavelPrincipal} em ${ultimoLancamento.data}. Almox: ${responsavelAlmox}`;
              remocaoBtn = `<button class="btn-danger btn-remove" data-id="${ultimoLancamento.id}" data-type="gas" title="Remover último lançamento. Responsável da Unidade: ${responsavelPrincipal}"><i data-lucide="trash-2"></i></button>`;
         }
         
@@ -3094,72 +3138,4 @@ function setupApp() {
     // NOVO: Listener para salvar nome do separador
     if (btnSalvarSeparador) btnSalvarSeparador.addEventListener('click', handleSalvarSeparador);
     // NOVO: Listener para salvar o nome do almoxarifado no modal
-    if (btnSalvarMovimentacaoFinal) btnSalvarMovimentacaoFinal.addEventListener('click', handleFinalMovimentacaoSubmit);
-    
-    document.querySelectorAll('.form-tab-btn[data-form="saida-agua"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('saida-agua')));
-    document.querySelectorAll('.form-tab-btn[data-form="entrada-agua"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('entrada-agua')));
-    document.querySelectorAll('.form-tab-btn[data-form="saida-gas"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('saida-gas')));
-    document.querySelectorAll('.form-tab-btn[data-form="entrada-gas"]').forEach(btn => btn.addEventListener('click', () => switchEstoqueForm('entrada-gas')));
-    if (formEntradaAgua) formEntradaAgua.addEventListener('submit', handleEntradaEstoqueSubmit);
-    if (formEntradaGas) formEntradaGas.addEventListener('submit', handleEntradaEstoqueSubmit);
-    if (btnAbrirInicialAgua) btnAbrirInicialAgua.addEventListener('click', () => { if(formInicialAguaContainer) formInicialAguaContainer.classList.remove('hidden'); if(btnAbrirInicialAgua) btnAbrirInicialAgua.classList.add('hidden'); });
-    if (btnAbrirInicialGas) btnAbrirInicialGas.addEventListener('click', () => { if(formInicialGasContainer) formInicialGasContainer.classList.remove('hidden'); if(btnAbrirInicialGas) btnAbrirInicialGas.classList.add('hidden'); });
-    if (formInicialAgua) formInicialAgua.addEventListener('submit', handleInicialEstoqueSubmit);
-    if (formInicialGas) formInicialGas.addEventListener('submit', handleInicialEstoqueSubmit);
-    document.getElementById('filtro-status-agua')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-agua'));
-    document.getElementById('filtro-historico-agua')?.addEventListener('input', (e) => filterTable(e.target, 'table-historico-agua'));
-    document.getElementById('filtro-status-gas')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-gas'));
-    document.getElementById('filtro-historico-gas')?.addEventListener('input', (e) => filterTable(e.target, 'table-historico-gas'));
-    document.getElementById('filtro-status-materiais')?.addEventListener('input', (e) => filterTable(e.target, 'table-status-materiais'));
-    // NOVO: Listeners para sub-navegação de Água e Gás
-    document.getElementById('sub-nav-agua')?.addEventListener('click', (e) => { 
-        const btn = e.target.closest('button.sub-nav-btn[data-subview]'); 
-        if (btn) {
-             switchSubTabView('agua', btn.dataset.subview); 
-             if (btn.dataset.subview === 'status-agua') renderAguaStatus();
-             if (btn.dataset.subview === 'historico-agua') renderHistoricoAgua();
-        }
-    });
-    document.getElementById('sub-nav-gas')?.addEventListener('click', (e) => { 
-        const btn = e.target.closest('button.sub-nav-btn[data-subview]'); 
-        if (btn) {
-            switchSubTabView('gas', btn.dataset.subview);
-            if (btn.dataset.subview === 'status-gas') renderGasStatus();
-            if (btn.dataset.subview === 'historico-gas') renderHistoricoGas();
-        }
-    });
-
-    const cardSeparacao = document.getElementById('dashboard-card-separacao');
-    const cardRetirada = document.getElementById('dashboard-card-retirada');
-    const btnClearFilter = btnClearDashboardFilter; 
-    
-    if (cardSeparacao) {
-        // Agora, clicar em 'Em Separação' filtra por status 'separacao' E 'requisitado' (lógica interna)
-        cardSeparacao.addEventListener('click', () => filterDashboardMateriais('separacao')); 
-    }
-    if (cardRetirada) {
-        cardRetirada.addEventListener('click', () => filterDashboardMateriais('retirada')); 
-    }
-    if (btnClearFilter) { 
-        btnClearFilter.addEventListener('click', () => filterDashboardMateriais(null));
-    }
-
-    if(typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 10: Garante que lucide existe
-    toggleAguaFormInputs(); toggleGasFormInputs();
-
-    // CORREÇÃO: Removida a chamada switchTab('dashboard') daqui
-    // Ela agora é chamada pelo onAuthStateChanged
-}
-
-
-// --- INICIALIZAÇÃO GERAL ---
-// CORREÇÃO: Ordem de inicialização alterada
-document.addEventListener('DOMContentLoaded', () => { 
-    console.log("DOM Carregado. Executando setupApp...");
-    // 1. Configura o DOM e os listeners primeiro
-    setupApp(); 
-    
-    // 2. Inicia o Firebase APÓS o DOM estar pronto e 'domReady = true'
-    console.log("setupApp concluído. Iniciando Firebase...");
-    initFirebase(); 
-});
+    if (btnSalvarMovimentacaoFinal) btnSalvarMovimentacaoFinal.
