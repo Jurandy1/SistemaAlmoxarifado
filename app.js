@@ -130,7 +130,7 @@ function formatTimestamp(timestamp) {
 function formatTimestampComTempo(timestamp) { // <<< NOVA FUNÇÃO
     if (!timestamp || typeof timestamp.toDate !== 'function') return 'N/A';
     try {
-        return timestamp.toDate().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+        return timestamp.toDate().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     } catch (e) { console.error("Erro ao formatar timestamp com tempo:", timestamp, e); return 'Erro Data'; }
 }
 
@@ -634,7 +634,7 @@ async function handleAguaSubmit(e) {
         // Tenta preencher o nome do almoxarifado a partir da última entrada de estoque, se disponível (opcional)
         // Não implementado para evitar complexidade, o usuário deve digitar.
         
-        almoxarifadoResponsavelModal.style.display = 'block';
+        almoxarifadoResponsavelModal.style.display = 'flex'; // Usar flex para centralizar
         document.getElementById('input-almox-responsavel-nome').focus();
         showAlert('alert-agua', 'Quase lá! Agora informe seu nome no pop-up para finalizar a entrega.', 'info');
         return;
@@ -925,7 +925,7 @@ async function handleGasSubmit(e) {
         if (modalTitle) modalTitle.innerHTML = `<i data-lucide="box" class="w-5 h-5"></i> Confirmação de Saída de Estoque (Gás)`;
         if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } 
 
-        almoxarifadoResponsavelModal.style.display = 'block';
+        almoxarifadoResponsavelModal.style.display = 'flex';
         document.getElementById('input-almox-responsavel-nome').focus();
         showAlert('alert-gas', 'Quase lá! Agora informe seu nome no pop-up para finalizar a entrega.', 'info');
         return;
@@ -2551,7 +2551,7 @@ async function openConfirmDeleteModal(id, type, details = null) {
     deleteDetailsEl.textContent = `Detalhes: ${detailsText}`;
     deleteWarningUnidadeEl.style.display = showUnidadeWarning ? 'block' : 'none'; 
     deleteWarningInicialEl.style.display = isInicial ? 'block' : 'none'; 
-    confirmDeleteModal.style.display = 'block'; 
+    confirmDeleteModal.style.display = 'flex'; 
 }
 
 async function executeDelete() {
@@ -2817,7 +2817,10 @@ function renderHistoricoAgua() {
     if (!tableHistoricoAgua) return;
      if (!domReady) { console.warn("renderHistoricoAgua chamada antes do DOM pronto."); return; }
     
-    const historicoOrdenado = [...fb_estoque_agua].sort((a, b) => (b.data?.toMillis() || 0) - (a.data?.toMillis() || 0));
+    // NOVO: Filtra apenas entradas (tipo: inicial ou entrada)
+    const historicoOrdenado = [...fb_estoque_agua]
+        .filter(e => e.tipo === 'inicial' || e.tipo === 'entrada')
+        .sort((a, b) => (b.registradoEm?.toMillis() || 0) - (a.registradoEm?.toMillis() || 0));
      
      if (historicoOrdenado.length === 0) { 
         tableHistoricoAgua.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma entrada registrada.</td></tr>'; return; 
@@ -2847,7 +2850,10 @@ function renderHistoricoGas() {
      if (!tableHistoricoGas) return;
      if (!domReady) { console.warn("renderHistoricoGas chamada antes do DOM pronto."); return; }
     
-    const historicoOrdenado = [...fb_estoque_gas].sort((a, b) => (b.data?.toMillis() || 0) - (a.data?.toMillis() || 0));
+    // NOVO: Filtra apenas entradas (tipo: inicial ou entrada)
+    const historicoOrdenado = [...fb_estoque_gas]
+        .filter(e => e.tipo === 'inicial' || e.tipo === 'entrada')
+        .sort((a, b) => (b.data?.toMillis() || 0) - (a.data?.toMillis() || 0));
      
      if (historicoOrdenado.length === 0) { 
         tableHistoricoGas.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhuma entrada registrada.</td></tr>'; return; 
@@ -3153,4 +3159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Configura o DOM e os listeners primeiro
     setupApp(); 
     
-    // 2. Inicia o Firebase APÓS
+    // 2. Inicia o Firebase APÓS o DOM estar pronto e 'domReady = true'
+    console.log("setupApp concluído. Iniciando Firebase...");
+    initFirebase(); 
+});
