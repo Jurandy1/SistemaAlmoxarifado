@@ -565,6 +565,7 @@ function toggleAguaFormInputs() {
 function getUnidadeSaldo(unidadeId, itemType) {
     if (!unidadeId) return 0;
     const movimentacoes = itemType === 'agua' ? fb_agua_movimentacoes : fb_gas_movimentacoes;
+    // CORREÇÃO: Inclui a lógica de troca para o saldo
     const entregues = movimentacoes.filter(m => m.unidadeId === unidadeId && (m.tipo === 'entrega' || m.tipo === 'troca')).reduce((sum, m) => sum + m.quantidade, 0);
     const recebidos = movimentacoes.filter(m => m.unidadeId === unidadeId && (m.tipo === 'retorno' || m.tipo === 'troca')).reduce((sum, m) => sum + m.quantidade, 0);
     return entregues - recebidos;
@@ -740,7 +741,8 @@ async function executeFinalMovimentacao(data) {
         }
         
         // 2. RETORNO (ENTRADA EM ESTOQUE VAZIO/CRÉDITO) - Salva o nome do almoxarifado em TODAS as movimentações
-        if (data.qtdRetorno > 0 && data.tipoMovimentacao !== 'troca') { // Se for troca, já foi lançado acima com o tipo 'troca'. Se for só retorno, lança.
+        // MODIFICADO: Só lança 'retorno' se não for 'troca' E houver retorno
+        if (data.qtdRetorno > 0 && data.tipoMovimentacao !== 'troca') { 
              await addDoc(collection, { 
                  unidadeId: data.unidadeId, 
                  unidadeNome: data.unidadeNome, 
@@ -834,7 +836,7 @@ function handleSaldoFilter(itemType, e) {
 
     // Atualiza o estado visual dos botões
     document.querySelectorAll(`#filtro-saldo-${itemType}-controls button`).forEach(btn => {
-        btn.classList.remove('active', 'bg-blue-600', 'text-white', 'font-semibold', 'btn-warning', 'btn-info', 'btn-secondary', 'bg-green-600', 'bg-orange-600', 'bg-gray-400', 'bg-red-600');
+        btn.classList.remove('active', 'bg-blue-600', 'text-white', 'font-semibold', 'btn-warning', 'btn-info', 'btn-secondary', 'bg-green-600', 'bg-orange-600', 'bg-gray-600', 'bg-red-600');
         
         if (btn.dataset.filter === newFilter) {
             // CORREÇÃO PONTO 3: Usa cores mais chamativas e claras para o ativo
@@ -876,7 +878,7 @@ function renderAguaStatus() {
              const unidadeStatus = statusMap.get(m.unidadeId);
              // CORREÇÃO PONTO 3: Inclui movimentações de TROCA no cálculo de entregues E recebidos
              if (m.tipo === 'entrega' || m.tipo === 'troca') unidadeStatus.entregues += m.quantidade;
-             else if (m.tipo === 'retorno') unidadeStatus.recebidos += m.quantidade;
+             else if (m.tipo === 'retorno' || m.tipo === 'troca') unidadeStatus.recebidos += m.quantidade;
              
              // Armazena todos os lançamentos (melhor para o futuro, mas usa só o último)
              unidadeStatus.ultimosLancamentos.push({
@@ -980,7 +982,7 @@ function renderGasStatus() {
              const unidadeStatus = statusMap.get(m.unidadeId);
              // CORREÇÃO PONTO 3: Inclui movimentações de TROCA no cálculo de entregues E recebidos
              if (m.tipo === 'entrega' || m.tipo === 'troca') unidadeStatus.entregues += m.quantidade;
-             else if (m.tipo === 'retorno') unidadeStatus.recebidos += m.quantidade;
+             else if (m.tipo === 'retorno' || m.tipo === 'troca') unidadeStatus.recebidos += m.quantidade;
               // Armazena todos os lançamentos (melhor para o futuro, mas usa só o último)
              unidadeStatus.ultimosLancamentos.push({
                  id: m.id, 
@@ -1460,11 +1462,10 @@ async function calcularPrevisaoInteligente(itemType) {
             exclusoes: exclusoes
         };
 
-        // CORREÇÃO CRÍTICA DO ERRO DE SINTAXE: Evitando desestruturação e usando atribuição direta
+        // CORREÇÃO CRÍTICA DO ERRO DE SINTAXE: Usando desestruturação aqui
         consumoResult = getConsumoDiarioMedio(itemType, filterConfig);
-        consumoTotal = consumoResult.consumoTotal;
-        consumoMedioDiario = consumoResult.consumoMedioDiario;
-        dias = consumoResult.dias;
+        // Desestruturação correta
+        ({ consumoTotal, consumoMedioDiario, dias } = consumoResult); 
         // FIM DA CORREÇÃO CRÍTICA
         
         if (consumoTotal === 0) {
@@ -1894,6 +1895,8 @@ async function handleSalvarSeparador() {
         });
 
         showAlert('alert-separador', 'Nome salvo! O status foi atualizado para "Em Separação".', 'success', 4000);
+        // Fech
+
         // Fecha o modal após um pequeno delay para o usuário ver a msg de sucesso
         setTimeout(() => {
             if (separadorModal) separadorModal.style.display = 'none';
@@ -2243,9 +2246,9 @@ function getChartDataLast30Days(movimentacoes) {
         const dateKey = `${mDate.getFullYear()}-${String(mDate.getMonth() + 1).padStart(2, '0')}-${String(mDate.getDate()).padStart(2, '0')}`; 
         if (dataMap.has(dateKey)) { 
             const dayData = dataMap.get(dateKey); 
-            // CORREÇÃO PONTO 3: Considera 'entrega' e 'troca' como entregues, 'retorno' como recebidos
+            // CORREÇÃO PONTO 3: Considera 'entrega' e 'troca' como entregues, 'retorno' e 'troca' como recebidos
             if (m.tipo === 'entrega' || m.tipo === 'troca') dayData.entregas += m.quantidade; 
-            else if (m.tipo === 'retorno') dayData.retornos += m.quantidade; 
+            else if (m.tipo === 'retorno' || m.tipo === 'troca') dayData.retornos += m.quantidade; 
         } 
     });
 
@@ -2362,14 +2365,14 @@ function renderDashboardGasChart() {
 function renderDashboardAguaSummary() {
     if (!domReady) { return; } 
     if (!summaryAguaPendente) return; 
-    // CORREÇÃO PONTO 3: Considera 'entrega' e 'troca' como entregues, 'retorno' como recebidos
+    // CORREÇÃO PONTO 3: Considera 'entrega' e 'troca' como entregues, 'retorno' e 'troca' como recebidos
     const totalEntregueGeral = fb_agua_movimentacoes.filter(m => m.tipo === 'entrega' || m.tipo === 'troca').reduce((sum, m) => sum + m.quantidade, 0);
     const totalRecebidoGeral = fb_agua_movimentacoes.filter(m => m.tipo === 'retorno' || m.tipo === 'troca').reduce((sum, m) => sum + m.quantidade, 0);
     summaryAguaPendente.textContent = totalEntregueGeral - totalRecebidoGeral; 
     
     const movs30Dias = filterLast30Days(fb_agua_movimentacoes);
     const totalEntregue30d = movs30Dias.filter(m => m.tipo === 'entrega' || m.tipo === 'troca').reduce((sum, m) => sum + m.quantidade, 0);
-    const totalRecebido30d = movs30Dias.filter(m => m.tipo === 'retorno').reduce((sum, m) => sum + m.quantidade, 0);
+    const totalRecebido30d = movs30Dias.filter(m => m.tipo === 'retorno' || m.tipo === 'troca').reduce((sum, m) => sum + m.quantidade, 0);
     summaryAguaEntregue.textContent = totalEntregue30d;
     summaryAguaRecebido.textContent = totalRecebido30d;
     
@@ -2379,14 +2382,14 @@ function renderDashboardAguaSummary() {
 function renderDashboardGasSummary() {
      if (!domReady) { return; } 
      if (!summaryGasPendente) return; 
-    // CORREÇÃO PONTO 3: Considera 'entrega' e 'troca' como entregues, 'retorno' como recebidos
+    // CORREÇÃO PONTO 3: Considera 'entrega' e 'troca' como entregues, 'retorno' e 'troca' como recebidos
     const totalEntregueGeral = fb_gas_movimentacoes.filter(m => m.tipo === 'entrega' || m.tipo === 'troca').reduce((sum, m) => sum + m.quantidade, 0);
     const totalRecebidoGeral = fb_gas_movimentacoes.filter(m => m.tipo === 'retorno' || m.tipo === 'troca').reduce((sum, m) => sum + m.quantidade, 0);
     summaryGasPendente.textContent = totalEntregueGeral - totalRecebidoGeral; 
     
     const movs30Dias = filterLast30Days(fb_gas_movimentacoes);
     const totalEntregue30d = movs30Dias.filter(m => m.tipo === 'entrega' || m.tipo === 'troca').reduce((sum, m) => sum + m.quantidade, 0);
-    const totalRecebido30d = movs30Dias.filter(m => m.tipo === 'retorno').reduce((sum, m) => sum + m.quantidade, 0);
+    const totalRecebido30d = movs30Dias.filter(m => m.tipo === 'retorno' || m.tipo === 'troca').reduce((sum, m) => sum + m.quantidade, 0);
     summaryGasEntregue.textContent = totalEntregue30d;
     summaryGasRecebido.textContent = totalRecebido30d;
     
@@ -3318,7 +3321,6 @@ function setupApp() {
 
     // --- Adiciona Event Listeners ---
     navButtons.forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
-    // CORREÇÃO PONTO 2: Adiciona listeners para as sub-abas de água/gás/materiais
     document.querySelectorAll('#sub-nav-materiais .sub-nav-btn').forEach(btn => btn.addEventListener('click', () => switchSubTabView('materiais', btn.dataset.subview)));
     document.querySelectorAll('#sub-nav-agua .sub-nav-btn').forEach(btn => btn.addEventListener('click', () => switchSubTabView('agua', btn.dataset.subview)));
     document.querySelectorAll('#sub-nav-gas .sub-nav-btn').forEach(btn => btn.addEventListener('click', () => switchSubTabView('gas', btn.dataset.subview)));
