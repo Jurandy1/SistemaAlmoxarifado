@@ -195,7 +195,7 @@ async function initFirebase() {
         
         // CORREÇÃO: Busca o connectionStatusEl (que já deve existir pois setupApp() rodou)
         if (connectionStatusEl) {
-             connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-yellow-400 rounded-full animate-pulse"></span> <span>Autenticando...</span>`;
+             connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-yellow-400 rounded-full animate-pulse"></span> <span>Autentizando...</span>`;
         } else {
              // Este log não deve mais aparecer se a ordem de inicialização estiver correta
              console.warn("connectionStatusEl não encontrado ao iniciar initFirebase (ISSO É INESPERADO)");
@@ -1251,7 +1251,7 @@ async function handleMateriaisSubmit(e) {
             registradoEm: serverTimestamp(), // Data do Lançamento
             fileURL: fileURL,
             storagePath: storagePath,
-            downloadInfo: { count: 0, lastDownload: null, blockedUntil: null } // <<< NOVO para controle download
+            downloadInfo: { count: 0, lastDownload: null, blockedUntil: null } // <<< COMPLETO
         });
         showAlert('alert-materiais', 'Requisição registrada! O status inicial é "Para Separar".', 'success'); // Mensagem atualizada
         formMateriais.reset(); 
@@ -1720,7 +1720,7 @@ function handleEditUnidadeClick(e) {
     if (!button) return;
     
     const td = button.closest('td');
-    const row = td.closest('tr');
+    const row = button.closest('tr');
     const nomeSpan = td.querySelector('.unidade-nome-display');
     const currentName = nomeSpan.textContent;
 
@@ -2712,6 +2712,7 @@ function renderEstoqueAgua() {
         if(resumoEstoqueAguaEl) resumoEstoqueAguaEl.classList.remove('hidden'); 
     } else { 
         if(btnAbrirInicialAgua) btnAbrirInicialAgua.classList.remove('hidden'); 
+        if(formInicialAguaContainer) formInicialAguaContainer.classList.add('hidden'); // Garante que está escondido ao mostrar o botão
         if(resumoEstoqueAguaEl) resumoEstoqueAguaEl.classList.add('hidden'); 
     }
 
@@ -2739,6 +2740,7 @@ function renderEstoqueGas() {
         if(resumoEstoqueGasEl) resumoEstoqueGasEl.classList.remove('hidden');
     } else { 
         if(btnAbrirInicialGas) btnAbrirInicialGas.classList.remove('hidden'); 
+        if(formInicialGasContainer) formInicialGasContainer.classList.add('hidden'); // Garante que está escondido ao mostrar o botão
         if(resumoEstoqueGasEl) resumoEstoqueGasEl.classList.add('hidden'); 
     }
 
@@ -2942,6 +2944,11 @@ function setupApp() {
     // --- Adiciona Event Listeners ---
     navButtons.forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
     document.querySelectorAll('#sub-nav-materiais .sub-nav-btn').forEach(btn => btn.addEventListener('click', () => switchSubTabView('materiais', btn.dataset.subview)));
+    
+    // >>> CORREÇÃO PARA ATIVAR SUBMENUS DE ÁGUA E GÁS <<<
+    document.querySelectorAll('#sub-nav-agua .sub-nav-btn').forEach(btn => btn.addEventListener('click', () => switchSubTabView('agua', btn.dataset.subview)));
+    document.querySelectorAll('#sub-nav-gas .sub-nav-btn').forEach(btn => btn.addEventListener('click', () => switchSubTabView('gas', btn.dataset.subview)));
+    
     if (dashboardNavControls) dashboardNavControls.addEventListener('click', (e) => { const btn = e.target.closest('button.dashboard-nav-btn[data-view]'); if (btn) switchDashboardView(btn.dataset.view); });
     if (formAgua) formAgua.addEventListener('submit', handleAguaSubmit); 
     if (formGas) formGas.addEventListener('submit', handleGasSubmit); 
