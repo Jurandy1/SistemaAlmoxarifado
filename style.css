@@ -509,7 +509,7 @@ button .loading-spinner-small {
 }
 .form-select {
     -webkit-appearance: none; -moz-appearance: none; appearance: none;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w.g/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-position: right 0.5rem center;
     background-repeat: no-repeat;
     background-size: 1.5em 1.5em;
@@ -568,3 +568,24 @@ button .loading-spinner-small {
 .badge-green { background-color: #dcfce7; color: #166534; border-color: #bbf7d0; }
 .badge-gray { background-color: #f3f4f6; color: #4b5563; border-color: #e5e7eb; }
 .badge-blue { background-color: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+
+/* NOVO: Estilos para os botões de filtro de saldo ativos */
+/* Devendo (Vermelho) */
+.btn-warning.active {
+    background-color: #b91c1c !important; /* bg-red-700 */
+    color: #ffffff !important;
+    border-color: #991b1b !important; /* border-red-800 */
+}
+.btn-warning.active:hover {
+    background-color: #991b1b !important;
+}
+
+/* Crédito (Azul - Primário) */
+.btn-info.active {
+    background-color: #1e40af !important; /* semcas-blue (bg-blue-800) */
+    color: #ffffff !important;
+    border-color: #1e40af !important;
+}
+.btn-info.active:hover {
+    background-color: #1d3674 !important; /* dark blue hover */
+}
