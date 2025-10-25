@@ -179,19 +179,15 @@ async function initFirebase() {
         auth = getAuth(app);
         storage = getStorage(app); // <<< Adicionado inicializador do Storage
         
-        // Tentativa de buscar o elemento de status logo cedo
-        connectionStatusEl = document.getElementById('connectionStatus'); 
+        // CORREÇÃO: Busca o connectionStatusEl (que já deve existir pois setupApp() rodou)
         if (connectionStatusEl) {
              connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-yellow-400 rounded-full animate-pulse"></span> <span>Autenticando...</span>`;
         } else {
-             console.warn("connectionStatusEl não encontrado ao iniciar initFirebase");
+             // Este log não deve mais aparecer se a ordem de inicialização estiver correta
+             console.warn("connectionStatusEl não encontrado ao iniciar initFirebase (ISSO É INESPERADO)");
         }
 
-
-        onAuthStateChanged(auth, async (user) => { // <<< Adicionado async aqui
-             // Garante que connectionStatusEl seja encontrado
-             if (!connectionStatusEl) connectionStatusEl = document.getElementById('connectionStatus'); 
-
+        onAuthStateChanged(auth, async (user) => { 
             if (user) {
                 isAuthReady = true;
                 userId = user.uid;
@@ -208,13 +204,31 @@ async function initFirebase() {
                 
                 console.log("Caminho base das coleções:", basePath);
                 
-                // <<< CHAMA setupApp SOMENTE APÓS AUTENTICAÇÃO BEM-SUCEDIDA >>>
-                if (!domReady) { // Evita chamar setupApp múltiplas vezes se o estado de auth mudar rapidamente
-                    console.log("Usuário autenticado, chamando setupApp...");
-                    setupApp(); 
-                }
+                // CORREÇÃO: Chama os listeners e a renderização inicial AQUI,
+                // pois agora temos certeza que o DOM está pronto (domReady=true) E o usuário está autenticado.
+                initFirestoreListeners();
                 
-                initFirestoreListeners(); // Inicia listeners após ter coleções definidas
+                // Chama as funções de renderização que dependem de dados (listeners podem já ter dados)
+                console.log("Chamando funções de renderização inicial pós-autenticação...");
+                updateLastUpdateTime(); 
+                renderDashboardMateriaisProntos(currentDashboardMaterialFilter); 
+                renderAguaStatus();
+                renderGasStatus();
+                renderMateriaisStatus();
+                renderEstoqueAgua();
+                renderHistoricoAgua();
+                renderEstoqueGas();
+                renderHistoricoGas();
+                renderDashboardAguaChart();
+                renderDashboardGasChart();
+                renderDashboardAguaSummary();
+                renderDashboardGasSummary();
+                renderDashboardMateriaisList();
+                renderDashboardMateriaisCounts();
+
+                // Inicia a UI
+                console.log("Chamando switchTab('dashboard') após autenticação...");
+                switchTab('dashboard'); 
                 
             } else {
                 isAuthReady = false;
@@ -222,9 +236,8 @@ async function initFirebase() {
                 console.log("Usuário deslogado.");
                 if (connectionStatusEl) connectionStatusEl.innerHTML = `<span class="h-3 w-3 bg-red-500 rounded-full"></span> <span class="text-red-700">Desconectado</span>`;
                 clearAlmoxarifadoData();
-                 domReady = false; // <<< Resetar domReady ao deslogar
+                 // domReady permanece true, mas os dados são limpos
             }
-             // Não chama updateLastUpdateTime aqui, deixa para o setupApp ou listeners
         });
 
         // Inicia o processo de autenticação
@@ -250,8 +263,7 @@ function initFirestoreListeners() {
         console.warn("Firestore listeners não iniciados: Auth não pronto ou coleção inválida."); 
         return; 
     }
-    // Não precisa mais logar aqui, o onAuthStateChanged já loga
-    // console.log("Iniciando listeners do Firestore..."); 
+    console.log("Iniciando listeners do Firestore..."); 
 
     onSnapshot(query(unidadesCollection), (snapshot) => { 
         fb_unidades = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
@@ -275,6 +287,7 @@ function initFirestoreListeners() {
             renderAguaStatus(); 
             renderGasStatus(); 
         } else {
+             // Este log não deve mais aparecer
              console.warn("Listener de unidades: DOM não pronto (domReady=false).");
         }
     }, (error) => { console.error("Erro no listener de unidades:", error); if(domReady) showAlert('alert-gestao', `Erro ao carregar unidades: ${error.message}`, 'error'); });
@@ -354,7 +367,7 @@ function clearAlmoxarifadoData() {
     estoqueInicialDefinido = { agua: false, gas: false };
     currentDashboardMaterialFilter = null; 
 
-    if(domReady) { 
+    if(domReady) { // domReady deve ser true, mesmo deslogado
         [selectUnidadeAgua, selectUnidadeGas, selectUnidadeMateriais, 
          document.getElementById('select-previsao-unidade-agua-v2'), 
          document.getElementById('select-previsao-unidade-gas-v2'),
@@ -1922,6 +1935,7 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     // pois as colunas estão sempre visíveis.
 
      if (!container) {
+        // CORREÇÃO: Este log não deve mais aparecer se setupApp() rodar primeiro.
         console.error("Elemento CRÍTICO (container dashboard-materiais-prontos) não encontrado!");
         return; 
     }
@@ -2037,11 +2051,14 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     // 5. Se não houver NENHUM pendente, mostrar mensagem.
     if (totalPendentesVisiveis === 0) {
         const placeholder = `<li class="text-sm text-slate-500 text-center py-4">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</li>`;
-        if (colunas.CT) {
-             // Coloca o placeholder na primeira coluna (CT)
-             colunas.CT.innerHTML = placeholder;
+        
+        // Tenta encontrar a primeira coluna válida para por o placeholder
+        const primeiraColunaValida = colunas.CT || colunas.SEDE || colunas.CRAS || colunas.CREAS || colunas.ABRIGO;
+
+        if (primeiraColunaValida) {
+             primeiraColunaValida.innerHTML = placeholder;
         } else {
-            // Fallback se a coluna CT não for encontrada
+            // Fallback se nenhuma coluna for encontrada (o que não deve acontecer)
             container.innerHTML = `<p class="text-sm text-slate-500 text-center py-4 col-span-full">Nenhum material ${filterToDisplay ? `com status "${filterToDisplay}"` : 'pendente'} encontrado.</p>`;
         }
     }
@@ -2169,7 +2186,7 @@ function handleGerarPdf() {
             const atual = responsavelMap.get(nome) || 0; 
             responsavelMap.set(nome, atual + m.quantidade); 
         });
-        const responsavelData = Array.from(responsavelMap.entries())
+        const responsavelData = Array.from(abastecimentoMap.entries())
             .sort((a,b) => b[1] - a[1])
             .map(entry => [entry[0], entry[1]]);
 
@@ -2659,7 +2676,7 @@ function switchTab(tabName) {
     }, 50); 
 }
 
-// <<< Nova função para configurar a UI após autenticação >>>
+// CORREÇÃO: Esta função agora roda PRIMEIRO, no DOMContentLoaded
 function setupApp() {
     console.log("Executando setupApp...");
     
@@ -2704,17 +2721,17 @@ function setupApp() {
     tableHistoricoGas = document.getElementById('table-historico-gas'); alertHistoricoGas = document.getElementById('alert-historico-gas');
 
     // <<< VERIFICAÇÃO CRÍTICA >>>
-    if (!dashboardMateriaisProntosContainer) {
-        console.error("ERRO CRÍTICO: Container ou loader do dashboard de materiais NÃO encontrados DENTRO de setupApp!");
+    // Esta verificação agora roda DEPOIS do DOMContentLoaded, então deve passar.
+    if (!dashboardMateriaisProntosContainer || !navButtons) {
+        console.error("ERRO CRÍTICO: Elementos essenciais (Container Materiais ou Botões de Navegação) NÃO encontrados DENTRO de setupApp!");
         showAlert('alert-agua', 'Erro crítico ao carregar interface. Recarregue a página (Erro Setup).', 'error', 60000);
-        // O domReady não é alterado, o que impediria a inicialização do app.
-        return; 
+        return; // Não marcar domReady = true se falhar
     } else {
-        console.log("Elementos essenciais (container) encontrados DENTRO de setupApp.");
+        console.log("Elementos essenciais encontrados DENTRO de setupApp.");
     }
     
-    // CORREÇÃO CRÍTICA: Se o setup chegou até aqui, o DOM está pronto.
-    // Marcamos domReady=true IMEDIATAMENTE para evitar que switchTab() rejeite as chamadas subsequentes.
+    // CORREÇÃO CRÍTICA: Marcar domReady=true AQUI, após encontrar os elementos
+    // e ANTES de adicionar os listeners
     domReady = true; 
     console.log("setupApp: domReady marcado como TRUE.");
 
@@ -2806,38 +2823,19 @@ function setupApp() {
     if(typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); } // CORREÇÃO 10: Garante que lucide existe
     toggleAguaFormInputs(); toggleGasFormInputs();
 
-    // <<< Removemos a marcação de domReady do final para evitar o race condition >>>
-    
-    // Chama funções que podem depender de dados do Firebase (listeners podem ter rodado antes)
-    console.log("Chamando funções de renderização inicial pós-setupApp...");
-    updateLastUpdateTime(); 
-    // Chama a primeira renderização dos materiais
-    renderDashboardMateriaisProntos(currentDashboardMaterialFilter); 
-    // Chama outras renderizações que podem ter dados dos listeners
-    renderAguaStatus();
-    renderGasStatus();
-    renderMateriaisStatus();
-    renderEstoqueAgua();
-    renderHistoricoAgua();
-    renderEstoqueGas();
-    renderHistoricoGas();
-    renderDashboardAguaChart();
-    renderDashboardGasChart();
-    renderDashboardAguaSummary();
-    renderDashboardGasSummary();
-    renderDashboardMateriaisList();
-    renderDashboardMateriaisCounts();
-
-
-    // <<< CHAMA switchTab por último >>>
-    console.log("Chamando switchTab('dashboard') após setupApp...");
-    switchTab('dashboard'); 
+    // CORREÇÃO: Removida a chamada switchTab('dashboard') daqui
+    // Ela agora é chamada pelo onAuthStateChanged
 }
 
 
 // --- INICIALIZAÇÃO GERAL ---
+// CORREÇÃO: Ordem de inicialização alterada
 document.addEventListener('DOMContentLoaded', () => { 
-    console.log("DOM Carregado. Iniciando Firebase...");
+    console.log("DOM Carregado. Executando setupApp...");
+    // 1. Configura o DOM e os listeners primeiro
+    setupApp(); 
+    
+    // 2. Inicia o Firebase APÓS o DOM estar pronto e 'domReady = true'
+    console.log("setupApp concluído. Iniciando Firebase...");
     initFirebase(); 
-    // <<< NÃO CHAMA setupApp aqui, espera o onAuthStateChanged >>>
 });
