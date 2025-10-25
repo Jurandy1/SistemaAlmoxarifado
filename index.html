@@ -349,20 +349,28 @@
         <!-- PAINEL CONTROLE DE ÁGUA (ID: content-agua)    -->
         <!-- ============================================= -->
         <div id="content-agua" class="fade-in hidden">
-             <!-- Sub-navegação -->
+             <!-- Sub-navegação MODIFICADA -->
              <div class="flex flex-wrap gap-2 mb-6" id="sub-nav-agua">
                  <button class="sub-nav-btn active" data-subview="movimentacao-agua">
-                    <i data-lucide="list-checks"></i>
-                    <span>Lançamentos / Status</span>
+                    <i data-lucide="edit"></i>
+                    <span>✍️ Lançamento</span>
+                 </button>
+                 <button class="sub-nav-btn" data-subview="status-agua">
+                    <i data-lucide="layers-3"></i>
+                    <span>💧 Status de Galões (Saldo nas Unidades)</span>
+                 </button>
+                 <button class="sub-nav-btn" data-subview="historico-agua">
+                    <i data-lucide="archive"></i>
+                    <span>📦 Histórico de Entradas no Estoque</span>
                  </button>
                  <button class="sub-nav-btn" data-subview="previsao-agua">
                     <i data-lucide="bar-chart-3"></i>
-                    <span>Previsão</span>
+                    <span>📈 Previsão</span>
                  </button>
              </div>
 
-            <!-- Sub-view: Movimentação -->
-            <div id="subview-movimentacao-agua">
+            <!-- Sub-view: Movimentação (Lançamento) -->
+            <div id="subview-movimentacao-agua" class="space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
                     <!-- Coluna de Estoque -->
@@ -412,7 +420,7 @@
                     </div>
 
                     <!-- Coluna de Lançamento -->
-                    <div class="lg:col-span-1 bg-white rounded-xl border border-gray-200 shadow-sm">
+                    <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm">
                         <!-- Abas de Lançamento -->
                         <div class="flex border-b border-gray-200">
                             <button class="form-tab-btn active" data-form="saida-agua">
@@ -430,6 +438,8 @@
                                 <label for="select-unidade-agua" class="form-label">Unidade (Apenas habilitadas)</label>
                                 <select id="select-unidade-agua" class="form-select" required></select>
                             </div>
+                            <div id="unidade-saldo-alerta-agua" class="alert alert-warning mt-2" style="display:none;"></div>
+
                             <div>
                                 <label for="select-tipo-agua" class="form-label">Tipo de Movimentação</label>
                                 <select id="select-tipo-agua" class="form-select" required>
@@ -455,8 +465,8 @@
                                 <input type="date" id="input-data-agua" class="form-input" required>
                             </div>
                             <div>
-                                 <label for="input-responsavel-agua" class="form-label">Responsável (Unidade)</label>
-                                 <input type="text" id="input-responsavel-agua" class="form-input" placeholder="Nome de quem recebeu/entregou" required>
+                                 <label for="input-responsavel-agua" class="form-label">Nome de quem Recebeu/Devolveu (Unidade)</label>
+                                 <input type="text" id="input-responsavel-agua" class="form-input" placeholder="Nome do Responsável da Unidade" required>
                             </div>
                             <button type="submit" id="btn-submit-agua" class="btn-primary w-full !mt-6">
                                 <i data-lucide="save"></i> <span>Salvar Movimentação</span>
@@ -475,8 +485,8 @@
                                 <input type="date" id="input-data-entrada-agua" class="form-input" required>
                             </div>
                             <div>
-                                 <label for="input-responsavel-entrada-agua" class="form-label">Recebido por (Almoxarifado)</label>
-                                 <input type="text" id="input-responsavel-entrada-agua" class="form-input" placeholder="Nome de quem recebeu" required>
+                                 <label for="input-responsavel-entrada-agua" class="form-label">Responsável do Estoque (Almoxarifado)</label>
+                                 <input type="text" id="input-responsavel-entrada-agua" class="form-input" placeholder="Nome de quem recebeu a NF" required>
                             </div>
                              <div>
                                  <label for="input-nf-entrada-agua" class="form-label">Nota Fiscal (Opcional)</label>
@@ -490,66 +500,72 @@
                         <div id="alert-agua" class="alert m-6"></div>
                     </div>
                     
-                    <!-- Coluna de Status e Histórico -->
-                    <div class="lg:col-span-1 space-y-6">
-                        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                            <h2 class="text-xl font-bold text-gray-800 mb-4">Status de Galões (Saldo nas Unidades)</h2>
-                            <div id="alert-agua-lista" class="alert mb-4"></div>
-                            
-                            <div class="mb-4">
-                                <label for="filtro-status-agua" class="form-label text-xs">Buscar Unidade:</label>
-                                <input type="text" id="filtro-status-agua" data-table="table-status-agua" class="form-input" placeholder="Digite o nome da unidade...">
-                            </div>
-
-                            <div class="overflow-x-auto border border-gray-200 rounded-lg">
-                                <table class="table w-full text-sm">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th>Unidade</th>
-                                            <th>Tipo</th>
-                                            <th class="text-center">Entregues</th>
-                                            <th class="text-center">Recebidos</th>
-                                            <th class="text-center">Saldo</th> 
-                                            <th class="text-center">Ação</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="table-status-agua" class="divide-y divide-gray-100">
-                                        <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                            <h2 class="text-xl font-bold text-gray-800 mb-4">Histórico de Entradas no Estoque</h2>
-                            <div id="alert-historico-agua" class="alert mb-4"></div>
-                            
-                            <div class="mb-4">
-                                <label for="filtro-historico-agua" class="form-label text-xs">Buscar no Histórico:</label>
-                                <input type="text" id="filtro-historico-agua" data-table="table-historico-agua" class="form-input" placeholder="Buscar por data, responsável, NF...">
-                            </div>
-
-                            <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-96">
-                                <table class="table w-full text-sm">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th>Data</th>
-                                            <th>Tipo</th>
-                                            <th class="text-center">Qtd.</th>
-                                            <th>Responsável</th>
-                                            <th>NF</th>
-                                            <th class="text-center">Ação</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="table-historico-agua" class="divide-y divide-gray-100">
-                                        <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div> 
+
+            <!-- Sub-view: Status de Galões (Saldo nas Unidades) - NOVO -->
+            <div id="subview-status-agua" class="hidden">
+                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                     <h2 class="text-xl font-bold text-gray-800 mb-4">💧 Status de Galões (Saldo nas Unidades)</h2>
+                     <p class="text-sm text-gray-600 mb-4">Veja o saldo atual de galões cheios pendentes de devolução ou crédito nas unidades.</p>
+                     <div id="alert-agua-lista" class="alert mb-4"></div>
+                     
+                     <div class="mb-4">
+                         <label for="filtro-status-agua" class="form-label text-xs">Buscar Unidade:</label>
+                         <input type="text" id="filtro-status-agua" data-table="table-status-agua" class="form-input" placeholder="Digite o nome da unidade...">
+                     </div>
+    
+                     <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                         <table class="table w-full text-sm">
+                             <thead class="bg-gray-50">
+                                 <tr>
+                                     <th>Unidade</th>
+                                     <th>Tipo</th>
+                                     <th class="text-center">Entregues</th>
+                                     <th class="text-center">Recebidos</th>
+                                     <th class="text-center">Saldo</th> 
+                                     <th class="text-center">Último Lanç.</th>
+                                 </tr>
+                             </thead>
+                             <tbody id="table-status-agua" class="divide-y divide-gray-100">
+                                 <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                             </tbody>
+                         </table>
+                     </div>
+                 </div>
+            </div>
+
+            <!-- Sub-view: Histórico de Entradas no Estoque - NOVO -->
+             <div id="subview-historico-agua" class="hidden">
+                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">📦 Histórico de Entradas no Estoque (Água)</h2>
+                    <p class="text-sm text-gray-600 mb-4">Detalhes das entradas de galões no almoxarifado (inicial e compras).</p>
+                    <div id="alert-historico-agua" class="alert mb-4"></div>
+                    
+                    <div class="mb-4">
+                        <label for="filtro-historico-agua" class="form-label text-xs">Buscar no Histórico:</label>
+                        <input type="text" id="filtro-historico-agua" data-table="table-historico-agua" class="form-input" placeholder="Buscar por data, responsável, NF...">
+                    </div>
+
+                    <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-96">
+                        <table class="table w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th class="text-center">Qtd.</th>
+                                    <th>Responsável</th>
+                                    <th>NF</th>
+                                    <th class="text-center">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-historico-agua" class="divide-y divide-gray-100">
+                                <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+             </div>
 
             <!-- Sub-view: Previsão (Água) -->
             <div id="subview-previsao-agua" class="hidden">
@@ -653,20 +669,28 @@
         <!-- PAINEL CONTROLE DE GÁS (ID: content-gas)      -->
         <!-- ============================================= -->
         <div id="content-gas" class="fade-in hidden">
-            <!-- Sub-navegação -->
+            <!-- Sub-navegação MODIFICADA -->
             <div class="flex flex-wrap gap-2 mb-6" id="sub-nav-gas">
                 <button class="sub-nav-btn active" data-subview="movimentacao-gas">
-                   <i data-lucide="list-checks"></i>
-                   <span>Lançamentos / Status</span>
+                   <i data-lucide="edit"></i>
+                   <span>✍️ Lançamento</span>
+                </button>
+                <button class="sub-nav-btn" data-subview="status-gas">
+                   <i data-lucide="layers-3"></i>
+                   <span>🔥 Status de Botijões (Saldo nas Unidades)</span>
+                </button>
+                <button class="sub-nav-btn" data-subview="historico-gas">
+                   <i data-lucide="archive"></i>
+                   <span>📦 Histórico de Entradas no Estoque</span>
                 </button>
                 <button class="sub-nav-btn" data-subview="previsao-gas">
                    <i data-lucide="bar-chart-3"></i>
-                   <span>Previsão</span>
+                   <span>📈 Previsão</span>
                 </button>
             </div>
 
-            <!-- Sub-view: Movimentação -->
-            <div id="subview-movimentacao-gas">
+            <!-- Sub-view: Movimentação (Lançamento) -->
+            <div id="subview-movimentacao-gas" class="space-y-6">
                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                    
                    <!-- Coluna de Estoque -->
@@ -716,7 +740,7 @@
                    </div>
 
                    <!-- Coluna de Lançamento -->
-                   <div class="lg:col-span-1 bg-white rounded-xl border border-gray-200 shadow-sm">
+                   <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm">
                        <div class="flex border-b border-gray-200">
                            <button class="form-tab-btn active" data-form="saida-gas">
                                <i data-lucide="arrow-up-right-square"></i> <span>Saída (Unidades)</span>
@@ -732,6 +756,7 @@
                                <label for="select-unidade-gas" class="form-label">Unidade (Apenas habilitadas)</label>
                                <select id="select-unidade-gas" class="form-select" required></select>
                            </div>
+                           <div id="unidade-saldo-alerta-gas" class="alert alert-warning mt-2" style="display:none;"></div>
                            <div>
                                <label for="select-tipo-gas" class="form-label">Tipo de Movimentação</label>
                                <select id="select-tipo-gas" class="form-select" required>
@@ -757,8 +782,8 @@
                                <input type="date" id="input-data-gas" class="form-input" required>
                            </div>
                            <div>
-                                <label for="input-responsavel-gas" class="form-label">Responsável (Unidade)</label>
-                                <input type="text" id="input-responsavel-gas" class="form-input" placeholder="Nome de quem recebeu/entregou" required>
+                                <label for="input-responsavel-gas" class="form-label">Nome de quem Recebeu/Devolveu (Unidade)</label>
+                                <input type="text" id="input-responsavel-gas" class="form-input" placeholder="Nome do Responsável da Unidade" required>
                            </div>
                            <button type="submit" id="btn-submit-gas" class="btn-primary w-full !mt-6">
                                <i data-lucide="save"></i> <span>Salvar Movimentação</span>
@@ -776,8 +801,8 @@
                                <input type="date" id="input-data-entrada-gas" class="form-input" required>
                            </div>
                            <div>
-                                <label for="input-responsavel-entrada-gas" class="form-label">Recebido por (Almoxarifado)</label>
-                                <input type="text" id="input-responsavel-entrada-gas" class="form-input" placeholder="Nome de quem recebeu" required>
+                                <label for="input-responsavel-entrada-gas" class="form-label">Responsável do Estoque (Almoxarifado)</label>
+                                <input type="text" id="input-responsavel-entrada-gas" class="form-input" placeholder="Nome de quem recebeu a NF" required>
                            </div>
                             <div>
                                 <label for="input-nf-entrada-gas" class="form-label">Nota Fiscal (Opcional)</label>
@@ -790,67 +815,72 @@
 
                        <div id="alert-gas" class="alert m-6"></div>
                    </div>
-                   
-                   <!-- Coluna de Status e Histórico -->
-                   <div class="lg:col-span-1 space-y-6">
-                       <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                           <h2 class="text-xl font-bold text-gray-800 mb-4">Status de Botijões (Saldo nas Unidades)</h2>
-                           <div id="alert-gas-lista" class="alert mb-4"></div>
-                           
-                           <div class="mb-4">
-                               <label for="filtro-status-gas" class="form-label text-xs">Buscar Unidade:</label>
-                               <input type="text" id="filtro-status-gas" data-table="table-status-gas" class="form-input" placeholder="Digite o nome da unidade...">
-                           </div>
-
-                           <div class="overflow-x-auto border border-gray-200 rounded-lg">
-                               <table class="table w-full text-sm">
-                                   <thead class="bg-gray-50">
-                                       <tr>
-                                           <th>Unidade</th>
-                                           <th>Tipo</th>
-                                           <th class="text-center">Entregues</th>
-                                           <th class="text-center">Recebidos</th>
-                                           <th class="text-center">Saldo</th> 
-                                           <th class="text-center">Ação</th>
-                                       </tr>
-                                   </thead>
-                                   <tbody id="table-status-gas" class="divide-y divide-gray-100">
-                                       <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
-                                   </tbody>
-                               </table>
-                           </div>
-                       </div>
-
-                        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                           <h2 class="text-xl font-bold text-gray-800 mb-4">Histórico de Entradas no Estoque</h2>
-                           <div id="alert-historico-gas" class="alert mb-4"></div>
-                           
-                           <div class="mb-4">
-                               <label for="filtro-historico-gas" class="form-label text-xs">Buscar no Histórico:</label>
-                               <input type="text" id="filtro-historico-gas" data-table="table-historico-gas" class="form-input" placeholder="Buscar por data, responsável, NF...">
-                           </div>
-
-                           <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-96">
-                               <table class="table w-full text-sm">
-                                   <thead class="bg-gray-50">
-                                       <tr>
-                                           <th>Data</th>
-                                           <th>Tipo</th>
-                                           <th class="text-center">Qtd.</th>
-                                           <th>Responsável</th>
-                                           <th>NF</th>
-                                           <th class="text-center">Ação</th>
-                                       </tr>
-                                   </thead>
-                                   <tbody id="table-historico-gas" class="divide-y divide-gray-100">
-                                       <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
-                                   </tbody>
-                               </table>
-                           </div>
-                       </div>
-                   </div>
                </div>
             </div> 
+            
+            <!-- Sub-view: Status de Botijões (Saldo nas Unidades) - NOVO -->
+            <div id="subview-status-gas" class="hidden">
+                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                     <h2 class="text-xl font-bold text-gray-800 mb-4">🔥 Status de Botijões (Saldo nas Unidades)</h2>
+                     <p class="text-sm text-gray-600 mb-4">Veja o saldo atual de botijões cheios pendentes de devolução ou crédito nas unidades.</p>
+                     <div id="alert-gas-lista" class="alert mb-4"></div>
+                     
+                     <div class="mb-4">
+                         <label for="filtro-status-gas" class="form-label text-xs">Buscar Unidade:</label>
+                         <input type="text" id="filtro-status-gas" data-table="table-status-gas" class="form-input" placeholder="Digite o nome da unidade...">
+                     </div>
+    
+                     <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                         <table class="table w-full text-sm">
+                             <thead class="bg-gray-50">
+                                 <tr>
+                                     <th>Unidade</th>
+                                     <th>Tipo</th>
+                                     <th class="text-center">Entregues</th>
+                                     <th class="text-center">Recebidos</th>
+                                     <th class="text-center">Saldo</th> 
+                                     <th class="text-center">Último Lanç.</th>
+                                 </tr>
+                             </thead>
+                             <tbody id="table-status-gas" class="divide-y divide-gray-100">
+                                 <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                             </tbody>
+                         </table>
+                     </div>
+                 </div>
+            </div>
+
+            <!-- Sub-view: Histórico de Entradas no Estoque - NOVO -->
+            <div id="subview-historico-gas" class="hidden">
+                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">📦 Histórico de Entradas no Estoque (Gás)</h2>
+                    <p class="text-sm text-gray-600 mb-4">Detalhes das entradas de botijões no almoxarifado (inicial e compras).</p>
+                    <div id="alert-historico-gas" class="alert mb-4"></div>
+                    
+                    <div class="mb-4">
+                        <label for="filtro-historico-gas" class="form-label text-xs">Buscar no Histórico:</label>
+                        <input type="text" id="filtro-historico-gas" data-table="table-historico-gas" class="form-input" placeholder="Buscar por data, responsável, NF...">
+                    </div>
+
+                    <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-96">
+                        <table class="table w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th class="text-center">Qtd.</th>
+                                    <th>Responsável</th>
+                                    <th>NF</th>
+                                    <th class="text-center">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-historico-gas" class="divide-y divide-gray-100">
+                                <tr><td colspan="6" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
             
             <!-- Sub-view: Previsão (Gás) -->
             <div id="subview-previsao-gas" class="hidden">
@@ -1142,6 +1172,44 @@
       </div>
     </div>
 
+    <!-- Modal para Inserir Nome do Responsável do Almoxarifado (NOVO) -->
+    <div id="almoxarifado-responsavel-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title flex items-center gap-2">
+                    <i data-lucide="box" class="w-5 h-5"></i>
+                    Confirmação de Saída de Estoque
+                </h2>
+                <button class="modal-close" onclick="document.getElementById('almoxarifado-responsavel-modal').style.display='none'">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-4 text-sm text-gray-700">Informe seu nome (Responsável do Almoxarifado) para registrar quem está realizando a **entrega** desta movimentação. Esta informação é crucial para o histórico de rastreio.</p>
+                <div>
+                     <label for="input-almox-responsavel-nome" class="form-label">Seu Nome (Almoxarifado):</label>
+                     <input type="text" id="input-almox-responsavel-nome" class="form-input" placeholder="Nome de quem está entregando" required>
+                     <!-- Campos hidden para guardar os dados do formulário principal antes de salvar -->
+                     <input type="hidden" id="almox-temp-unidadeId">
+                     <input type="hidden" id="almox-temp-unidadeNome">
+                     <input type="hidden" id="almox-temp-tipoUnidadeRaw">
+                     <input type="hidden" id="almox-temp-tipoMovimentacao">
+                     <input type="hidden" id="almox-temp-qtdEntregue">
+                     <input type="hidden" id="almox-temp-qtdRetorno">
+                     <input type="hidden" id="almox-temp-data">
+                     <input type="hidden" id="almox-temp-responsavelUnidade">
+                     <input type="hidden" id="almox-temp-itemType">
+                </div>
+                 <div id="alert-almox-responsavel" class="alert mt-3 text-xs p-2"></div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-secondary" onclick="document.getElementById('almoxarifado-responsavel-modal').style.display='none'">Cancelar</button>
+              <button id="btn-salvar-movimentacao-final" class="btn-primary">
+                  <i data-lucide="package-open"></i>
+                  Confirmar Entrega
+              </button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Modal para Inserir Nome do Separador -->
     <div id="separador-modal" class="modal">
       <div class="modal-content">
