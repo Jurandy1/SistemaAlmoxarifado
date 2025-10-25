@@ -232,11 +232,9 @@ async function initFirebase() {
                 renderDashboardMateriaisCounts(); // CONTAGEM P/ SUMMARY DO MATERIAL
                 
                 renderEstoqueAgua();
-                renderHistoricoAgua(); // DEVOLVEU A FUNÇÃO
                 renderAguaMovimentacoesHistory(); // NOVO HISTÓRICO GERAL
 
                 renderEstoqueGas();
-                renderHistoricoGas(); // DEVOLVEU A FUNÇÃO
                 renderGasMovimentacoesHistory(); // NOVO HISTÓRICO GERAL
 
                 renderDashboardAguaChart();
@@ -814,14 +812,15 @@ function handleSaldoFilter(itemType, e) {
 
     // Atualiza o estado visual dos botões
     document.querySelectorAll(`#filtro-saldo-${itemType}-controls button`).forEach(btn => {
-        btn.classList.remove('active', 'bg-blue-600', 'text-white', 'font-semibold');
+        btn.classList.remove('active', 'bg-blue-600', 'text-white', 'font-semibold', 'btn-warning', 'btn-info', 'btn-secondary');
+        
         if (btn.dataset.filter === newFilter) {
             btn.classList.add('active', 'bg-blue-600', 'text-white', 'font-semibold');
         } else {
-            btn.classList.remove('btn-warning', 'btn-info'); // Limpa estilos de estado
+            // Garante que os estilos de cor corretos são aplicados quando inativo
             if (btn.dataset.filter === 'devendo') btn.classList.add('btn-warning');
             else if (btn.dataset.filter === 'credito') btn.classList.add('btn-info');
-            else btn.classList.add('btn-secondary'); // Garante que o padrão é secundário
+            else btn.classList.add('btn-secondary'); 
         }
     });
 
@@ -1240,11 +1239,11 @@ async function handleMateriaisSubmit(e) {
             dataInicioSeparacao: null, // <<< NOVO
             dataRetirada: null,
             dataEntrega: null,
-            responsavelLancamento: responsavelLancamento, // <<< NOME ATUALIZADO
+            responsavelLancamento: responsavelLancamento, // <<< NOME ATUALIZADO (Responsável da Unidade)
             responsavelSeparador: null, // <<< NOVO
-            responsavelEntrega: null, // NOVO
-            responsavelRecebimento: null, // NOVO
-            registradoEm: serverTimestamp(),
+            responsavelEntrega: null, // NOVO (Responsável Almoxarifado)
+            responsavelRecebimento: null, // NOVO (Responsável Unidade na Retirada)
+            registradoEm: serverTimestamp(), // Data do Lançamento
             fileURL: fileURL,
             storagePath: storagePath,
             downloadInfo: { count: 0, lastDownload: null, blockedUntil: null } // <<< NOVO para controle download
@@ -1365,8 +1364,9 @@ function renderMaterialSubTable(tableBody, data, status) {
             `;
         } else if (status === 'entregue') {
             const dataEntrega = formatTimestamp(m.dataEntrega);
+            // Ponto 4: Usa os novos campos de responsável
             const respUnidade = m.responsavelRecebimento || m.responsavelLancamento || 'N/A';
-            const respAlmox = m.responsavelEntrega || 'N/A';
+            const respAlmox = m.responsavelEntrega || m.responsavelSeparador || 'N/A';
             const dataLancamento = formatTimestampComTempo(m.registradoEm);
 
             rowContent = `
@@ -1952,9 +1952,9 @@ function renderDashboardMateriaisCounts() {
     if (dashboardMateriaisRetiradaCountEl) dashboardMateriaisRetiradaCountEl.textContent = retiradaCount;
     
     // Atualiza os summaries da subview de lançamento de materiais
-    summaryMateriaisRequisitado.textContent = requisitadoCount;
-    summaryMateriaisSeparacao.textContent = separacaoCount;
-    summaryMateriaisRetirada.textContent = retiradaCount;
+    if (summaryMateriaisRequisitado) summaryMateriaisRequisitado.textContent = requisitadoCount;
+    if (summaryMateriaisSeparacao) summaryMateriaisSeparacao.textContent = separacaoCount;
+    if (summaryMateriaisRetirada) summaryMateriaisRetirada.textContent = retiradaCount;
 }
 
 // <<< Função filterLast30Days ESTAVA FALTANDO, RESTAURADA ABAIXO >>>
@@ -2751,8 +2751,6 @@ function renderEstoqueGas() {
 }
 
 // REMOVIDO: renderHistoricoAgua e renderHistoricoGas (pois o histórico GERAL agora faz isso. Este era apenas para entradas.)
-// REMOVIDO: renderHistoricoAgua (apenas para manter compatibilidade, mas o histórico principal é o geral)
-// REMOVIDO: renderHistoricoGas (apenas para manter compatibilidade, mas o histórico principal é o geral)
 
 
 // --- CONTROLE DE ABAS E INICIALIZAÇÃO ---
@@ -2860,4 +2858,163 @@ function setupApp() {
     formAgua = document.getElementById('form-agua'); selectUnidadeAgua = document.getElementById('select-unidade-agua'); selectTipoAgua = document.getElementById('select-tipo-agua'); inputDataAgua = document.getElementById('input-data-agua'); inputResponsavelAgua = document.getElementById('input-responsavel-agua'); btnSubmitAgua = document.getElementById('btn-submit-agua'); alertAgua = document.getElementById('alert-agua'); tableStatusAgua = document.getElementById('table-status-agua'); alertAguaLista = document.getElementById('alert-agua-lista');
     inputQtdEntregueAgua = document.getElementById('input-qtd-entregue-agua'); inputQtdRetornoAgua = document.getElementById('input-qtd-retorno-agua'); formGroupQtdEntregueAgua = document.getElementById('form-group-qtd-entregue-agua'); formGroupQtdRetornoAgua = document.getElementById('form-group-qtd-retorno-agua');
     unidadeSaldoAlertaAgua = document.getElementById('unidade-saldo-alerta-agua'); // NOVO
-    formGas = document.getElementById('form-gas'); selectUnidadeGas = document.getElementById('select-unidade-gas'); selectTipoGas = document.getElementById('select-
+    formGas = document.getElementById('form-gas'); selectUnidadeGas = document.getElementById('select-unidade-gas'); selectTipoGas = document.getElementById('select-tipo-gas'); inputDataGas = document.getElementById('input-data-gas'); inputResponsavelGas = document.getElementById('input-responsavel-gas'); btnSubmitGas = document.getElementById('btn-submit-gas'); alertGas = document.getElementById('alert-gas'); tableStatusGas = document.getElementById('table-status-gas'); alertGasLista = document.getElementById('alert-gas-lista');
+    inputQtdEntregueGas = document.getElementById('input-qtd-entregue-gas'); inputQtdRetornoGas = document.getElementById('input-qtd-retorno-gas'); formGroupQtdEntregueGas = document.getElementById('form-group-qtd-entregue-gas'); formGroupQtdRetornoGas = document.getElementById('form-group-qtd-retorno-gas');
+    unidadeSaldoAlertaGas = document.getElementById('unidade-saldo-alerta-gas'); // NOVO
+    formMateriais = document.getElementById('form-materiais'); selectUnidadeMateriais = document.getElementById('select-unidade-materiais'); selectTipoMateriais = document.getElementById('select-tipo-materiais'); inputDataSeparacao = document.getElementById('input-data-separacao'); textareaItensMateriais = document.getElementById('textarea-itens-materiais'); inputResponsavelMateriais = document.getElementById('input-responsavel-materiais'); inputArquivoMateriais = document.getElementById('input-arquivo-materiais'); btnSubmitMateriais = document.getElementById('btn-submit-materiais'); alertMateriais = document.getElementById('alert-materiais');
+    tableGestaoUnidades = document.getElementById('table-gestao-unidades'); alertGestao = document.getElementById('alert-gestao'); textareaBulkUnidades = document.getElementById('textarea-bulk-unidades'); btnBulkAddUnidades = document.getElementById('btn-bulk-add-unidades');
+    filtroUnidadeNome = document.getElementById('filtro-unidade-nome'); filtroUnidadeTipo = document.getElementById('filtro-unidade-tipo'); 
+    relatorioTipo = document.getElementById('relatorio-tipo'); relatorioDataInicio = document.getElementById('relatorio-data-inicio'); relatorioDataFim = document.getElementById('relatorio-data-fim'); btnGerarPdf = document.getElementById('btn-gerar-pdf'); alertRelatorio = document.getElementById('alert-relatorio');
+    confirmDeleteModal = document.getElementById('confirm-delete-modal'); btnCancelDelete = document.getElementById('btn-cancel-delete'); btnConfirmDelete = document.getElementById('btn-confirm-delete'); deleteDetailsEl = document.getElementById('delete-details'); deleteWarningUnidadeEl = document.getElementById('delete-warning-unidade'); deleteWarningInicialEl = document.getElementById('delete-warning-inicial'); 
+    // NOVO: Busca elementos do modal do separador
+    separadorModal = document.getElementById('separador-modal');
+    inputSeparadorNome = document.getElementById('input-separador-nome');
+    btnSalvarSeparador = document.getElementById('btn-salvar-separador');
+    separadorMaterialIdEl = document.getElementById('separador-material-id'); // Input hidden
+    alertSeparador = document.getElementById('alert-separador');
+    // NOVO: Busca elementos do modal de responsável do almoxarifado
+    almoxarifadoResponsavelModal = document.getElementById('almoxarifado-responsavel-modal');
+    inputAlmoxResponsavelNome = document.getElementById('input-almox-responsavel-nome');
+    btnSalvarMovimentacaoFinal = document.getElementById('btn-salvar-movimentacao-final');
+    alertAlmoxResponsavel = document.getElementById('alert-almox-responsavel');
+    // NOVO: Busca elementos do modal de finalização de materiais
+    finalizarEntregaModal = document.getElementById('finalizar-entrega-modal');
+    inputEntregaResponsavelAlmox = document.getElementById('input-entrega-responsavel-almox');
+    inputEntregaResponsavelUnidade = document.getElementById('input-entrega-responsavel-unidade');
+    btnConfirmarFinalizacaoEntrega = document.getElementById('btn-confirmar-finalizacao-entrega');
+    finalizarEntregaMaterialIdEl = document.getElementById('finalizar-entrega-material-id');
+    alertFinalizarEntrega = document.getElementById('alert-finalizar-entrega');
+    // NOVO: Busca as tabelas de workflow de materiais
+    tableParaSeparar = document.getElementById('table-para-separar');
+    tableEmSeparacao = document.getElementById('table-em-separacao');
+    tableProntoEntrega = document.getElementById('table-pronto-entrega');
+    tableHistoricoEntregues = document.getElementById('table-historico-entregues');
+    summaryMateriaisRequisitado = document.getElementById('summary-materiais-requisitado');
+    summaryMateriaisSeparacao = document.getElementById('summary-materiais-separacao');
+    summaryMateriaisRetirada = document.getElementById('summary-materiais-retirada');
+    // NOVO: Busca as tabelas de histórico geral
+    tableHistoricoAguaAll = document.getElementById('table-historico-agua-all');
+    tableHistoricoGasAll = document.getElementById('table-historico-gas-all');
+    // NOVO: Busca os inputs hidden temporários
+    almoxTempFields = {
+        unidadeId: document.getElementById('almox-temp-unidadeId'),
+        unidadeNome: document.getElementById('almox-temp-unidadeNome'),
+        tipoUnidadeRaw: document.getElementById('almox-temp-tipoUnidadeRaw'),
+        tipoMovimentacao: document.getElementById('almox-temp-tipoMovimentacao'),
+        qtdEntregue: document.getElementById('almox-temp-qtdEntregue'),
+        qtdRetorno: document.getElementById('almox-temp-qtdRetorno'),
+        data: document.getElementById('almox-temp-data'),
+        responsavelUnidade: document.getElementById('almox-temp-responsavelUnidade'),
+        itemType: document.getElementById('almox-temp-itemType'),
+    };
+    estoqueAguaInicialEl = document.getElementById('estoque-agua-inicial'); estoqueAguaEntradasEl = document.getElementById('estoque-agua-entradas'); estoqueAguaSaidasEl = document.getElementById('estoque-agua-saidas'); estoqueAguaAtualEl = document.getElementById('estoque-agua-atual'); loadingEstoqueAguaEl = document.getElementById('loading-estoque-agua'); resumoEstoqueAguaEl = document.getElementById('resumo-estoque-agua');
+    formEntradaAgua = document.getElementById('form-entrada-agua'); inputDataEntradaAgua = document.getElementById('input-data-entrada-agua'); btnSubmitEntradaAgua = document.getElementById('btn-submit-entrada-agua');
+    formInicialAguaContainer = document.getElementById('form-inicial-agua-container'); formInicialAgua = document.getElementById('form-inicial-agua'); inputInicialQtdAgua = document.getElementById('input-inicial-qtd-agua'); inputInicialResponsavelAgua = document.getElementById('input-inicial-responsavel-agua'); btnSubmitInicialAgua = document.getElementById('btn-submit-inicial-agua'); alertInicialAgua = document.getElementById('alert-inicial-agua'); btnAbrirInicialAgua = document.getElementById('btn-abrir-inicial-agua');
+    estoqueGasInicialEl = document.getElementById('estoque-gas-inicial'); estoqueGasEntradasEl = document.getElementById('estoque-gas-entradas'); estoqueGasSaidasEl = document.getElementById('estoque-gas-saidas'); estoqueGasAtualEl = document.getElementById('estoque-gas-atual'); loadingEstoqueGasEl = document.getElementById('loading-estoque-gas'); resumoEstoqueGasEl = document.getElementById('resumo-estoque-gas');
+    formEntradaGas = document.getElementById('form-entrada-gas'); inputDataEntradaGas = document.getElementById('input-data-entrada-gas'); btnSubmitEntradaGas = document.getElementById('btn-submit-entrada-gas');
+    formInicialGasContainer = document.getElementById('form-inicial-gas-container'); formInicialGas = document.getElementById('form-inicial-gas'); inputInicialQtdGas = document.getElementById('input-inicial-qtd-gas'); inputInicialResponsavelGas = document.getElementById('input-inicial-responsavel-gas'); btnSubmitInicialGas = document.getElementById('btn-submit-inicial-gas'); alertInicialGas = document.getElementById('alert-inicial-gas'); btnAbrirInicialGas = document.getElementById('btn-abrir-inicial-gas');
+
+    // <<< VERIFICAÇÃO CRÍTICA >>>
+    // Esta verificação agora roda DEPOIS do DOMContentLoaded, então deve passar.
+    if (!dashboardMateriaisProntosContainer || !navButtons) {
+        console.error("ERRO CRÍTICO: Elementos essenciais (Container Materiais ou Botões de Navegação) NÃO encontrados DENTRO de setupApp!");
+        showAlert('alert-agua', 'Erro crítico ao carregar interface. Recarregue a página (Erro Setup).', 'error', 60000);
+        return; // Não marcar domReady = true se falhar
+    } else {
+        console.log("Elementos essenciais encontrados DENTRO de setupApp.");
+    }
+    
+    // CORREÇÃO CRÍTICA: Marcar domReady=true AQUI, após encontrar os elementos
+    // e ANTES de adicionar os listeners
+    domReady = true; 
+    console.log("setupApp: domReady marcado como TRUE.");
+
+    const todayStr = getTodayDateString();
+    [inputDataAgua, inputDataGas, inputDataSeparacao, relatorioDataInicio, relatorioDataFim, inputDataEntradaAgua, inputDataEntradaGas].forEach(input => {
+        if(input) input.value = todayStr;
+    });
+
+    // --- Adiciona Event Listeners ---
+    navButtons.forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
+    document.querySelectorAll('#sub-nav-materiais .sub-nav-btn').forEach(btn => btn.addEventListener('click', () => switchSubTabView('materiais', btn.dataset.subview)));
+    if (dashboardNavControls) dashboardNavControls.addEventListener('click', (e) => { const btn = e.target.closest('button.dashboard-nav-btn[data-view]'); if (btn) switchDashboardView(btn.dataset.view); });
+    if (formAgua) formAgua.addEventListener('submit', handleAguaSubmit); 
+    if (formGas) formGas.addEventListener('submit', handleGasSubmit); 
+    if (formMateriais) formMateriais.addEventListener('submit', handleMateriaisSubmit); 
+    if (selectTipoAgua) selectTipoAgua.addEventListener('change', toggleAguaFormInputs);
+    if (selectTipoGas) selectTipoGas.addEventListener('change', toggleGasFormInputs);
+    
+    // NOVO: Listener para o select de unidade (para o alerta de saldo)
+    if(selectUnidadeAgua) selectUnidadeAgua.addEventListener('change', () => checkUnidadeSaldoAlert('agua'));
+    if(selectUnidadeGas) selectUnidadeGas.addEventListener('change', () => checkUnidadeSaldoAlert('gas'));
+    
+    // Botões de Estoque Inicial
+    if (formInicialAgua) formInicialAgua.addEventListener('submit', handleInicialEstoqueSubmit);
+    if (formInicialGas) formInicialGas.addEventListener('submit', handleInicialEstoqueSubmit);
+    if (btnAbrirInicialAgua) btnAbrirInicialAgua.addEventListener('click', () => { formInicialAguaContainer?.classList.remove('hidden'); btnAbrirInicialAgua?.classList.add('hidden'); });
+    if (btnAbrirInicialGas) btnAbrirInicialGas.addEventListener('click', () => { formInicialGasContainer?.classList.remove('hidden'); btnAbrirInicialGas?.classList.add('hidden'); });
+    
+    // Formulários de Entrada de Estoque
+    if (formEntradaAgua) formEntradaAgua.addEventListener('submit', handleEntradaEstoqueSubmit);
+    if (formEntradaGas) formEntradaGas.addEventListener('submit', handleEntradaEstoqueSubmit);
+    
+    // Botões de sub-aba de Lançamento (Entrada/Saída)
+    document.querySelectorAll('.form-tab-btn').forEach(btn => btn.addEventListener('click', (e) => {
+        const formName = btn.dataset.form;
+        if (formName) switchEstoqueForm(formName);
+    }));
+
+    // Eventos de clique centralizados
+    document.querySelector('main').addEventListener('click', (e) => {
+         const removeBtn = e.target.closest('button.btn-remove[data-id]');
+         // O botão "Entregue" agora abre o modal
+         const entregueBtn = e.target.closest('button.btn-entregue[data-id]');
+         const retiradaBtn = e.target.closest('button.btn-retirada[data-id]');
+         // NOVOS: Botões de Iniciar Separação e Download
+         const startSeparacaoBtn = e.target.closest('button.btn-start-separacao[data-id]');
+         const downloadPedidoBtn = e.target.closest('button.btn-download-pedido[data-id]');
+
+         if (removeBtn) {
+             openConfirmDeleteModal(removeBtn.dataset.id, removeBtn.dataset.type, removeBtn.dataset.details);
+         } else if (entregueBtn) {
+             handleMarcarEntregue(e); // Agora abre o modal para pegar os nomes
+         } else if (retiradaBtn) {
+             handleMarcarRetirada(e); // Marca como pronto para retirada
+         } else if (startSeparacaoBtn) { // NOVO
+             openSeparadorModal(startSeparacaoBtn.dataset.id);
+         } else if (downloadPedidoBtn) { // NOVO
+             handleDownloadPedido(downloadPedidoBtn.dataset.id, downloadPedidoBtn.dataset.url);
+         }
+    });
+
+    if (tableGestaoUnidades) { 
+        tableGestaoUnidades.addEventListener('click', handleEditUnidadeClick);
+        tableGestaoUnidades.addEventListener('click', handleCancelEditUnidadeClick);
+        tableGestaoUnidades.addEventListener('click', handleSaveUnidadeClick);
+    }
+    const contentGestao = document.getElementById('content-gestao');
+    if (contentGestao) {
+        contentGestao.addEventListener('change', handleGestaoToggle); 
+        if(filtroUnidadeNome) filtroUnidadeNome.addEventListener('input', renderGestaoUnidades); 
+        if(filtroUnidadeTipo) filtroUnidadeTipo.addEventListener('input', renderGestaoUnidades); 
+    }
+    if (btnBulkAddUnidades) btnBulkAddUnidades.addEventListener('click', handleBulkAddUnidades);
+    if (btnGerarPdf) btnGerarPdf.addEventListener('click', handleGerarPdf);
+    if (btnCancelDelete) btnCancelDelete.addEventListener('click', () => confirmDeleteModal.style.display = 'none');
+    if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', executeDelete);
+    // NOVO: Listener para salvar nome do separador
+    if (btnSalvarSeparador) btnSalvarSeparador.addEventListener('click', handleSalvarSeparador);
+    // NOVO: Listener para salvar o nome do almoxarifado no modal (Água/Gás)
+    if (btnSalvarMovimentacaoFinal) btnSalvarMovimentacaoFinal.addEventListener('click', handleFinalMovimentacaoSubmit);
+    // NOVO: Listener para confirmar finalização de materiais
+    if (btnConfirmarFinalizacaoEntrega) btnConfirmarFinalizacaoEntrega.addEventListener('click', handleFinalizarEntregaSubmit);
+
+}
+
+// Inicia o setup quando o DOM estiver completamente carregado
+document.addEventListener('DOMContentLoaded', setupApp);
+
+// --- Inicializa Firebase após o setup do DOM ---
+// O initFirebase será chamado no final de setupApp.
+// Não, o initFirebase é chamado na Main Thread e só chama os listeners DEPOIS do onAuthStateChanged!
+window.onload = initFirebase;
