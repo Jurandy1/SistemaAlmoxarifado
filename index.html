@@ -31,7 +31,7 @@
                         sans: ['Inter', 'sans-serif'],
                     },
                     colors: {
-                        'semcas-blue': '#1e40af', // Exemplo de cor primária
+                        'semcas-blue': '#1e40af', // Cor primária definida
                     }
                 }
             }
@@ -225,14 +225,53 @@
                                 Limpar Filtro
                             </button>
                         </div>
-                        <!-- Container para o grid dinâmico de materiais -->
+                        
+                        <!-- Container para o grid dinâmico de materiais (MODIFICADO CONFORME TXT) -->
                         <div id="dashboard-materiais-prontos" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                            <!-- O JS preenche isso, mas mostramos um loader -->
-                            <div class="text-center p-10 col-span-full" id="loading-materiais-prontos">
-                                <div class="loading-spinner-small mx-auto mb-2"></div>
-                                <p class="text-sm text-gray-500">Carregando...</p>
+                            
+                            <!-- Coluna CT -->
+                            <div class="materiais-prontos-col">
+                                <h4 class="font-bold text-sm mb-3 text-semcas-blue border-b-2 border-blue-300 pb-2">CT</h4>
+                                <ul class="space-y-3" id="coluna-CT">
+                                    <!-- JS preenche aqui -->
+                                    <li class="text-sm text-slate-500 p-3"><div class="loading-spinner-small mx-auto"></div></li>
+                                </ul>
                             </div>
+
+                            <!-- Coluna SEDE -->
+                            <div class="materiais-prontos-col">
+                                <h4 class="font-bold text-sm mb-3 text-semcas-blue border-b-2 border-blue-300 pb-2">SEDE</h4>
+                                <ul class="space-y-3" id="coluna-SEDE">
+                                    <!-- JS preenche aqui -->
+                                </ul>
+                            </div>
+
+                            <!-- Coluna CRAS -->
+                            <div class="materiais-prontos-col">
+                                <h4 class="font-bold text-sm mb-3 text-semcas-blue border-b-2 border-blue-300 pb-2">CRAS</h4>
+                                <ul class="space-y-3" id="coluna-CRAS">
+                                    <!-- JS preenche aqui -->
+                                </ul>
+                            </div>
+
+                            <!-- Coluna CREAS -->
+                            <div class="materiais-prontos-col">
+                                <h4 class="font-bold text-sm mb-3 text-semcas-blue border-b-2 border-blue-300 pb-2">CREAS</h4>
+                                <ul class="space-y-3" id="coluna-CREAS">
+                                    <!-- JS preenche aqui -->
+                                </ul>
+                            </div>
+
+                            <!-- Coluna ABRIGO -->
+                            <div class="materiais-prontos-col">
+                                <h4 class="font-bold text-sm mb-3 text-semcas-blue border-b-2 border-blue-300 pb-2">ABRIGO</h4>
+                                <ul class="space-y-3" id="coluna-ABRIGO">
+                                    <!-- JS preenche aqui -->
+                                </ul>
+                            </div>
+
                         </div>
+                        <!-- Fim do container modificado -->
                     </div>
                 </div>
 
