@@ -512,6 +512,7 @@
                      <p class="text-sm text-gray-600 mb-4">Veja o saldo atual de galões cheios pendentes de devolução ou crédito nas unidades.</p>
                      <div id="alert-agua-lista" class="alert mb-4"></div>
                      
+                     <!-- NOVO: Filtro por Saldo (Ponto 3) -->
                      <div class="mb-4 flex flex-wrap gap-3 items-end">
                          <div>
                              <label for="filtro-status-agua" class="form-label text-xs">Buscar Unidade:</label>
@@ -519,8 +520,8 @@
                          </div>
                          <div id="filtro-saldo-agua-controls" class="flex flex-wrap gap-2">
                             <button class="btn-secondary btn-saldo-filter" data-filter="all">Todos</button>
-                            <button class="btn-warning btn-saldo-filter" data-filter="devendo" title="Unidades com saldo > 0">Devendo</button>
-                            <button class="btn-info btn-saldo-filter" data-filter="credito" title="Unidades com saldo < 0">Crédito</button>
+                            <button class="btn-warning btn-saldo-filter" data-filter="devendo" title="Unidades com saldo > 0">Devendo (Vazios na Unidade)</button>
+                            <button class="btn-info btn-saldo-filter" data-filter="credito" title="Unidades com saldo < 0">Crédito (Vazios na Secretaria)</button>
                             <button class="btn-secondary btn-saldo-filter" data-filter="zero" title="Unidades com saldo = 0">Zero</button>
                          </div>
                      </div>
@@ -839,6 +840,7 @@
                      <p class="text-sm text-gray-600 mb-4">Veja o saldo atual de botijões cheios pendentes de devolução ou crédito nas unidades.</p>
                      <div id="alert-gas-lista" class="alert mb-4"></div>
                      
+                     <!-- NOVO: Filtro por Saldo (Ponto 3) -->
                      <div class="mb-4 flex flex-wrap gap-3 items-end">
                          <div>
                              <label for="filtro-status-gas" class="form-label text-xs">Buscar Unidade:</label>
@@ -846,8 +848,8 @@
                          </div>
                          <div id="filtro-saldo-gas-controls" class="flex flex-wrap gap-2">
                             <button class="btn-secondary btn-saldo-filter" data-filter="all">Todos</button>
-                            <button class="btn-warning btn-saldo-filter" data-filter="devendo" title="Unidades com saldo > 0">Devendo</button>
-                            <button class="btn-info btn-saldo-filter" data-filter="credito" title="Unidades com saldo < 0">Crédito</button>
+                            <button class="btn-warning btn-saldo-filter" data-filter="devendo" title="Unidades com saldo > 0">Devendo (Vazios na Unidade)</button>
+                            <button class="btn-info btn-saldo-filter" data-filter="credito" title="Unidades com saldo < 0">Crédito (Vazios na Secretaria)</button>
                             <button class="btn-secondary btn-saldo-filter" data-filter="zero" title="Unidades com saldo = 0">Zero</button>
                          </div>
                      </div>
@@ -1123,7 +1125,7 @@
             <div id="subview-em-separacao" class="hidden">
                  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                     <h2 class="text-xl font-bold text-gray-800 mb-4"><i data-lucide="archive" class="inline-block -mt-1 mr-2"></i> Requisições em Separação</h2>
-                    <p class="text-sm text-gray-600 mb-4">Itens já em separação. Clique em "Pronto" para liberá-los para a entrega/retirada.</p>
+                    <p class="text-sm text-gray-600 mb-4">Itens já em separação. Clique em **"Pronto para Entrega"** para liberá-los para a retirada.</p>
                     <div id="alert-em-separacao" class="alert mb-4"></div>
                     <div id="table-em-separacao-container" class="overflow-x-auto border border-gray-200 rounded-lg">
                         <table class="table w-full text-sm">
@@ -1148,7 +1150,7 @@
             <div id="subview-pronto-entrega" class="hidden">
                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                     <h2 class="text-xl font-bold text-gray-800 mb-4"><i data-lucide="check-square" class="inline-block -mt-1 mr-2"></i> Requisições Prontas para Entrega</h2>
-                    <p class="text-sm text-gray-600 mb-4">Materiais já separados. Clique em "Entregue" para registrar a retirada e finalizar o processo.</p>
+                    <p class="text-sm text-gray-600 mb-4">Materiais já separados. Clique em **"Entregue"** para registrar a retirada e finalizar o processo.</p>
                     <div id="alert-pronto-entrega" class="alert mb-4"></div>
                     <div id="table-pronto-entrega-container" class="overflow-x-auto border border-gray-200 rounded-lg">
                         <table class="table w-full text-sm">
