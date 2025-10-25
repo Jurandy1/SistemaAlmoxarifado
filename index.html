@@ -519,8 +519,9 @@
                          </div>
                          <div id="filtro-saldo-agua-controls" class="flex flex-wrap gap-2">
                             <button class="btn-secondary btn-saldo-filter" data-filter="all">Todos</button>
-                            <button class="btn-warning btn-saldo-filter" data-filter="devendo" title="Unidades com saldo > 0">Devendo</button>
-                            <button class="btn-info btn-saldo-filter" data-filter="credito" title="Unidades com saldo < 0">Crédito</button>
+                            <!-- Estilos melhorados (classes de cor personalizadas) -->
+                            <button class="btn-warning btn-saldo-filter border border-red-400 bg-red-50 text-red-700 hover:bg-red-100" data-filter="devendo" title="Unidades com saldo > 0">Devendo</button>
+                            <button class="btn-info btn-saldo-filter border border-blue-400 bg-blue-50 text-blue-700 hover:bg-blue-100" data-filter="credito" title="Unidades com saldo < 0">Crédito</button>
                             <button class="btn-secondary btn-saldo-filter" data-filter="zero" title="Unidades com saldo = 0">Zero</button>
                          </div>
                      </div>
@@ -836,6 +837,7 @@
             <div id="subview-status-gas" class="hidden">
                  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                      <h2 class="text-xl font-bold text-gray-800 mb-4"><i data-lucide="flame" class="inline-block -mt-1 mr-2"></i> Status de Botijões (Saldo nas Unidades)</h2>
+                     <!-- CORREÇÃO DE TEXTO DO SUBMENU -->
                      <p class="text-sm text-gray-600 mb-4">Veja o saldo atual de botijões cheios pendentes de devolução ou crédito nas unidades.</p>
                      <div id="alert-gas-lista" class="alert mb-4"></div>
                      
@@ -846,8 +848,9 @@
                          </div>
                          <div id="filtro-saldo-gas-controls" class="flex flex-wrap gap-2">
                             <button class="btn-secondary btn-saldo-filter" data-filter="all">Todos</button>
-                            <button class="btn-warning btn-saldo-filter" data-filter="devendo" title="Unidades com saldo > 0">Devendo</button>
-                            <button class="btn-info btn-saldo-filter" data-filter="credito" title="Unidades com saldo < 0">Crédito</button>
+                            <!-- Estilos melhorados (classes de cor personalizadas) -->
+                            <button class="btn-warning btn-saldo-filter border border-red-400 bg-red-50 text-red-700 hover:bg-red-100" data-filter="devendo" title="Unidades com saldo > 0">Devendo</button>
+                            <button class="btn-info btn-saldo-filter border border-blue-400 bg-blue-50 text-blue-700 hover:bg-blue-100" data-filter="credito" title="Unidades com saldo < 0">Crédito</button>
                             <button class="btn-secondary btn-saldo-filter" data-filter="zero" title="Unidades com saldo = 0">Zero</button>
                          </div>
                      </div>
