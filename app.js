@@ -1966,7 +1966,6 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     // --- NOVA LÓGICA (Baseada no .txt) ---
 
     // 1. Encontrar as colunas UL do index.html
-    // As colunas agora são estáticas no index.html
     const colunas = {
         CT: document.getElementById("coluna-CT"),
         SEDE: document.getElementById("coluna-SEDE"),
@@ -1974,6 +1973,9 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
         CREAS: document.getElementById("coluna-CREAS"),
         ABRIGO: document.getElementById("coluna-ABRIGO"),
     };
+    
+    // Define os tipos de unidade que têm uma coluna estática
+    const TIPOS_DE_COLUNA = Object.keys(colunas); // ['CT', 'SEDE', 'CRAS', 'CREAS', 'ABRIGO']
 
     // 2. Limpar o conteúdo anterior
     let totalPendentesVisiveis = 0;
@@ -1985,8 +1987,15 @@ function renderDashboardMateriaisProntos(filterStatus = null) {
     
     // 3. Agrupar os 'pendentes' filtrados (lógica movida da função antiga)
     const gruposTipoUnidade = pendentes.reduce((acc, m) => {
-        let tipoUnidade = (m.tipoUnidade || 'OUTROS').toUpperCase();
+        let tipoUnidade = (m.tipoUnidade || '').toUpperCase();
         if (tipoUnidade === 'SEMCAS') tipoUnidade = 'SEDE'; 
+        
+        // CORREÇÃO: Usar um filtro explícito para garantir que o tipo da unidade 
+        // corresponda a uma coluna existente. Se não corresponder, ignora.
+        if (!TIPOS_DE_COLUNA.includes(tipoUnidade)) {
+             // console.warn(`Item de material ignorado: Tipo de unidade "${tipoUnidade}" não mapeado para coluna.`);
+             return acc; // Ignora o item se não for um tipo de coluna esperado
+        }
         
         if (!acc[tipoUnidade]) acc[tipoUnidade] = [];
         acc[tipoUnidade].push(m);
