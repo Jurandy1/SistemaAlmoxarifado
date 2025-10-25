@@ -1707,7 +1707,7 @@ function renderMaterialSubTable(tableBody, data, status) {
             rowContent = '<td>' + m.unidadeNome + '</td>' +
                 '<td class="capitalize">' + m.tipoMaterial + '</td>' +
                 '<td>' + separador + '</td>' +
-                '<td>' + (formatTimestamp(m.dataRetirada) || 'N/A') + '</td>' +
+                '<td class="text-xs">' + (formatTimestamp(m.dataRetirada) || 'N/A') + '</td>' +
                 '<td class="text-center space-x-2">' + acoesHtml + '</td>';
             
         } else if (status === 'entregue') {
