@@ -19,6 +19,46 @@ let graficoAnaliseConsumo = { agua: null, gas: null };
 // Estado local para evitar recriação desnecessária de listeners (Bugfix de UI)
 let analiseListenersInitialized = { agua: false, gas: false };
 
+// FERIADOS NACIONAIS FIXOS (Dia/Mês)
+const FERIADOS_FIXOS = [
+    '01/01', // Confraternização Universal
+    '21/04', // Tiradentes
+    '01/05', // Dia do Trabalho
+    '07/09', // Independência do Brasil
+    '12/10', // Nossa Senhora Aparecida
+    '02/11', // Finados
+    '15/11', // Proclamação da República
+    '20/11', // Dia da Consciência Negra
+    '25/12'  // Natal
+];
+
+function isFeriado(date) {
+    const dia = String(date.getDate()).padStart(2, '0');
+    const mes = String(date.getMonth() + 1).padStart(2, '0');
+    const chave = `${dia}/${mes}`;
+    return FERIADOS_FIXOS.includes(chave);
+}
+
+function countDiasUteis(startDate, endDate) {
+    let count = 0;
+    let curDate = new Date(startDate.getTime());
+    const end = new Date(endDate.getTime());
+    
+    // Normalizar para meia-noite para evitar problemas de hora
+    curDate.setHours(0,0,0,0);
+    end.setHours(0,0,0,0);
+
+    while (curDate <= end) {
+        const dayOfWeek = curDate.getDay();
+        // 0 = Domingo, 6 = Sábado
+        if (dayOfWeek !== 0 && dayOfWeek !== 6 && !isFeriado(curDate)) {
+            count++;
+        }
+        curDate.setDate(curDate.getDate() + 1);
+    }
+    return count;
+}
+
 function normalizeUnidadeType(tipo) {
     let tipoNormalizado = (tipo || 'OUTROS').toUpperCase();
     if (tipoNormalizado === 'SEMCAS') tipoNormalizado = 'SEDE';
@@ -28,6 +68,10 @@ function normalizeUnidadeType(tipo) {
 
 function normalizeUnidadeNome(nome) {
     return (nome || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function isFuroDeEstoqueNome(nome) {
+    return normalizeUnidadeNome(nome) === 'furo de estoque';
 }
 
 /**
@@ -115,9 +159,10 @@ function getPeriodoAnalise(movimentacoes) {
     const dataFinal = Timestamp.fromDate(ultimaMovDate);
     const inicioPrimeira = new Date(primeiraMovDate.getFullYear(), primeiraMovDate.getMonth(), primeiraMovDate.getDate());
     const fimUltima = new Date(ultimaMovDate.getFullYear(), ultimaMovDate.getMonth(), ultimaMovDate.getDate());
-    const diffTime = Math.abs(fimUltima.getTime() - inicioPrimeira.getTime());
-    const totalDaysMs = 1000 * 60 * 60 * 24;
-    const totalDias = Math.ceil(diffTime / totalDaysMs) + 1; 
+    
+    // CORREÇÃO: Usar dias úteis (Segunda a Sexta + Feriados)
+    const totalDias = Math.max(1, countDiasUteis(inicioPrimeira, fimUltima));
+    
     return { dataInicial, dataFinal, totalDias };
 }
 
@@ -334,10 +379,25 @@ function analisarConsumoPorPeriodo(itemType) {
         return;
     }
 
+    const isFuroMov = (mov) => {
+        if (itemType !== 'agua') return false;
+        const info = unidadeMap.get(mov.unidadeId);
+        const nome = info?.nome || mov.unidadeNome || '';
+        return isFuroDeEstoqueNome(nome);
+    };
+
+    const movsEntregaSemFuro = itemType === 'agua'
+        ? movsEntrega.filter(m => !isFuroMov(m))
+        : movsEntrega;
+
+    const furoQuantidade = itemType === 'agua'
+        ? movsEntrega.filter(m => isFuroMov(m)).reduce((s, m) => s + (m.quantidade || 0), 0)
+        : 0;
+
     const { dataInicial, dataFinal, totalDias } = getPeriodoAnalise(movsEntrega);
     const consumoPorPeriodo = new Map();
 
-    movsEntrega.forEach(mov => {
+    movsEntregaSemFuro.forEach(mov => {
         const data = mov.data.toDate();
         const unidadeInfo = unidadeMap.get(mov.unidadeId);
         if (!unidadeInfo) return; 
@@ -360,7 +420,7 @@ function analisarConsumoPorPeriodo(itemType) {
     renderGraficoAnalise(itemType, chartLabels, chartDataSets, granularidade, agruparPor, nomeFiltro);
     document.getElementById(`analise-resultado-container-${itemType}`).classList.remove('hidden');
     renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, dataFinal, movsGroupFull, granularidade, mesRefVal || '', movimentacoes);
-    showAlert(alertId, `Análise concluída. Período: ${formatTimestamp(dataInicial)} a ${formatTimestamp(dataFinal)} (${totalDias} dias).`, 'success', 5000);
+    showAlert(alertId, `Análise concluída. Período: ${formatTimestamp(dataInicial)} a ${formatTimestamp(dataFinal)} (${totalDias} dias úteis).`, 'success', 5000);
 }
 
 function getItemLabel(itemType, qty) {
@@ -502,21 +562,27 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
     const resumoExecEl = document.getElementById(`analise-resumo-executivo-${itemType}`);
     if (!relatorioEl || !rankingEl) return;
     const { totalDias } = getPeriodoAnalise(movsEntrega);
+    let furoQuantidade = 0;
     const consumoPorUnidade = movsEntrega.reduce((acc, mov) => {
         const unidadeInfo = unidades.find(u => u.id === mov.unidadeId);
-        if (unidadeInfo) {
-            const nome = unidadeInfo.nome;
-            acc[nome] = (acc[nome] || 0) + mov.quantidade;
+        const nome = unidadeInfo?.nome || mov.unidadeNome || '';
+        if (itemType === 'agua' && isFuroDeEstoqueNome(nome)) {
+            furoQuantidade += mov.quantidade || 0;
+            return acc;
+        }
+        if (nome) {
+            acc[nome] = (acc[nome] || 0) + (mov.quantidade || 0);
         }
         return acc;
     }, {});
     const ranking = Object.entries(consumoPorUnidade)
         .map(([nome, consumo]) => ({ nome, consumo }))
         .sort((a, b) => b.consumo - a.consumo);
-    const totalConsumo = ranking.reduce((sum, item) => sum + item.consumo, 0);
-    const mediaConsumo = totalConsumo / (ranking.length > 0 ? ranking.length : 1);
+    const totalConsumoSemFuro = ranking.reduce((sum, item) => sum + item.consumo, 0);
+    const totalConsumoComFuro = totalConsumoSemFuro + (itemType === 'agua' ? furoQuantidade : 0);
     const itemLabel = getItemLabel(itemType, 1);
-    const itemLabelPlural = getItemLabel(itemType, totalConsumo);
+    const itemLabelPluralSemFuro = getItemLabel(itemType, totalConsumoSemFuro);
+    const itemLabelPluralComFuro = getItemLabel(itemType, totalConsumoComFuro);
     rankingEl.innerHTML = '';
     if (ranking.length > 0) {
         let rankingHtml = '';
@@ -546,23 +612,47 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
     } else {
         rankingEl.innerHTML = `<p class="text-gray-500 italic text-sm">Nenhum consumo registrado.</p>`;
     }
-    const mediaDiariaPeriodo = totalDias > 0 ? (totalConsumo / totalDias) : totalConsumo;
+    const mediaDiariaPeriodoSemFuro = totalDias > 0 ? (totalConsumoSemFuro / totalDias) : totalConsumoSemFuro;
+    const mediaDiariaPeriodoComFuro = totalDias > 0 ? (totalConsumoComFuro / totalDias) : totalConsumoComFuro;
     let blocoEquivalencia = '';
     if (itemType === 'agua') {
-        const semanalEquiv = mediaDiariaPeriodo * 7;
-        const mensalEquiv = mediaDiariaPeriodo * 30;
-        const anualEquiv = mediaDiariaPeriodo * 365;
+        const semanalSemFuro = mediaDiariaPeriodoSemFuro * 5;
+        const mensalSemFuro = mediaDiariaPeriodoSemFuro * 22;
+        const anualSemFuro = mediaDiariaPeriodoSemFuro * 252;
+
+        const semanalComFuro = mediaDiariaPeriodoComFuro * 5;
+        const mensalComFuro = mediaDiariaPeriodoComFuro * 22;
+        const anualComFuro = mediaDiariaPeriodoComFuro * 252;
+
         blocoEquivalencia = `
-        <p>🔍 Mantendo esse ritmo médio, isso equivale aproximadamente a:</p>
-        <ul class="list-disc ml-5 text-sm text-gray-700">
-            <li><strong>${semanalEquiv.toFixed(1)} un. por semana</strong></li>
-            <li><strong>${mensalEquiv.toFixed(1)} un. por mês</strong> (30 dias)</li>
-            <li><strong>${anualEquiv.toFixed(1)} un. por ano</strong> (365 dias)</li>
-        </ul>
-        <p class="text-xs text-gray-500 mt-1">
-            Metodologia: o sistema calcula a média diária dividindo o consumo total do período (${totalConsumo} ${itemLabelPlural})
-            pela quantidade de dias analisados (${totalDias}). Em seguida, projeta essa média para 7, 30 e 365 dias.
-        </p>
+        <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 mt-4">
+            <h5 class="font-bold text-blue-800 mb-2 flex items-center"><i data-lucide="calendar-clock" class="w-4 h-4 mr-2"></i> Projeção de Consumo (Dias Úteis)</h5>
+            <p class="text-sm text-blue-900 mb-3">Considerando apenas dias úteis (Seg-Sex, exceto feriados):</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white/60 rounded-lg border border-blue-100 p-3">
+                    <div class="font-semibold text-blue-900 mb-2">Sem Furo De Estoque</div>
+                    <ul class="list-none space-y-1 text-sm text-blue-800">
+                        <li class="flex items-center"><span class="font-bold w-24">Semanal:</span> <span>~${semanalSemFuro.toFixed(1)} un.</span></li>
+                        <li class="flex items-center"><span class="font-bold w-24">Mensal:</span> <span>~${mensalSemFuro.toFixed(1)} un.</span></li>
+                        <li class="flex items-center"><span class="font-bold w-24">Anual:</span> <span>~${anualSemFuro.toFixed(1)} un.</span></li>
+                    </ul>
+                </div>
+                <div class="bg-white/60 rounded-lg border border-blue-100 p-3">
+                    <div class="font-semibold text-blue-900 mb-2">Incluindo Furo De Estoque</div>
+                    <ul class="list-none space-y-1 text-sm text-blue-800">
+                        <li class="flex items-center"><span class="font-bold w-24">Semanal:</span> <span>~${semanalComFuro.toFixed(1)} un.</span></li>
+                        <li class="flex items-center"><span class="font-bold w-24">Mensal:</span> <span>~${mensalComFuro.toFixed(1)} un.</span></li>
+                        <li class="flex items-center"><span class="font-bold w-24">Anual:</span> <span>~${anualComFuro.toFixed(1)} un.</span></li>
+                    </ul>
+                </div>
+            </div>
+            ${furoQuantidade > 0 ? `
+            <div class="mt-3 bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-lg p-3 text-sm">
+                <div class="font-semibold mb-1 flex items-center"><i data-lucide="alert-triangle" class="w-4 h-4 mr-2"></i> Alerta: Furo De Estoque</div>
+                <div>Há <strong>${furoQuantidade}</strong> ${getItemLabel('agua', furoQuantidade)} lançados em <strong>Furo De Estoque</strong> no período. Não é possível saber para qual unidade esses galões foram destinados.</div>
+            </div>
+            ` : ''}
+        </div>
         `;
     }
 
@@ -642,24 +732,34 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
 
     let mediaDiariaHistorica = 0;
     if (Array.isArray(movsGroupFull) && movsGroupFull.length > 0) {
-        const { totalDias: diasHist } = getPeriodoAnalise(movsGroupFull);
-        const totalHist = movsGroupFull.reduce((sum, m) => sum + m.quantidade, 0);
+        const movsHistSemFuro = itemType === 'agua'
+            ? movsGroupFull.filter(m => {
+                const u = unidades.find(x => x.id === m.unidadeId);
+                const nome = u?.nome || m.unidadeNome || '';
+                return !isFuroDeEstoqueNome(nome);
+            })
+            : movsGroupFull;
+        const { totalDias: diasHist } = getPeriodoAnalise(movsHistSemFuro);
+        const totalHist = movsHistSemFuro.reduce((sum, m) => sum + (m.quantidade || 0), 0);
         mediaDiariaHistorica = diasHist > 0 ? (totalHist / diasHist) : totalHist;
     }
     const esperadoPeriodo = mediaDiariaHistorica * totalDias;
-    const desvioAbs = totalConsumo - esperadoPeriodo;
+    const desvioAbs = totalConsumoSemFuro - esperadoPeriodo;
     const desvioPerc = esperadoPeriodo > 0 ? ((desvioAbs / esperadoPeriodo) * 100) : 0;
     const picoEntrega = movsEntrega.reduce((max, m) => Math.max(max, m.quantidade || 0), 0);
 
     let relatorioText = `
-        <p>📅 Período: <strong>${formatTimestamp(dataInicial)}</strong> a <strong>${formatTimestamp(dataFinal)}</strong> (<strong>${totalDias} dias</strong>).</p>
-        <p>📦 Consumo total de ${itemLabelPlural}: <strong>${totalConsumo} un.</strong></p>
-        <p>⚖️ Média diária: <strong>${mediaDiariaPeriodo.toFixed(2)} un./dia</strong> (histórico: <strong>${mediaDiariaHistorica.toFixed(2)} un./dia</strong>).</p>
-        <p>📈 Desvio vs previsão histórica no período: <strong>${desvioAbs.toFixed(1)} un.</strong> (${desvioPerc.toFixed(1)}%).</p>
+        <p>📅 Período: <strong>${formatTimestamp(dataInicial)}</strong> a <strong>${formatTimestamp(dataFinal)}</strong> (<strong>${totalDias} dias úteis</strong>).</p>
+        <p>📦 Consumo total (sem Furo De Estoque): <strong>${totalConsumoSemFuro} un.</strong></p>
+        ${itemType === 'agua' && furoQuantidade > 0 ? `<p>🟨 Furo De Estoque (destino desconhecido): <strong>${furoQuantidade} un.</strong></p>` : ``}
+        ${itemType === 'agua' ? `<p>📦 Total incluindo Furo De Estoque: <strong>${totalConsumoComFuro} un.</strong></p>` : ``}
+        <p>⚖️ Média por dia útil (sem Furo): <strong>${mediaDiariaPeriodoSemFuro.toFixed(2)} un.</strong> (histórico: <strong>${mediaDiariaHistorica.toFixed(2)} un.</strong>).</p>
+        ${itemType === 'agua' ? `<p>⚖️ Média por dia útil (incluindo Furo): <strong>${mediaDiariaPeriodoComFuro.toFixed(2)} un.</strong></p>` : ``}
+        <p>📈 Desvio vs previsão histórica: <strong>${desvioAbs.toFixed(1)} un.</strong> (${desvioPerc.toFixed(1)}%).</p>
         ${blocoEquivalencia}
     `;
     if (ranking.length > 0) {
-        relatorioText += `<p>🏅 Destaque: <strong>${ranking[0].nome}</strong> consumiu <strong>${ranking[0].consumo} un.</strong> (${((ranking[0].consumo / totalConsumo) * 100).toFixed(1)}% do total).</p>`;
+        relatorioText += `<p>🏅 Destaque: <strong>${ranking[0].nome}</strong> consumiu <strong>${ranking[0].consumo} un.</strong> (${totalConsumoSemFuro > 0 ? ((ranking[0].consumo / totalConsumoSemFuro) * 100).toFixed(1) : '0.0'}% do total).</p>`;
         const menorConsumo = ranking[ranking.length - 1];
         relatorioText += `<p>🔻 Menor consumo: <strong>${menorConsumo.nome}</strong> com <strong>${menorConsumo.consumo} un.</strong>.</p>`;
     }
@@ -770,21 +870,25 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
     if (resumoExecEl) {
         resumoExecEl.innerHTML = `
             <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <div class="text-xs text-gray-500">Consumo Total</div>
-                <div class="text-2xl font-bold text-gray-800">${totalConsumo}</div>
+                <div class="text-xs text-gray-500">Consumo Total (Sem Furo)</div>
+                <div class="text-2xl font-bold text-gray-800">${totalConsumoSemFuro}</div>
                 <div class="text-xs text-gray-500">${formatTimestamp(dataInicial)} — ${formatTimestamp(dataFinal)}</div>
             </div>
             <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <div class="text-xs text-gray-500">Média Diária</div>
-                <div class="text-2xl font-bold text-gray-800">${mediaDiariaPeriodo.toFixed(2)} un./dia</div>
-                <div class="text-xs text-gray-500">Histórico: ${mediaDiariaHistorica.toFixed(2)} un./dia</div>
+                <div class="text-xs text-gray-500">Furo De Estoque</div>
+                <div class="text-2xl font-bold ${furoQuantidade > 0 ? 'text-yellow-700' : 'text-gray-800'}">${itemType === 'agua' ? furoQuantidade : 0}</div>
+                <div class="text-xs text-gray-500">Destino desconhecido</div>
             </div>
             <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <div class="text-xs text-gray-500">Desvio vs Previsão</div>
-                <div class="text-2xl font-bold ${desvioAbs >= 0 ? 'text-green-700' : 'text-red-700'}">${desvioAbs.toFixed(1)} un.</div>
-                <div class="text-xs text-gray-500">${desvioPerc.toFixed(1)}% • Pico: ${picoEntrega} un.</div>
+                <div class="text-xs text-gray-500">Total (Incluindo Furo)</div>
+                <div class="text-2xl font-bold text-gray-800">${totalConsumoComFuro}</div>
+                <div class="text-xs text-gray-500">Pico: ${picoEntrega} un. • Desvio: ${desvioPerc.toFixed(1)}%</div>
             </div>
         `;
+    }
+
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+        lucide.createIcons();
     }
 }
 
@@ -1029,10 +1133,10 @@ function calcularPrevisaoInteligente(itemType) {
             }
 
             // =========================================================================
-            // CORREÇÃO MATEMÁTICA DA PREVISÃO: Lógica de Intervalo Real
+            // CORREÇÃO MATEMÁTICA DA PREVISÃO: Lógica de Intervalo Real (DIAS ÚTEIS)
             // =========================================================================
-            const primeiraMov = movsFiltradas[0].data.toMillis();
-            const ultimaMov = movsFiltradas[movsFiltradas.length - 1].data.toMillis();
+            const primeiraMovDate = movsFiltradas[0].data.toDate();
+            const ultimaMovDate = movsFiltradas[movsFiltradas.length - 1].data.toDate();
             const qtdeUltimaEntrega = movsFiltradas[movsFiltradas.length - 1].quantidade;
 
             const totalConsumidoHistorico = movsFiltradas.reduce((sum, m) => sum + m.quantidade, 0);
@@ -1043,9 +1147,8 @@ function calcularPrevisaoInteligente(itemType) {
             // é tudo o que foi entregue ANTES da última data.
             const totalParaCalculoMedia = totalConsumidoHistorico - qtdeUltimaEntrega;
             
-            // Cálculo preciso de dias entre a primeira e a última entrega
-            const diffMs = ultimaMov - primeiraMov;
-            const diasIntervalo = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24))); 
+            // Cálculo preciso de dias úteis entre a primeira e a última entrega
+            const diasIntervalo = Math.max(1, countDiasUteis(primeiraMovDate, ultimaMovDate)); 
 
             // Se só tivermos 2 entregas no mesmo dia ou muito próximas, usamos o total histórico como fallback seguro
             // para não dividir por 1 um valor pequeno e subestimar, ou dividir 0 e dar erro.
@@ -1082,7 +1185,7 @@ function calcularPrevisaoInteligente(itemType) {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
                     <div class="bg-white/10 p-4 rounded-lg">
                         <span class="block text-sm text-white/80 uppercase">Período Analisado</span>
-                        <span class="block text-2xl font-bold">${diasIntervalo.toFixed(0)} dias</span>
+                        <span class="block text-2xl font-bold">${diasIntervalo.toFixed(0)} dias úteis</span>
                         <span class="block text-xs text-white/60">(${movsFiltradas.length} entregas)</span>
                     </div>
                     <div class="bg-white/10 p-4 rounded-lg">
@@ -1091,11 +1194,11 @@ function calcularPrevisaoInteligente(itemType) {
                     </div>
                 </div>
                 <div class="bg-white/20 p-4 rounded-lg mt-4">
-                    <span class="block text-center text-sm text-white/80 uppercase">Consumo Médio Diário Real</span>
+                    <span class="block text-center text-sm text-white/80 uppercase">Consumo Médio por Dia Útil</span>
                     <span class="block text-center text-4xl font-bold">${mediaDiaria.toFixed(2)} un./dia</span>
                 </div>
                 <hr class="border-white/20 my-4">
-                <h4 class="text-lg font-bold text-white mb-2">Previsão para ${diasPrevisao} dias:</h4>
+                <h4 class="text-lg font-bold text-white mb-2">Previsão para ${diasPrevisao} dias úteis:</h4>
                 <div class="grid grid-cols-3 gap-2 text-center text-sm">
                     <div class="bg-white/10 p-3 rounded-lg">
                         <span class="block text-white/80">Base</span>

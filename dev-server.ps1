@@ -1,7 +1,29 @@
-$listener = New-Object System.Net.HttpListener
-$listener.Prefixes.Add('http://localhost:8000/')
-$listener.Start()
-Write-Host "Serving http://localhost:8000/ from $pwd"
+[CmdletBinding()]
+param(
+  [int]$Port = 8000
+)
+
+$started = $false
+$tries = 0
+while (-not $started -and $tries -lt 20) {
+  $prefix = "http://localhost:$Port/"
+  $listener = New-Object System.Net.HttpListener
+  $listener.Prefixes.Add($prefix)
+  try {
+    $listener.Start()
+    $started = $true
+  } catch {
+    try { $listener.Stop() } catch {}
+    $Port = $Port + 1
+    $tries = $tries + 1
+  }
+}
+
+if (-not $started) {
+  throw "Não foi possível iniciar o servidor em nenhuma porta disponível."
+}
+
+Write-Host "Serving http://localhost:$Port/ from $pwd"
 try {
   while ($listener.IsListening) {
     $context = $listener.GetContext()

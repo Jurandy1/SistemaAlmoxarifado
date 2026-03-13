@@ -47,6 +47,7 @@ function initializeFirebaseServices() {
         estoqueAgua: collection(db, `${basePath}/estoqueAgua`),
         estoqueGas: collection(db, `${basePath}/estoqueGas`),
         userRoles: collection(db, `${basePath}/userRoles`),
+        feriados: collection(db, `${basePath}/feriados`),
         // NOVAS COLEÇÕES PARA ASSISTÊNCIA SOCIAL
         cestaMov: collection(db, `${basePath}/socialCestaMov`),
         cestaEstoque: collection(db, `${basePath}/socialCestaEstoque`),

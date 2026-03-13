@@ -300,7 +300,7 @@ function renderDashboardMateriaisList() {
 }
 
 function renderDashboardMateriaisCounts() {
-    if (!DOM_ELEMENTS.summaryMateriaisRequisitado) return;
+    // if (!DOM_ELEMENTS.summaryMateriaisRequisitado) return; // Removido para permitir atualização parcial (Modo TV)
     
     try {
         const materiais = (getMateriais() || []).filter(m => !m.deleted);
@@ -326,6 +326,12 @@ export function renderDashboardMateriaisProntos(filterStatus = null) {
     const container = DOM_ELEMENTS.dashboardMateriaisProntosContainer;
     const titleEl = DOM_ELEMENTS.dashboardMateriaisTitle; 
     const clearButton = DOM_ELEMENTS.btnClearDashboardFilter; 
+    
+    // VERIFICAÇÃO DO MODO TV (NOVO LAYOUT)
+    if (DOM_ELEMENTS.tvListSeparacao && DOM_ELEMENTS.tvListPronto) {
+        renderTVDashboard(DOM_ELEMENTS.tvListSeparacao, DOM_ELEMENTS.tvListPronto);
+        if (!container) return;
+    }
 
     if (!container) return; 
     
@@ -452,6 +458,132 @@ export function renderDashboardMateriaisProntos(filterStatus = null) {
     } catch(e) {
         console.error("Erro ao renderizar materiais prontos:", e);
     }
+}
+
+// FUNÇÃO ESPECÍFICA PARA O NOVO PAINEL TV
+function renderTVDashboard(containerSeparacao, containerPronto) {
+    try {
+        const materiais = (getMateriais() || []).filter(m => !m.deleted);
+        
+        // Filtra e Ordena
+        // Em Preparação = Requisitado + Separação
+        const emSeparacao = materiais
+            .filter(m => m.status === 'requisitado' || m.status === 'separacao')
+            .sort((a, b) => {
+                const tsA = (a.dataSeparacao?.toMillis() || a.registradoEm?.toMillis() || 0);
+                const tsB = (b.dataSeparacao?.toMillis() || b.registradoEm?.toMillis() || 0);
+                return tsA - tsB; // Mais antigos primeiro
+            });
+
+        // Prontos = Retirada
+        const prontos = materiais
+            .filter(m => m.status === 'retirada')
+            .sort((a, b) => {
+                const tsA = (a.dataRetirada?.toMillis() || a.registradoEm?.toMillis() || 0);
+                const tsB = (b.dataRetirada?.toMillis() || b.registradoEm?.toMillis() || 0);
+                return tsB - tsA; // Mais recentes primeiro
+            });
+
+        // Atualiza contadores (Headers das Colunas)
+        if (DOM_ELEMENTS.countSeparacaoHeader) DOM_ELEMENTS.countSeparacaoHeader.textContent = emSeparacao.length;
+        if (DOM_ELEMENTS.countProntoHeader) DOM_ELEMENTS.countProntoHeader.textContent = prontos.length;
+
+        // Atualiza contadores (KPIs do Topo)
+        if (DOM_ELEMENTS.dashboardMateriaisSeparacaoCountEl) DOM_ELEMENTS.dashboardMateriaisSeparacaoCountEl.textContent = emSeparacao.length;
+        if (DOM_ELEMENTS.dashboardMateriaisRetiradaCountEl) DOM_ELEMENTS.dashboardMateriaisRetiradaCountEl.textContent = prontos.length;
+
+        // Renderiza Coluna Separação
+        if (emSeparacao.length === 0) {
+            containerSeparacao.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-400 opacity-50"><i data-lucide="check-circle" class="w-12 h-12 mb-2"></i><p>Tudo limpo por aqui</p></div>`;
+        } else {
+            containerSeparacao.innerHTML = emSeparacao.map(m => createTVCard(m, 'separacao')).join('');
+        }
+
+        // Renderiza Coluna Pronto
+        if (prontos.length === 0) {
+            containerPronto.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-400 opacity-50"><i data-lucide="clock" class="w-12 h-12 mb-2"></i><p>Nenhum material aguardando</p></div>`;
+        } else {
+            containerPronto.innerHTML = prontos.map(m => createTVCard(m, 'pronto')).join('');
+        }
+
+        // Inicia Auto-Scroll se necessário
+        handleTVAutoScroll(containerSeparacao);
+        handleTVAutoScroll(containerPronto);
+
+    } catch (e) {
+        console.error("Erro render TV Dashboard:", e);
+    }
+}
+
+function createTVCard(m, type) {
+    const unidade = m.unidadeNome || 'Unidade';
+    const item = m.tipoMaterial || 'Material';
+    const obs = m.itens ? `<p class="text-sm text-gray-500 mt-1 truncate">${m.itens}</p>` : '';
+    const separador = m.responsavelSeparador ? `<div class="flex items-center gap-1 mt-2 text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-md w-max"><i data-lucide="user" class="w-3 h-3"></i> ${m.responsavelSeparador}</div>` : '';
+    const time = formatTimestamp(m.dataSeparacao || m.dataRetirada || m.registradoEm);
+    
+    let borderClass = 'border-l-4 border-l-amber-400';
+    let icon = '<i data-lucide="loader" class="text-amber-500 w-5 h-5"></i>';
+    
+    if (type === 'pronto') {
+        borderClass = 'border-l-4 border-l-green-500';
+        icon = '<i data-lucide="check-circle" class="text-green-600 w-5 h-5"></i>';
+    }
+
+    return `
+    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 ${borderClass} mb-3 flex flex-col hover:shadow-md transition-shadow">
+        <div class="flex justify-between items-start mb-1">
+            <h3 class="font-bold text-lg text-gray-800 leading-tight">${unidade}</h3>
+            ${icon}
+        </div>
+        <p class="text-gray-600 font-medium">${item}</p>
+        ${obs}
+        <div class="flex justify-between items-end mt-2">
+            ${separador}
+            <span class="text-xs text-gray-400 ml-auto">${time}</span>
+        </div>
+    </div>
+    `;
+}
+
+// Controle de Auto-Scroll independente para cada coluna
+const tvScrollTimers = new Map();
+
+function handleTVAutoScroll(element) {
+    if (!element) return;
+    
+    // Limpa timer anterior se existir para este elemento
+    if (tvScrollTimers.has(element)) {
+        clearInterval(tvScrollTimers.get(element));
+        tvScrollTimers.delete(element);
+    }
+
+    // Só rola se o conteúdo for maior que o container
+    if (element.scrollHeight <= element.clientHeight) return;
+
+    let scrollTop = 0;
+    const scrollSpeed = 1; // pixels por tick
+    const scrollDelay = 50; // ms
+    
+    // Aguarda um pouco antes de começar
+    setTimeout(() => {
+        const timer = setInterval(() => {
+            if (scrollTop < (element.scrollHeight - element.clientHeight)) {
+                scrollTop += scrollSpeed;
+                element.scrollTop = scrollTop;
+            } else {
+                // Chegou no fim. Espera e reseta.
+                clearInterval(timer);
+                setTimeout(() => {
+                    element.scrollTo({ top: 0, behavior: 'smooth' });
+                    // Reinicia o scroll depois de subir
+                    handleTVAutoScroll(element);
+                }, 3000);
+            }
+        }, scrollDelay);
+        
+        tvScrollTimers.set(element, timer);
+    }, 2000);
 }
 
 export function filterDashboardMateriais(status) {
@@ -715,32 +847,43 @@ function startAutoScrollGeralTV() {
         const stepPx = 1; 
         const tickMs = 80; 
 
-        const timer = setInterval(() => {
+        let timer = null;
+        const tick = () => {
             const pane = document.getElementById('dashboard-view-geral');
-            if (!pane || !pane.classList.contains('tv-mode')) return; 
+            if (!pane || !pane.classList.contains('tv-mode')) return;
             const atBottom = (content.scrollTop + content.clientHeight) >= (content.scrollHeight - 2);
-            if (atBottom) {
-                content.scrollTop = 0; 
-            } else {
-                content.scrollTop = content.scrollTop + stepPx;
-            }
-        }, tickMs);
+            content.scrollTop = atBottom ? 0 : (content.scrollTop + stepPx);
+        };
+        const start = () => {
+            if (timer) clearInterval(timer);
+            timer = setInterval(tick, tickMs);
+        };
+        const stop = () => {
+            if (timer) clearInterval(timer);
+            timer = null;
+        };
 
-        const pause = () => { if (timer) clearInterval(timer); };
-        content.addEventListener('mouseenter', pause);
-        content.addEventListener('mouseleave', () => {});
+        const onEnter = () => stop();
+        const onLeave = () => {
+            const pane = document.getElementById('dashboard-view-geral');
+            if (!pane || !pane.classList.contains('tv-mode')) return;
+            start();
+        };
 
-        geralAutoScrollTimers.push({ timer, content });
+        start();
+        content.addEventListener('mouseenter', onEnter);
+        content.addEventListener('mouseleave', onLeave);
+
+        geralAutoScrollTimers.push({ stop, content, onEnter, onLeave });
     });
 }
 
 function stopAutoScrollGeralTV() {
-    geralAutoScrollTimers.forEach(({ timer, content }) => {
-        try { if (timer) clearInterval(timer); } catch {}
-        if (content) {
-            content.removeEventListener('mouseenter', () => {});
-            content.removeEventListener('mouseleave', () => {});
-        }
+    geralAutoScrollTimers.forEach(({ stop, content, onEnter, onLeave }) => {
+        try { if (stop) stop(); } catch {}
+        if (!content) return;
+        if (onEnter) content.removeEventListener('mouseenter', onEnter);
+        if (onLeave) content.removeEventListener('mouseleave', onLeave);
     });
     geralAutoScrollTimers = [];
 }

@@ -6,6 +6,7 @@ import { DOM_ELEMENTS, showAlert } from "../utils/dom-helpers.js";
 import { dateToTimestamp, formatTimestamp, getTodayDateString } from "../utils/formatters.js"; // Importa getTodayDateString
 import { isReady } from "./auth.js";
 import { auth } from "../services/firestore-service.js";
+import { getFeriadosISOSetCached } from "./feriados.js";
 
 /**
  * Converte uma URL de imagem em DataURL base64 para uso no PDF.
@@ -168,7 +169,34 @@ export async function handleGerarPdf() {
             return currentY;
         };
 
-        const diasPeriodo = Math.max(1, Math.ceil((dataFim - dataInicio + 1) / (1000 * 60 * 60 * 24)));
+        const normalizeStartOfDay = (ms) => {
+            const d = new Date(ms);
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        };
+        const toISO = (ms) => {
+            const d = new Date(ms);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
+        const isWeekend = (ms) => {
+            const day = new Date(ms).getDay();
+            return day === 0 || day === 6;
+        };
+        const countWorkingDaysInclusive = (startMs, endMs, holidaysSet) => {
+            const s = normalizeStartOfDay(startMs);
+            const e = normalizeStartOfDay(endMs);
+            if (e < s) return 0;
+            let count = 0;
+            for (let cur = s; cur <= e; cur += 24 * 60 * 60 * 1000) {
+                if (isWeekend(cur)) continue;
+                if (holidaysSet?.has(toISO(cur))) continue;
+                count += 1;
+            }
+            return count;
+        };
+
+        const feriadosSet = await getFeriadosISOSetCached();
+        const diasUteisPeriodo = Math.max(1, countWorkingDaysInclusive(dataInicio, dataFim, feriadosSet));
+        const diasUteisMesAprox = 22;
 
         // Função de gráfico diário (se Chart.js disponível)
         const makeDailyChartImage = (movs, label) => {
@@ -212,7 +240,7 @@ export async function handleGerarPdf() {
             // Análise por unidade (objetos) para tabelas separadas
             const analiseAgua = Array.from(abastecimentoMap.entries()).map(([unidade, galoesPeriodo]) => {
                 const litrosPeriodo = galoesPeriodo * litrosPorGalao;
-                const litrosMensalEstimado = Math.round((litrosPeriodo / diasPeriodo) * 30);
+                const litrosMensalEstimado = Math.round((litrosPeriodo / diasUteisPeriodo) * diasUteisMesAprox);
                 const galoesMensaisEstimados = Math.ceil(litrosMensalEstimado / litrosPorGalao);
                 const custos = {
                     galoesMes: galoesMensaisEstimados * custoGalao,
@@ -236,7 +264,7 @@ export async function handleGerarPdf() {
             // KPIs
             const totalGaloes = Array.from(abastecimentoMap.values()).reduce((s, v) => s + v, 0);
             const totalLitrosPeriodo = totalGaloes * litrosPorGalao;
-            const litrosMensalTotal = Math.round((totalLitrosPeriodo / diasPeriodo) * 30);
+            const litrosMensalTotal = Math.round((totalLitrosPeriodo / diasUteisPeriodo) * diasUteisMesAprox);
             const drawKpiBox = (x, y, title, value, color = [11, 61, 145]) => {
                 doc.setDrawColor(color[0], color[1], color[2]);
                 doc.setFillColor(color[0], color[1], color[2]);
@@ -350,7 +378,7 @@ export async function handleGerarPdf() {
 
             // KPIs de gás
             const totalBotijoes = Array.from(abastecimentoMap.values()).reduce((s, v) => s + v, 0);
-            const consumoMensalEstimado = Math.round((totalBotijoes / diasPeriodo) * 30);
+            const consumoMensalEstimado = Math.round((totalBotijoes / diasUteisPeriodo) * diasUteisMesAprox);
             const drawKpiBox = (x, y, title, value, color = [11, 61, 145]) => {
                 doc.setDrawColor(color[0], color[1], color[2]);
                 doc.setFillColor(color[0], color[1], color[2]);
@@ -390,7 +418,7 @@ export async function handleGerarPdf() {
             // Ranking Top 10 — Gás
             const rankingGas = Array.from(abastecimentoMap.entries()).map(([unidade, qtdPeriodo]) => ({
                 unidade,
-                botijoesMes: Math.round((qtdPeriodo / diasPeriodo) * 30)
+                botijoesMes: Math.round((qtdPeriodo / diasUteisPeriodo) * diasUteisMesAprox)
             })).sort((a,b) => b.botijoesMes - a.botijoesMes).slice(0, 10);
             doc.setFontSize(12); doc.setTextColor(40); doc.text('Ranking de Consumo — Gás (Top 10)', MARGIN_LEFT, (doc.lastAutoTable?.finalY || 74) + 16);
             const nextY2 = (doc.lastAutoTable?.finalY || 74) + 22;

@@ -17,10 +17,11 @@ import { getDebitosAguaResumoList, renderAguaMovimentacoesHistory } from "./modu
 import { getDebitosGasResumoList } from "./modules/gas-control.js";
 import { isReady } from "./modules/auth.js";
 import { initSocialListeners } from "./modules/social-control.js"; // NOVO
+import { initFeriadosListeners } from "./modules/feriados.js";
 import { getUserRole } from "./utils/cache.js";
 
 // Variável de estado da UI local (para manter o dashboard na tela)
-let visaoAtiva = 'dashboard'; 
+let visaoAtiva = 'inicio'; 
 
 /**
  * Função que configura o app: encontra elementos DOM e adiciona listeners.
@@ -53,6 +54,8 @@ function setupApp() {
     
     // 7. ADICIONADO: Inicializa os listeners de Assistência Social (globais)
     initSocialListeners();
+
+    initFeriadosListeners();
     
     // 8. ADICIONADO: Listeners do Modal de Login
     if (DOM_ELEMENTS.formLogin) {
@@ -72,9 +75,9 @@ function setupApp() {
                 // Tratamento de erro aprimorado
                 console.error("Erro de login:", error);
                 // Exibe um alerta de erro
-                if (typeof showAlert === 'function') {
-                    showAlert('login', 'Erro ao logar: ' + (error.message || 'Verifique suas credenciais.'), 'error');
-                }
+                        if (typeof showAlert === 'function') {
+                            showAlert('alert-login', 'Erro ao logar: ' + (error.message || 'Verifique suas credenciais.'), 'error');
+                        }
             } finally {
                 // Reabilita o botão e restaura o ícone
                 btn.disabled = false;
@@ -101,9 +104,9 @@ function setupApp() {
                 await signInAnonUser();
              } catch(error) {
                 console.error("Erro no Login Anônimo:", error);
-                if (typeof showAlert === 'function') {
-                    showAlert('login', 'Erro no acesso anônimo. Tente novamente.', 'error');
-                }
+                        if (typeof showAlert === 'function') {
+                            showAlert('alert-login', 'Erro no acesso anônimo. Tente novamente.', 'error');
+                        }
              } finally {
                 // Restaura o botão
                 DOM_ELEMENTS.btnLoginAnonimo.disabled = false;
@@ -121,8 +124,50 @@ function setupApp() {
     setupDebitosPopupScheduler();
 
     // 11. Configurar o estado inicial do dashboard (inicia o refresh ao entrar na aba)
-    const dashboardBtn = document.querySelector('.nav-btn[data-tab="dashboard"]');
-    if (dashboardBtn) dashboardBtn.click();
+    const inicioBtn = document.querySelector('.nav-btn[data-tab="inicio"]');
+    if (inicioBtn) inicioBtn.click();
+
+    // 12. Menu Mobile Toggle
+    const sidebar = document.getElementById('main-sidebar');
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const overlay = document.createElement('div'); // Criar overlay dinamicamente
+    overlay.className = 'fixed inset-0 bg-black/50 z-20 hidden md:hidden transition-opacity duration-300 opacity-0';
+    if (sidebar) sidebar.parentNode.insertBefore(overlay, sidebar);
+
+    if (sidebar && menuBtn) {
+        const toggleMenu = () => {
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            if (isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10); // Fade in
+                menuBtn.setAttribute('aria-expanded', 'true');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300); // Wait for fade out
+                menuBtn.setAttribute('aria-expanded', 'false');
+            }
+        };
+
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleMenu();
+        });
+
+        overlay.addEventListener('click', toggleMenu);
+
+        // Fechar ao clicar em um botão de navegação (apenas mobile)
+        sidebar.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.innerWidth < 768) { // md breakpoint
+                     sidebar.classList.add('-translate-x-full');
+                     overlay.classList.add('opacity-0');
+                     setTimeout(() => overlay.classList.add('hidden'), 300);
+                }
+            });
+        });
+    }
 
     console.log("Setup inicial do DOM concluído.");
 }

@@ -96,10 +96,15 @@ async function signInEmailPassword(email, password) {
         if (DOM_ELEMENTS.authModal) DOM_ELEMENTS.authModal.style.display = 'none';
     } catch (err) {
         console.error("Erro login:", err);
-        let msg = "Erro ao fazer login. Verifique suas credenciais.";
-        if (['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential'].includes(err.code)) msg = "E-mail ou senha incorretos.";
+        let msg = "Não foi possível fazer login.";
+        if (['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential'].includes(err.code)) {
+            msg = "E-mail ou senha incorretos. Se for seu primeiro acesso ou não lembrar a senha, clique em “Esqueci minha senha”.";
+        }
         if (err.code === 'auth/invalid-email') msg = "Formato de e-mail inválido.";
-        showAlert('alert-login', `${msg} (${err.code || 'erro'})`, 'error');
+        if (err.code === 'auth/too-many-requests') msg = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+        if (err.code === 'auth/network-request-failed') msg = "Falha de rede. Verifique sua conexão e tente novamente.";
+        if (err.code === 'auth/operation-not-allowed') msg = "Login por e-mail/senha não está habilitado no Firebase Authentication.";
+        showAlert('alert-login', msg, 'error');
         throw err;
     }
 }
@@ -111,13 +116,14 @@ async function sendResetPassword(email) {
     }
     try {
         await sendPasswordResetEmail(auth, email);
-        showAlert('alert-login', 'E-mail de redefinição de senha enviado.', 'success');
+        showAlert('alert-login', 'Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha.', 'success');
     } catch (err) {
         console.error('Erro reset senha:', err);
         let msg = 'Não foi possível enviar o e-mail de redefinição.';
         if (err.code === 'auth/invalid-email') msg = 'Formato de e-mail inválido.';
-        if (err.code === 'auth/user-not-found') msg = 'Usuário não encontrado.';
-        showAlert('alert-login', `${msg} (${err.code || 'erro'})`, 'error');
+        if (err.code === 'auth/too-many-requests') msg = 'Muitas solicitações. Aguarde alguns minutos e tente novamente.';
+        if (err.code === 'auth/network-request-failed') msg = 'Falha de rede. Verifique sua conexão e tente novamente.';
+        showAlert('alert-login', msg, 'error');
     }
 }
 
@@ -136,7 +142,7 @@ async function signOutUser() {
     try {
         await signOut(auth);
         onUserLogout();
-        switchTab('dashboard');
+        switchTab('inicio');
         console.log("Usuário deslogado com sucesso.");
     } catch (err) {
         console.error("Erro logout:", err);

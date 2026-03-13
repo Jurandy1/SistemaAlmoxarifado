@@ -3,7 +3,6 @@ import {
   query,
   onSnapshot,
   doc,
-  updateDoc,
   setDoc,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -11,9 +10,24 @@ import { createUserWithEmailAndPassword, getAuth, sendPasswordResetEmail } from 
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { DOM_ELEMENTS, showAlert } from "../utils/dom-helpers.js";
 import { getUserRole } from "../utils/cache.js";
-import { db, COLLECTIONS, auth } from "../services/firestore-service.js";
+import { COLLECTIONS, auth } from "../services/firestore-service.js";
 import { firebaseConfig } from "../firebase-config.js";
 import { isReady } from "./auth.js";
+
+function generateTempPassword() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*";
+  const bytes = new Uint8Array(16);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  let out = "";
+  for (let i = 0; i < bytes.length; i += 1) {
+    out += alphabet[bytes[i] % alphabet.length];
+  }
+  return out;
+}
 
 let allUsers = [];
 let unsubscribeUserRoles = null;
@@ -103,7 +117,7 @@ async function handleSaveRole(e) {
     '<div class="loading-spinner-small mx-auto" style="width:16px;height:16px;"></div>';
 
   try {
-    await updateDoc(doc(COLLECTIONS.userRoles, uid), { role: newRole });
+    await setDoc(doc(COLLECTIONS.userRoles, uid), { role: newRole }, { merge: true });
     showAlert("alert-usuarios", "Permissão atualizada com sucesso!", "success");
     // MELHORIA UX: Renderiza a tabela imediatamente.
     renderUsuariosTable(); 
@@ -129,11 +143,18 @@ async function handleCreateUser(e) {
   }
 
   const email = DOM_ELEMENTS.inputAddUserEmail?.value.trim().toLowerCase();
-  const password = DOM_ELEMENTS.inputAddUserPassword?.value;
+  const passwordRaw = DOM_ELEMENTS.inputAddUserPassword?.value || "";
   const role = DOM_ELEMENTS.selectAddUserRole?.value;
 
-  if (!email || !password || !role) {
-    showAlert("alert-add-user", "Preencha todos os campos!", "warning");
+  if (!email || !role) {
+    showAlert("alert-add-user", "Preencha o e-mail e a permissão!", "warning");
+    return;
+  }
+
+  const password = passwordRaw.trim() ? passwordRaw : generateTempPassword();
+  const usedTempPassword = !passwordRaw.trim();
+  if (password.length < 6) {
+    showAlert("alert-add-user", "Senha fraca. Use pelo menos 6 caracteres ou deixe vazio para definir por e-mail.", "warning");
     return;
   }
 
@@ -141,20 +162,32 @@ async function handleCreateUser(e) {
   btn.disabled = true;
   btn.innerHTML = '<div class="loading-spinner-small mx-auto"></div>';
 
+  let secondaryApp = null;
+  let createdUser = null;
+
   try {
     // Usa uma instância Auth secundária para não trocar a sessão atual do admin
-    const secondaryApp = initializeApp(firebaseConfig, "SecondaryAuthApp");
+    const appName = `SecondaryAuthApp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    secondaryApp = initializeApp(firebaseConfig, appName);
     const secondaryAuth = getAuth(secondaryApp);
 
     const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-    const uid = cred.user.uid;
+    createdUser = cred.user;
+    const uid = createdUser.uid;
 
-    await setDoc(doc(COLLECTIONS.userRoles, uid), {
-      uid,
-      email,
-      role,
-      createdAt: serverTimestamp(),
-    });
+    try {
+      await setDoc(doc(COLLECTIONS.userRoles, uid), {
+        uid,
+        email,
+        role,
+        createdAt: serverTimestamp(),
+      });
+    } catch (roleErr) {
+      try {
+        await createdUser.delete();
+      } catch (_) {}
+      throw roleErr;
+    }
 
     // Tenta enviar o e-mail de redefinição de senha para o novo usuário
     let resetMsg = "";
@@ -166,19 +199,27 @@ async function handleCreateUser(e) {
       resetMsg = " (Não foi possível enviar o e-mail de redefinição agora.)";
     }
 
-    showAlert("alert-add-user", `Usuário '${email}' criado como '${role}'.${resetMsg}`, "success");
+    const tempMsg = usedTempPassword ? " Senha temporária gerada (recomendado redefinir por e-mail)." : "";
+    showAlert("alert-add-user", `Usuário '${email}' criado como '${role}'.${tempMsg}${resetMsg}`, "success");
     DOM_ELEMENTS.formAddUser.reset();
     // MELHORIA UX: Renderiza a tabela imediatamente.
     renderUsuariosTable();
-
-    // Encerra a app secundária para liberar recursos
-    try { await deleteApp(secondaryApp); } catch (_) {}
   } catch (err) {
     console.error("Erro ao criar usuário:", err);
-    showAlert("alert-add-user", `Erro: ${err.message}`, "error");
+    let msg = err?.message || "Falha ao criar usuário.";
+    if (err?.code === "auth/email-already-in-use") msg = "Este e-mail já está em uso.";
+    if (err?.code === "auth/weak-password") msg = "Senha fraca. Use uma senha com pelo menos 6 caracteres.";
+    if (err?.code === "auth/invalid-email") msg = "E-mail inválido.";
+    if (err?.code === "auth/operation-not-allowed") msg = "Login por e-mail/senha não está habilitado no Firebase Authentication.";
+    if (err?.code === "permission-denied") msg = "Permissão negada no Firestore para salvar role do usuário.";
+    showAlert("alert-add-user", `Erro: ${msg}`, "error");
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i data-lucide="user-plus"></i> Adicionar Usuário';
+    if (lucide?.createIcons) lucide.createIcons();
+    if (secondaryApp) {
+      try { await deleteApp(secondaryApp); } catch (_) {}
+    }
   }
 }
 

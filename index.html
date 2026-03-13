@@ -20,6 +20,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231e40af'/%3E%3Cpath d='M20 42V22h8.5c6.7 0 11.5 3.9 11.5 10s-4.8 10-11.5 10H20zm7-6h1.7c3 0 5.3-1.5 5.3-4s-2.3-4-5.3-4H27v8z' fill='white'/%3E%3C/svg%3E">
 
     <!-- CSS Customizado (para classes dinâmicas) -->
     <link rel="stylesheet" href="style.css">
@@ -42,7 +43,7 @@
     </script>
 
 </head>
-<body class="bg-gray-50 text-slate-700 antialiased font-sans h-full flex flex-col">
+<body class="v2-app bg-gray-100 text-slate-700 antialiased font-sans h-full flex flex-col">
 
     <!-- Barra Institucional da Prefeitura de São Luís -->
     <div class="gov-header-top">
@@ -73,6 +74,11 @@
                     <i data-lucide="user-x"></i> Acesso Anônimo (Visualização)
                 </button>
 
+                <!-- Acesso Direto Dashboard TV -->
+                <a href="dashboard.html" class="btn-secondary w-full py-3 flex items-center justify-center gap-2 mt-2 text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100" target="_blank" title="Abrir painel para TV em tela cheia">
+                    <i data-lucide="monitor"></i> Modo TV / Painel
+                </a>
+
                 <div class="relative flex justify-center text-xs uppercase">
                     <span class="bg-white px-2 text-gray-500">Ou use sua conta</span>
                 </div>
@@ -102,124 +108,312 @@
     </div>
 
     <!-- Wrapper para todo o conteúdo do aplicativo - É escondido antes da autenticação -->
-    <div id="app-content-wrapper" class="hidden h-full flex flex-col">
+    <div id="app-content-wrapper" class="hidden h-full flex overflow-hidden bg-gray-100">
 
-        <!-- 1) CABEÇALHO (HERO / BRAND BAR) - NOVO VISUAL -->
-        <header class="bg-white brand-bar border-b border-gray-200 shadow-sm w-full">
-
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <!-- Removido h-24 para ajuste automático da altura -->
-                <div class="flex justify-between items-center py-3 sm:py-4">
-                    <!-- Lado Esquerdo: Logo e Títulos -->
-                    <div class="flex items-center gap-4 sm:gap-6">
-                        <!-- Logo (tamanho padrão) -->
-                        <div class="flex-shrink-0">
-                            <img src="SaoLuis.png"
-                                alt="Logo SEMCAS São Luís"
-                                class="h-20 sm:h-24 w-auto"
-                                loading="eager"
-                                onerror="this.src='https://placehold.co/200x80/1e40af/ffffff?text=SEMCAS'; this.onerror=null">
-                        </div>
-                        <!-- Títulos institucionais -->
-                        <div class="ml-5">
-                            <h1 class="text-xl sm:text-3xl font-bold text-blue-900 tracking-tight">Controle de Almoxarifado</h1>
-                            <p class="text-xs sm:text-sm text-gray-600 font-medium">SEMCAS – Secretaria Municipal da Criança e Assistência Social</p>
-                        </div>
-                    </div>
-
-                    <!-- Lado Direito: User Info e Logout -->
-                    <div class="flex flex-col items-end text-right">
-                         <p id="user-email-display" class="text-gray-700 text-sm font-medium truncate max-w-[150px] sm:max-w-full">Usuário</p>
-                         <div class="flex items-center gap-2 mt-1">
-                             <span id="user-role-display" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-300 text-yellow-900">N/A</span>
-                             <button id="btn-logout" class="text-gray-500 hover:text-gray-800 transition" title="Sair do Sistema">
-                                 <i data-lucide="log-out" class="w-5 h-5"></i>
-                             </button>
-                         </div>
-                    </div>
-                </div>
+        <!-- 1) SIDEBAR (MENU LATERAL) - NOVO VISUAL -->
+        <aside id="main-sidebar" class="w-64 bg-white border-r border-gray-200 flex flex-col z-30 shadow-sm transition-transform duration-300 transform -translate-x-full md:translate-x-0 fixed md:relative h-full inset-y-0 left-0">
+            <!-- Logo Area -->
+            <div class="h-20 flex items-center justify-center border-b border-gray-100 px-4">
+                <img src="SaoLuis.png" alt="Semcas" class="h-12 w-auto object-contain" onerror="this.src='https://placehold.co/100x40?text=SEMCAS'">
             </div>
 
-            <!-- Faixa superior colorida SEMCAS (MOVIDA PARA O FINAL DO HEADER) -->
-            <!-- Usando Tailwind para o degradê -->
-            <div class="w-full h-1 bg-gradient-to-r from-orange-400 via-green-500 to-blue-600 faixa-semcas"></div>
-        </header>
+            <!-- Navegação Vertical -->
+            <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1 custom-scrollbar">
+                <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">Principal</div>
+                
+                <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors group" data-tab="inicio">
+                    <i data-lucide="home" class="w-5 h-5 text-gray-400 group-hover:text-blue-600"></i>
+                    <span>Início</span>
+                </button>
 
-        <!-- 2) FAIXA DE SISTEMA E STATUS -->
-        <div class="bg-white border-b border-gray-200 shadow-sm hidden"> <!-- Ocultado temporariamente para simplificar o topo -->
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-3 flex-wrap gap-3">
-                    <!-- Lado Esquerdo: Nome do Sistema -->
-                    <div class="flex items-center gap-3">
-                        <div class="bg-blue-50 text-blue-600 p-2 rounded-full">
-                            <i data-lucide="package" class="w-5 h-5"></i>
+                <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-6 mb-2 px-2">Operacional</div>
+
+                <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-sky-50 hover:text-sky-700 transition-colors group" data-tab="agua">
+                    <i data-lucide="droplet" class="w-5 h-5 text-sky-400 group-hover:text-sky-600"></i>
+                    <span>Controle de Água</span>
+                </button>
+                <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-orange-50 hover:text-orange-700 transition-colors group" data-tab="gas">
+                    <i data-lucide="flame" class="w-5 h-5 text-orange-400 group-hover:text-orange-600"></i>
+                    <span>Controle de Gás</span>
+                </button>
+                <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-purple-50 hover:text-purple-700 transition-colors group" data-tab="materiais">
+                    <i data-lucide="truck" class="w-5 h-5 text-purple-400 group-hover:text-purple-600"></i>
+                    <span>Entrega Materiais</span>
+                </button>
+                <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-pink-50 hover:text-pink-700 transition-colors group" data-tab="social">
+                    <i data-lucide="handshake" class="w-5 h-5 text-pink-400 group-hover:text-pink-600"></i>
+                    <span>Assistência Social</span>
+                </button>
+
+                <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-6 mb-2 px-2">Administrativo</div>
+
+                <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group" data-tab="gestao">
+                    <i data-lucide="settings" class="w-5 h-5 text-gray-400 group-hover:text-gray-600"></i>
+                    <span>Gestão Unidades</span>
+                </button>
+                <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-teal-50 hover:text-teal-700 transition-colors group" data-tab="usuarios">
+                    <i data-lucide="users" class="w-5 h-5 text-teal-400 group-hover:text-teal-600"></i>
+                    <span>Gestão Usuários</span>
+                </button>
+                <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors group" data-tab="feriados">
+                    <i data-lucide="calendar-days" class="w-5 h-5 text-indigo-400 group-hover:text-indigo-600"></i>
+                    <span>Feriados</span>
+                </button>
+                <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors group" data-tab="relatorio">
+                    <i data-lucide="file-text" class="w-5 h-5 text-red-400 group-hover:text-red-600"></i>
+                    <span>Relatórios</span>
+                </button>
+            </nav>
+
+            <!-- User Footer -->
+            <div class="p-4 border-t border-gray-200 bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs" id="user-avatar">
+                        US
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate" id="user-email-display">Usuário</p>
+                        <p class="text-xs text-gray-500 truncate" id="user-role-display">Carregando...</p>
+                    </div>
+                    <button id="btn-logout" class="text-gray-400 hover:text-red-600 transition-colors" title="Sair">
+                        <i data-lucide="log-out" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Conteúdo Principal com Header -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            
+            <!-- Header Superior -->
+            <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sm:px-6 shadow-sm z-10">
+                <div class="flex items-center gap-4">
+                    <button id="mobile-menu-btn" class="md:hidden text-gray-500 hover:text-gray-700 focus:outline-none" aria-label="Abrir menu" aria-controls="main-sidebar" aria-expanded="false">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                    <h2 class="text-xl font-bold text-gray-800 tracking-tight" id="page-title">Início</h2>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                     <!-- Link para Dashboard TV -->
+                     <a href="dashboard.html" target="_blank" class="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200">
+                        <i data-lucide="monitor" class="w-4 h-4"></i>
+                        <span>Modo TV</span>
+                    </a>
+
+                    <div class="h-6 w-px bg-gray-200 mx-2"></div>
+                    
+                    <div class="flex items-center gap-2 text-sm text-gray-500">
+                        <div id="connectionStatus" class="flex items-center gap-2">
+                            <span class="h-2.5 w-2.5 bg-green-500 rounded-full"></span>
+                            <span class="hidden sm:inline">Online</span>
                         </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Scroll Area -->
+            <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 scroll-smooth">
+                <div class="max-w-7xl mx-auto">
+                    
+            <!-- Tela Inicial (ID: content-inicio) -->
+            <div id="content-inicio" class="fade-in">
+                <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 md:p-8 gov-card">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                        <div class="min-w-0">
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-xs font-semibold">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                <span>Sistema Almoxarifado v2</span>
+                            </div>
+                            <h3 class="mt-4 text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
+                                Central de Operações SEMCAS
+                            </h3>
+                            <p class="mt-3 text-base md:text-lg text-slate-600 max-w-3xl">
+                                Plataforma para controle de água, gás, materiais e assistência social, com rastreabilidade, relatórios e gestão de usuários por permissão.
+                            </p>
+                            <div class="mt-5 flex flex-wrap items-center gap-3">
+                                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 text-sm font-semibold">
+                                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                                    <span>Dados centralizados</span>
+                                </div>
+                                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-100 text-sm font-semibold">
+                                    <i data-lucide="history" class="w-4 h-4"></i>
+                                    <span>Histórico e auditoria</span>
+                                </div>
+                                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-100 text-sm font-semibold">
+                                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                                    <span>Atualização automática</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="w-full lg:w-auto">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+                                <a href="dashboard.html" target="_blank" class="btn-primary w-full justify-center">
+                                    <i data-lucide="monitor" class="w-5 h-5"></i>
+                                    <span>Abrir Modo TV</span>
+                                </a>
+                                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                    <div class="flex items-start gap-3">
+                                        <div class="mt-0.5 text-slate-700">
+                                            <i data-lucide="mouse-pointer-click" class="w-5 h-5"></i>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <div class="text-sm font-semibold text-slate-900">Como usar</div>
+                                            <div class="text-sm text-slate-600 mt-1">
+                                                Use o menu lateral para acessar os módulos. Cada módulo possui submenus no topo da página.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 gov-card">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-sky-100 rounded-xl">
+                                <i data-lucide="droplet" class="w-6 h-6 text-sky-700"></i>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-gray-900">Controle de Água</div>
+                                <div class="text-sm text-slate-600">Saídas, entradas e saldos por unidade.</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid gap-2 text-sm text-slate-700">
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-sky-600"></i><span>Movimentações e histórico</span></div>
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-sky-600"></i><span>Resumo de débitos e filtros</span></div>
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-sky-600"></i><span>Análise por unidade</span></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 gov-card">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-orange-100 rounded-xl">
+                                <i data-lucide="flame" class="w-6 h-6 text-orange-700"></i>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-gray-900">Controle de Gás</div>
+                                <div class="text-sm text-slate-600">Gestão de botijões e movimentações.</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid gap-2 text-sm text-slate-700">
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-orange-600"></i><span>Entradas, saídas e estoque</span></div>
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-orange-600"></i><span>Débitos e pendências</span></div>
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-orange-600"></i><span>Relatórios e auditoria</span></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 gov-card">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-purple-100 rounded-xl">
+                                <i data-lucide="truck" class="w-6 h-6 text-purple-700"></i>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-gray-900">Entrega de Materiais</div>
+                                <div class="text-sm text-slate-600">Requisição, separação e retirada.</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid gap-2 text-sm text-slate-700">
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-purple-600"></i><span>Fluxo por status</span></div>
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-purple-600"></i><span>Histórico e observações</span></div>
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-purple-600"></i><span>Painel TV dedicado</span></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 gov-card">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-pink-100 rounded-xl">
+                                <i data-lucide="handshake" class="w-6 h-6 text-pink-700"></i>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-gray-900">Assistência Social</div>
+                                <div class="text-sm text-slate-600">Cestas básicas e enxoval.</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid gap-2 text-sm text-slate-700">
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-pink-600"></i><span>Lançamentos e estoque</span></div>
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-pink-600"></i><span>Importação (permissão)</span></div>
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-pink-600"></i><span>Rastreabilidade por período</span></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 gov-card">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-slate-100 rounded-xl">
+                                <i data-lucide="settings" class="w-6 h-6 text-slate-700"></i>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-gray-900">Gestão e Relatórios</div>
+                                <div class="text-sm text-slate-600">Cadastros e acompanhamento.</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid gap-2 text-sm text-slate-700">
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-slate-600"></i><span>Gestão de unidades</span></div>
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-slate-600"></i><span>Relatórios operacionais</span></div>
+                            <div class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-slate-600"></i><span>Gestão de usuários (Admin)</span></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 gov-card">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-emerald-100 rounded-xl">
+                                <i data-lucide="shield" class="w-6 h-6 text-emerald-700"></i>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-gray-900">Perfis de Acesso</div>
+                                <div class="text-sm text-slate-600">Permissões por função.</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid gap-2 text-sm text-slate-700">
+                            <div class="flex items-center gap-2"><span class="badge badge-blue">Admin</span><span>Configurações e usuários</span></div>
+                            <div class="flex items-center gap-2"><span class="badge badge-gray">Editor</span><span>Operação e consultas</span></div>
+                            <div class="flex items-center gap-2"><span class="badge badge-yellow">Anônimo</span><span>Visualização inicial</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 bg-white border border-gray-200 rounded-2xl shadow-sm p-6 gov-card">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                            <h2 class="font-semibold text-base text-gray-800">Sistema de Almoxarifado</h2>
-                            <p class="text-xs text-gray-500">v.1.4 by Jurandy Santana</p> <!-- Versão atualizada -->
+                            <div class="text-lg font-bold text-gray-900">Fluxo de Materiais</div>
+                            <div class="text-sm text-slate-600 mt-1">Do pedido à retirada com rastreabilidade.</div>
                         </div>
+                        <a href="dashboard.html" target="_blank" class="btn-secondary">
+                            <i data-lucide="external-link" class="w-4 h-4"></i>
+                            <span>Ver no Modo TV</span>
+                        </a>
                     </div>
-                    <!-- Lado Direito: Status da Conexão -->
-                    <div class="flex items-center gap-4 text-sm">
-                        <div id="connectionStatus" class="flex items-center gap-2 font-medium text-gray-600">
-                            <span class="h-3 w-3 bg-yellow-400 rounded-full animate-pulse"></span>
-                            <span>Autenticando...</span>
+                    <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="border border-amber-200 bg-amber-50 rounded-xl p-4">
+                            <div class="flex items-center gap-2 font-semibold text-amber-900">
+                                <i data-lucide="file-plus" class="w-5 h-5 text-amber-700"></i>
+                                <span>1. Requisição</span>
+                            </div>
+                            <div class="mt-2 text-sm text-amber-900/80">Registro do pedido com unidade, item e observações.</div>
                         </div>
-                        <p id="last-update-time" class="text-gray-500 hidden md:block"></p>
+                        <div class="border border-blue-200 bg-blue-50 rounded-xl p-4">
+                            <div class="flex items-center gap-2 font-semibold text-blue-900">
+                                <i data-lucide="archive" class="w-5 h-5 text-blue-700"></i>
+                                <span>2. Separação</span>
+                            </div>
+                            <div class="mt-2 text-sm text-blue-900/80">Conferência e preparação para retirada.</div>
+                        </div>
+                        <div class="border border-emerald-200 bg-emerald-50 rounded-xl p-4">
+                            <div class="flex items-center gap-2 font-semibold text-emerald-900">
+                                <i data-lucide="check-square" class="w-5 h-5 text-emerald-700"></i>
+                                <span>3. Pronto / Retirada</span>
+                            </div>
+                            <div class="mt-2 text-sm text-emerald-900/80">Disponível para retirada e finalização do processo.</div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 3) NAVEGAÇÃO PRINCIPAL POR ABAS -->
-    <nav class="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-40">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <!-- main-nav-container é usado pelo CSS para o scroll -->
-                <div class="flex space-x-2 main-nav-container py-2 overflow-x-auto">
-                    <!-- Botões usam a classe .nav-btn para o JS encontrar -->
-                    <button class="nav-btn" data-tab="dashboard">
-                        <i data-lucide="layout-dashboard"></i>
-                        <span>Dashboard</span>
-                    </button>
-                    <button class="nav-btn" data-tab="agua">
-                        <i data-lucide="droplet" class="text-sky-500"></i>
-                        <span>Controle de Água</span>
-                    </button>
-                    <button class="nav-btn" data-tab="gas">
-                        <i data-lucide="flame" class="text-orange-500"></i>
-                        <span>Controle de Gás</span>
-                    </button>
-                    <button class="nav-btn" data-tab="materiais">
-                        <i data-lucide="truck" class="text-purple-500"></i>
-                        <span>Entrega de Materiais</span>
-                    </button>
-                    <!-- NOVO BOTÃO: Assistência Social -->
-                    <button class="nav-btn" data-tab="social">
-                        <i data-lucide="handshake" class="text-pink-500"></i>
-                        <span>Assistência Social</span>
-                    </button>
-                    <button class="nav-btn" data-tab="gestao">
-                        <i data-lucide="settings" class="text-gray-500"></i>
-                        <span>Gestão de Unidades</span>
-                    </button>
-                    <button class="nav-btn" data-tab="relatorio">
-                        <i data-lucide="file-text" class="text-red-500"></i>
-                        <span>Gerar Relatório</span>
-                    </button>
-                    <!-- BOTÃO ADICIONADO -->
-                    <button class="nav-btn" data-tab="usuarios">
-                        <i data-lucide="users" class="text-teal-500"></i>
-                        <span>Gestão de Usuários</span>
-                    </button>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Conteúdo Principal da Página -->
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
-
-            <!-- Conteúdo do Dashboard (ID: content-dashboard) -->
-            <div id="content-dashboard" class="fade-in">
+            <!-- Conteúdo do Dashboard (oculto na V2) -->
+            <div id="content-dashboard" class="fade-in hidden">
                 <!-- ... (Conteúdo do Dashboard) ... -->
                 <!-- 4) CABEÇALHO DA SEÇÃO E FILTROS LOCAIS -->
                 <div class="flex justify-between items-start mb-6 flex-wrap gap-4">
@@ -494,68 +688,8 @@
 
                 <!-- Sub-view: Movimentação (Lançamento) -->
                 <div id="subview-movimentacao-agua" class="space-y-6">
-                    <div class="module-inner-subnav">
-                        <button id="btn-inner-agua-resumo" class="sub-nav-btn active" data-inner="resumo"><i data-lucide="alert-triangle"></i><span>Resumo</span></button>
-                        <button id="btn-inner-agua-lancamento" class="sub-nav-btn" data-inner="lancamento"><i data-lucide="edit-3"></i><span>Lançamento</span></button>
-                    </div>
-                    <div id="inner-agua-resumo" class="bg-white rounded-xl border border-amber-300 shadow-sm gov-card">
-                        <div class="section-header-modern">
-                            <div class="header-main">
-                                <span class="icon-chip icon-amber">
-                                    <i data-lucide="alert-triangle"></i>
-                                </span>
-                                <div>
-                                    <div class="header-title">Débitos de galões vazios • Água</div>
-                                    <div class="header-subtitle">Antes de lançar, verifique quem está devendo vazios.</div>
-                                </div>
-                            </div>
-                            <div class="header-actions">
-                                <button id="btn-debito-agua" class="badge-filter active">Devendo</button>
-                                <button id="btn-credito-agua" class="badge-filter">Crédito</button>
-                                <button id="btn-ver-status-agua" class="btn-secondary btn-sm"><i data-lucide="list"></i> Ver status completo</button>
-                            </div>
-                        </div>
-                        <div class="p-6">
-                            <div class="filter-toolbar grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
-                                <div>
-                                    <label for="filtro-debito-agua" class="form-label text-xs">Unidade</label>
-                                    <input type="text" id="filtro-debito-agua" class="form-input" placeholder="Nome da unidade">
-                                </div>
-                                <div>
-                                    <label for="filtro-resumo-agua-tipo" class="form-label text-xs">Tipo</label>
-                                    <select id="filtro-resumo-agua-tipo" class="form-select"><option value="">Todos</option></select>
-                                </div>
-                                <div>
-                                    <label for="filtro-resumo-agua-pend-min" class="form-label text-xs">Vazios pendentes mín.</label>
-                                    <input type="number" id="filtro-resumo-agua-pend-min" class="form-input" min="0" placeholder="Ex.: 1">
-                                </div>
-                                <div>
-                                    <label for="filtro-resumo-agua-data-ini" class="form-label text-xs">Última mov. desde</label>
-                                    <input type="date" id="filtro-resumo-agua-data-ini" class="form-input">
-                                </div>
-                                <div>
-                                    <label for="filtro-resumo-agua-data-fim" class="form-label text-xs">Última mov. até</label>
-                                    <input type="date" id="filtro-resumo-agua-data-fim" class="form-input">
-                                </div>
-                            </div>
-                            <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-64 resumo-table-container">
-                                <table class="table w-full text-sm">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th>Unidade</th>
-                                            <th>Tipo</th>
-                                            <th class="text-center">Vazios Pendentes</th>
-                                            <th>Última Movimentação</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="table-debito-agua-resumo" class="divide-y divide-gray-100">
-                                        <tr><td colspan="4" class="text-center py-6"><div class="loading-spinner-small mx-auto"></div></td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="inner-agua-lancamento" class="grid grid-cols-1 lg:grid-cols-3 gap-6 hidden">
+                    
+                    <div id="inner-agua-lancamento" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                         <!-- Coluna de Estoque -->
                         <div class="lg:col-span-1 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
@@ -627,23 +761,20 @@
                                 </div>
                                 <div id="unidade-saldo-alerta-agua" class="alert alert-warning mt-2" style="display:none;"></div>
 
-                                <div>
-                                    <label for="select-tipo-agua" class="form-label" title="Troca combina saída de cheios e retorno de vazios; Entrega é apenas saída; Retorno é apenas entrada de vazios.">Tipo de Movimentação</label>
-                                    <select id="select-tipo-agua" class="form-select" required>
-                                        <option value="troca">Troca (Entregar Galão 20L Cheio / Receber Galão 20L Vazio)</option>
-                                        <option value="entrega">Apenas Saída (Entregar Galão 20L Cheio)</option>
-                                        <option value="retorno">Apenas Retorno (Receber Galão 20L Vazio)</option>
+                                <div class="hidden">
+                                    <label for="select-tipo-agua" class="form-label">Tipo de Movimentação</label>
+                                    <select id="select-tipo-agua" class="form-select">
+                                        <option value="entrega" selected>Apenas Saída (Entregar Galão 20L Cheio)</option>
                                     </select>
                                 </div>
 
-                                <div class="grid grid-cols-2 gap-4">
+                                <div class="grid grid-cols-1 gap-4">
                                     <div id="form-group-qtd-entregue-agua">
                                         <label for="input-qtd-entregue-agua" class="form-label" title="Saída: galões 20L cheios enviados para a unidade.">Qtd. Entregue (Galão 20L Cheio)</label>
-                                        <input type="number" id="input-qtd-entregue-agua" class="form-input" min="0" value="0" required>
+                                        <input type="number" id="input-qtd-entregue-agua" class="form-input" min="1" value="1" required>
                                     </div>
                                     <div id="form-group-qtd-retorno-agua" class="hidden">
-                                        <label for="input-qtd-retorno-agua" class="form-label" title="Entrada de vazios: galões 20L vazios recebidos da unidade.">Qtd. Recebida (Galão 20L Vazio)</label>
-                                        <input type="number" id="input-qtd-retorno-agua" class="form-input" min="0" value="0" required>
+                                        <input type="number" id="input-qtd-retorno-agua" class="form-input" value="0">
                                     </div>
                                 </div>
 
@@ -2445,7 +2576,7 @@
                          </div>
                          <div class="md:col-span-1">
                              <label for="input-add-user-password" class="form-label text-xs">Senha</label>
-                             <input type="password" id="input-add-user-password" class="form-input" placeholder="Senha forte" required>
+                             <input type="password" id="input-add-user-password" class="form-input" placeholder="Opcional (ou deixe vazio para definir via e-mail)">
                          </div>
                          <div class="md:col-span-1">
                              <label for="select-add-user-role" class="form-label text-xs">Permissão</label>
@@ -2461,6 +2592,7 @@
                              </button>
                          </div>
                      </form>
+                     <p class="text-xs text-slate-500 mt-3">Recomendado: deixe a senha em branco e use o link de redefinição para o primeiro acesso.</p>
                      <div id="alert-add-user" class="alert mt-3"></div>
                  </div>
 
@@ -2489,116 +2621,179 @@
                  </div>
              </div>
 
+            <!-- ============================================= -->
+            <!-- PAINEL FERIADOS (ID: content-feriados) -->
+            <!-- ============================================= -->
+            <div id="content-feriados" class="fade-in hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Feriados</h2>
+                <p class="text-sm text-gray-500 mb-6">Os feriados e pontos facultativos não são contabilizados nos relatórios de Água e Gás (assim como finais de semana).</p>
+                <div id="alert-feriados" class="alert mb-4"></div>
 
-        </main>
-        <!-- Rodapé Institucional -->
-        <footer class="gov-footer">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between flex-wrap gap-2">
-                <div class="flex items-center gap-2">
-                    <img src="SaoLuis.png" alt="Brasão de São Luís" class="h-5 w-auto" onerror="this.style.display='none'">
-                    <span class="gov-brand">Prefeitura de São Luís</span>
-                    <span class="gov-separator">•</span>
-                    <span class="gov-secretaria">SEMCAS</span>
-                </div>
-                <div class="text-xs sm:text-sm gov-footer-text">
-                    © <span id="gov-footer-year"></span> — Secretaria Municipal da Criança e Assistência Social. Todos os direitos reservados. — Site Desenvolvido por Jurandy
-                </div>
-            </div>
-            <script>document.getElementById('gov-footer-year').textContent = new Date().getFullYear();</script>
-        </footer>
-        <!-- Fim do Conteúdo Principal -->
-
-        <!-- Elementos ocultos para Modais de Fluxo -->
-        <!-- Modal para inserir nome do Responsável do Almoxarifado (Movimentação) -->
-        <div id="almoxarifado-responsavel-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 class="modal-title"><i data-lucide="box" class="w-5 h-5 inline-block -mt-1 mr-2"></i> Confirmar Movimentação</h3>
-                    <!-- Não precisa de botão fechar aqui, força a confirmação ou cancelamento -->
-                </div>
-                <div class="modal-body">
-                    <p class="text-sm mb-4"></p> <!-- JS preenche este texto -->
-                    <div>
-                        <label for="input-almox-responsavel-nome" class="form-label">Seu Nome (Responsável Almoxarifado)</label>
-                        <input type="text" id="input-almox-responsavel-nome" class="form-input" placeholder="Digite seu nome completo" required>
-                    </div>
-                    <div id="alert-almox-responsavel" class="alert mt-3"></div>
-                    <!-- Campos hidden para armazenar temporariamente os dados da movimentação -->
-                    <input type="hidden" id="almox-temp-unidadeId">
-                    <input type="hidden" id="almox-temp-unidadeNome">
-                    <input type="hidden" id="almox-temp-tipoUnidadeRaw">
-                    <input type="hidden" id="almox-temp-tipoMovimentacao">
-                    <input type="hidden" id="almox-temp-qtdEntregue">
-                    <input type="hidden" id="almox-temp-qtdRetorno">
-                    <input type="hidden" id="almox-temp-data">
-                    <input type="hidden" id="almox-temp-responsavelUnidade">
-                    <input type="hidden" id="almox-temp-itemType">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal').style.display='none'">Cancelar</button>
-                    <button type="button" id="btn-salvar-movimentacao-final" class="btn-primary">
-                        Confirmar
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal para inserir nome do Separador (Materiais) -->
-        <div id="separador-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 class="modal-title"><i data-lucide="user-check" class="w-5 h-5 inline-block -mt-1 mr-2"></i> Iniciar Separação</h3>
-                    <button class="modal-close" onclick="this.closest('.modal').style.display='none'">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-sm mb-4">Informe o nome do responsável pela separação deste material.</p>
-                    <div>
-                        <label for="input-separador-nome" class="form-label">Nome do Separador</label>
-                        <input type="text" id="input-separador-nome" class="form-input" placeholder="Nome completo" required>
-                    </div>
-                    <input type="hidden" id="separador-material-id">
-                    <div id="alert-separador" class="alert mt-3"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal').style.display='none'">Cancelar</button>
-                    <button type="button" id="btn-salvar-separador" class="btn-primary">Salvar Nome e Liberar</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal para finalizar entrega (Materiais) -->
-        <div id="finalizar-entrega-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 class="modal-title"><i data-lucide="check-circle" class="w-5 h-5 inline-block -mt-1 mr-2"></i> Finalizar Entrega</h3>
-                    <button class="modal-close" onclick="this.closest('.modal').style.display='none'">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-sm mb-4">Confirme os responsáveis pela entrega (Almoxarifado) e recebimento (Unidade).</p>
-                    <div class="space-y-3">
-                        <div>
-                            <label for="input-entrega-responsavel-almox" class="form-label">Entregue por (Almoxarifado)</label>
-                            <input type="text" id="input-entrega-responsavel-almox" class="form-input" placeholder="Nome de quem entregou" required>
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+                    <div class="flex flex-col md:flex-row md:items-end gap-4">
+                        <div class="w-full md:w-48">
+                            <label for="feriados-ano" class="form-label text-xs">Ano</label>
+                            <select id="feriados-ano" class="form-select"></select>
                         </div>
+                        <div class="flex-1"></div>
+                        <button type="button" id="btn-feriados-seed-2026" class="btn-secondary">
+                            <i data-lucide="database"></i>
+                            <span>Cadastrar calendário 2026</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+                    <h3 class="text-lg font-semibold mb-3">Importar feriados por texto</h3>
+                    <form id="form-feriados-import" class="space-y-4">
                         <div>
-                            <label for="input-entrega-responsavel-unidade" class="form-label">Recebido por (Unidade)</label>
-                            <input type="text" id="input-entrega-responsavel-unidade" class="form-input" placeholder="Nome de quem recebeu" required>
+                            <label for="feriados-import-text" class="form-label text-xs">Cole aqui (aceita texto do calendário ou linhas em CSV)</label>
+                            <textarea id="feriados-import-text" class="form-textarea" placeholder="Exemplos:
+2027-01-01;Confraternização Universal;Feriado Nacional
+01/01;Confraternização Universal;Feriado Nacional
+
+Ou cole o texto do calendário (com '1º de janeiro', etc.)"></textarea>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <button type="submit" class="btn-primary">
+                                <i data-lucide="upload"></i>
+                                <span>Importar</span>
+                            </button>
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('feriados-import-text').value=''">
+                                <i data-lucide="eraser"></i>
+                                <span>Limpar</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                    <h3 class="text-lg font-semibold mb-3">Feriados cadastrados</h3>
+                    <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-[32rem]">
+                        <table class="table w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Dia</th>
+                                    <th>Denominação</th>
+                                    <th>Natureza</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-feriados" class="divide-y divide-gray-100">
+                                <tr><td colspan="4" class="text-center py-10"><div class="loading-spinner-small mx-auto"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+
+                </div> <!-- Fim max-w-7xl -->
+
+                <!-- Rodapé Institucional (Dentro do Main) -->
+                <footer class="mt-8 border-t border-gray-200 py-6">
+                    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+                        <div class="flex items-center gap-2">
+                            <img src="SaoLuis.png" alt="Brasão" class="h-6 opacity-80" onerror="this.style.display='none'">
+                            <span class="font-semibold text-gray-700">Prefeitura de São Luís</span>
+                            <span class="text-gray-300">•</span>
+                            <span>SEMCAS</span>
+                        </div>
+                        <div class="text-center md:text-right">
+                            © <span id="gov-footer-year">2024</span> — Sistema Almoxarifado v2
                         </div>
                     </div>
-                    <input type="hidden" id="finalizar-entrega-material-id">
-                    <div id="alert-finalizar-entrega" class="alert mt-3"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal').style.display='none'">Cancelar</button>
-                    <button type="button" id="btn-confirmar-finalizacao-entrega" class="btn-primary">
-                        <i data-lucide="check-circle"></i> Confirmar Finalização
-                    </button>
-                </div>
-            </div>
-        </div>
+                    <script>document.getElementById('gov-footer-year').textContent = new Date().getFullYear();</script>
+                </footer>
+            </main>
 
+        </div> <!-- Fim flex-1 flex-col -->
 
     </div> <!-- Fim de #app-content-wrapper -->
+
+    <!-- Modais de Fluxo Operacional -->
+    
+    <!-- Modal para inserir nome do Responsável do Almoxarifado (Movimentação) -->
+    <div id="almoxarifado-responsavel-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="box" class="w-5 h-5 inline-block -mt-1 mr-2"></i> Confirmar Movimentação</h3>
+            </div>
+            <div class="modal-body">
+                <p class="text-sm mb-4"></p>
+                <div>
+                    <label for="input-almox-responsavel-nome" class="form-label">Seu Nome (Responsável Almoxarifado)</label>
+                    <input type="text" id="input-almox-responsavel-nome" class="form-input" placeholder="Digite seu nome completo" required>
+                </div>
+                <div id="alert-almox-responsavel" class="alert mt-3"></div>
+                <input type="hidden" id="almox-temp-unidadeId">
+                <input type="hidden" id="almox-temp-unidadeNome">
+                <input type="hidden" id="almox-temp-tipoUnidadeRaw">
+                <input type="hidden" id="almox-temp-tipoMovimentacao">
+                <input type="hidden" id="almox-temp-qtdEntregue">
+                <input type="hidden" id="almox-temp-qtdRetorno">
+                <input type="hidden" id="almox-temp-data">
+                <input type="hidden" id="almox-temp-responsavelUnidade">
+                <input type="hidden" id="almox-temp-itemType">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="this.closest('.modal').style.display='none'">Cancelar</button>
+                <button type="button" id="btn-salvar-movimentacao-final" class="btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para inserir nome do Separador (Materiais) -->
+    <div id="separador-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="user-check" class="w-5 h-5 inline-block -mt-1 mr-2"></i> Iniciar Separação</h3>
+                <button class="modal-close" onclick="this.closest('.modal').style.display='none'">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-sm mb-4">Informe o nome do responsável pela separação deste material.</p>
+                <div>
+                    <label for="input-separador-nome" class="form-label">Nome do Separador</label>
+                    <input type="text" id="input-separador-nome" class="form-input" placeholder="Nome completo" required>
+                </div>
+                <input type="hidden" id="separador-material-id">
+                <div id="alert-separador" class="alert mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="this.closest('.modal').style.display='none'">Cancelar</button>
+                <button type="button" id="btn-salvar-separador" class="btn-primary">Salvar Nome e Liberar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para finalizar entrega (Materiais) -->
+    <div id="finalizar-entrega-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="check-circle" class="w-5 h-5 inline-block -mt-1 mr-2"></i> Finalizar Entrega</h3>
+                <button class="modal-close" onclick="this.closest('.modal').style.display='none'">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-sm mb-4">Confirme os responsáveis pela entrega (Almoxarifado) e recebimento (Unidade).</p>
+                <div class="space-y-3">
+                    <div>
+                        <label for="input-entrega-responsavel-almox" class="form-label">Entregue por (Almoxarifado)</label>
+                        <input type="text" id="input-entrega-responsavel-almox" class="form-input" placeholder="Nome de quem entregou" required>
+                    </div>
+                    <div>
+                        <label for="input-entrega-responsavel-unidade" class="form-label">Recebido por (Unidade)</label>
+                        <input type="text" id="input-entrega-responsavel-unidade" class="form-input" placeholder="Nome de quem recebeu" required>
+                    </div>
+                </div>
+                <input type="hidden" id="finalizar-entrega-material-id">
+                <div id="alert-finalizar-entrega" class="alert mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="this.closest('.modal').style.display='none'">Cancelar</button>
+                <button type="button" id="btn-confirmar-finalizacao-entrega" class="btn-primary"><i data-lucide="check-circle"></i> Confirmar Finalização</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ============================================= -->
     <!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO              -->

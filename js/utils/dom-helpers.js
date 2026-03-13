@@ -4,9 +4,10 @@ import { getCurrentStatusFilter, setDeleteInfo, getUserRole } from "./cache.js";
 import { auth } from "../services/firestore-service.js"; // Importar auth para pegar o email
 
 // Variáveis de estado da UI e referências do DOM
-let visaoAtiva = 'dashboard';
+let visaoAtiva = 'inicio';
 let domReady = false;
 let DOM_ELEMENTS = {}; // Objeto que armazenará todas as referências do DOM
+const missingAlertWarned = new Set();
 
 /**
  * Busca todos os elementos do DOM e armazena em DOM_ELEMENTS.
@@ -18,7 +19,7 @@ function findDOMElements() {
         ['#connectionStatus', 'connectionStatusEl'],
         ['#last-update-time', 'lastUpdateTimeEl'],
         ['.nav-btn', 'navButtons', true], // true para All
-        ['main > div[id^="content-"]', 'contentPanes', true],
+        ['div[id^="content-"]', 'contentPanes', true],
 
         // NOVO: Permissões/Login
         ['#auth-modal', 'authModal'],
@@ -299,6 +300,15 @@ function findDOMElements() {
         ['#btn-submit-add-user', 'btnSubmitAddUser'],
         ['#alert-add-user', 'alertAddUser'],
 
+        // ADICIONADO: Feriados
+        ['#content-feriados', 'contentFeriados'],
+        ['#feriados-ano', 'feriadosAno'],
+        ['#btn-feriados-seed-2026', 'btnFeriadosSeed2026'],
+        ['#form-feriados-import', 'formFeriadosImport'],
+        ['#feriados-import-text', 'feriadosImportText'],
+        ['#alert-feriados', 'alertFeriados'],
+        ['#table-feriados', 'tableFeriados'],
+
         // NOVOS ELEMENTOS: ASSISTÊNCIA SOCIAL (content-social)
         ['#sub-nav-social-main', 'subNavSocialMain'],
         ['#social-module-container', 'socialModuleContainer'],
@@ -377,6 +387,12 @@ function findDOMElements() {
         ['#textarea-social-import', 'textareaSocialImport'],
         ['#btn-social-import-data', 'btnSocialImportData'],
         ['#alert-social-import', 'alertSocialImport'],
+
+        // ELEMENTOS ESPECÍFICOS DO NOVO PAINEL TV
+        ['#tv-list-separacao', 'tvListSeparacao'],
+        ['#tv-list-pronto', 'tvListPronto'],
+        ['#count-separacao-header', 'countSeparacaoHeader'],
+        ['#count-pronto-header', 'countProntoHeader'],
     ];
 
     mappings.forEach(([selector, varName, isAll]) => {
@@ -406,7 +422,13 @@ function showAlert(elementId, message, type = 'info', duration = 5000) {
     }
 
     const el = document.getElementById(elementId);
-    if (!el) { console.warn(`Alert element not found: ${elementId}, Message: ${message}`); return; }
+    if (!el) {
+        if (!missingAlertWarned.has(elementId)) {
+            console.warn(`Alert element not found: ${elementId}, Message: ${message}`);
+            missingAlertWarned.add(elementId);
+        }
+        return;
+    }
 
     el.className = `alert alert-${type}`;
     el.innerHTML = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Suporte a markdown negrito
@@ -447,6 +469,10 @@ function switchTab(tabName) {
     if(activePane) activePane.classList.remove('hidden');
 
     visaoAtiva = tabName;
+
+    const pageTitleEl = document.getElementById('page-title');
+    const label = activeBtn?.querySelector('span')?.textContent?.trim();
+    if (pageTitleEl && label) pageTitleEl.textContent = label;
 
     if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
         setTimeout(() => lucide.createIcons(), 50);
@@ -621,10 +647,10 @@ function renderPermissionsUI() {
     DOM_ELEMENTS.navButtons.forEach(btn => {
         const tab = btn.dataset.tab;
         let isVisible = true;
-        if (isAnon && tab !== 'dashboard') {
+        if (isAnon && tab !== 'inicio') {
             isVisible = false;
         }
-        if ((isAnon || isEditor) && (tab === 'gestao' || tab === 'usuarios')) {
+        if ((isAnon || isEditor) && (tab === 'gestao' || tab === 'usuarios' || tab === 'feriados')) {
             isVisible = false;
         }
         btn.classList.toggle('hidden', !isVisible);
@@ -633,10 +659,10 @@ function renderPermissionsUI() {
     DOM_ELEMENTS.contentPanes.forEach(pane => {
         const tabName = pane.id.replace('content-', '');
         let isDisabled = false;
-        if (isAnon && tabName !== 'dashboard') {
+        if (isAnon && tabName !== 'inicio') {
              isDisabled = true;
         }
-        if (!isAdmin && (tabName === 'gestao' || tabName === 'usuarios')) {
+        if (!isAdmin && (tabName === 'gestao' || tabName === 'usuarios' || tabName === 'feriados')) {
              isDisabled = true;
         }
          pane.classList.toggle('disabled-by-role', isDisabled);
@@ -747,11 +773,11 @@ function renderPermissionsUI() {
     const currentTab = document.querySelector('.nav-btn.active')?.dataset.tab;
     if (currentTab) {
         let shouldRedirect = false;
-        if (isAnon && currentTab !== 'dashboard') shouldRedirect = true;
-        if (!isAdmin && (currentTab === 'gestao' || currentTab === 'usuarios')) shouldRedirect = true;
+        if (isAnon && currentTab !== 'inicio') shouldRedirect = true;
+        if (!isAdmin && (currentTab === 'gestao' || currentTab === 'usuarios' || currentTab === 'feriados')) shouldRedirect = true;
 
         if (shouldRedirect) {
-            switchTab('dashboard');
+            switchTab('inicio');
             showAlert('connectionStatus', 'Acesso negado para esta seção.', 'warning', 10000);
         }
     }

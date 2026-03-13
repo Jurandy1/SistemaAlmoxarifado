@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard TV - Almoxarifado SEMCAS</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Bibliotecas JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+    <script src="https://unpkg.com/lucide@0.258.0/dist/umd/lucide.js" defer></script>
+
+    <!-- Fontes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- CSS Customizado -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Configuração do Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'semcas-blue': '#1e40af',
+                        'semcas-dark-blue': '#1e3a8a',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos específicos para o modo TV */
+        body.tv-mode {
+            overflow: hidden; /* Remove rolagem da página inteira */
+            background-color: #f3f4f6;
+        }
+        
+        /* Debug Console para TV */
+        #tv-debug-console {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            background: rgba(0,0,0,0.8);
+            color: #0f0;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-y: auto;
+            z-index: 9999;
+            padding: 10px;
+            display: none; /* Oculto por padrão */
+        }
+        .tv-container { height: 100vh; display: flex; flex-direction: column; padding: 1.5rem; }
+        .tv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .tv-content { flex: 1; display: grid; grid-template-rows: auto 1fr; gap: 1.5rem; overflow: hidden; }
+        
+        /* Ajustes de Cards para TV */
+        .tv-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+        .tv-card { background: white; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb; display: flex; flex-direction: column; justify-content: center; }
+        .tv-card h3 { font-size: 1.25rem; color: #4b5563; font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .tv-card .value { font-size: 3.5rem; font-weight: 800; line-height: 1; }
+        .tv-card .sub { font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem; }
+
+        /* Lista de Materiais em TV */
+        .tv-materiais-container { background: white; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb; overflow: hidden; display: flex; flex-direction: column; }
+        .tv-materiais-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 2px solid #f3f4f6; padding-bottom: 1rem; }
+        .tv-materiais-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; overflow-y: auto; padding-right: 0.5rem; }
+        
+        /* Auto-scroll animation class */
+        .auto-scroll { animation: scroll-vertical 60s linear infinite; }
+        @keyframes scroll-vertical {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-100%); }
+        }
+
+        /* Relógio */
+        #tv-clock { font-size: 1.5rem; font-weight: 700; color: #1e3a8a; font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body class="tv-mode">
+
+    <div class="tv-container">
+        <!-- Header TV -->
+        <header class="tv-header">
+            <div class="flex items-center gap-4">
+                <img src="SaoLuis.png" alt="Logo" class="h-16 w-auto" onerror="this.style.display='none'">
+                <div>
+                    <h1 class="text-3xl font-bold text-blue-900 tracking-tight">Painel de Almoxarifado</h1>
+                    <p class="text-lg text-gray-600 font-medium">SEMCAS • Monitoramento em Tempo Real</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <div id="tv-clock">00:00</div>
+                <div class="text-sm text-gray-500" id="tv-date">Segunda, 01 de Janeiro</div>
+            </div>
+        </header>
+
+        <!-- Conteúdo Principal TV -->
+        <div class="tv-content">
+            
+            <!-- Linha 1: KPIs -->
+            <div class="tv-kpi-grid">
+                <!-- Água -->
+                <div class="tv-card border-l-4 border-l-sky-500">
+                    <h3><i data-lucide="droplet" class="text-sky-500"></i> Estoque Água</h3>
+                    <div class="value text-sky-600" id="dashboard-estoque-agua">--</div>
+                    <div class="sub">Galões Disponíveis</div>
+                </div>
+
+                <!-- Gás -->
+                <div class="tv-card border-l-4 border-l-emerald-500">
+                    <h3><i data-lucide="flame" class="text-emerald-500"></i> Estoque Gás</h3>
+                    <div class="value text-emerald-600" id="dashboard-estoque-gas">--</div>
+                    <div class="sub">Botijões Disponíveis</div>
+                </div>
+
+                <!-- Em Separação -->
+                <div class="tv-card border-l-4 border-l-amber-500">
+                    <h3><i data-lucide="archive" class="text-amber-500"></i> Em Preparação</h3>
+                    <div class="value text-amber-600" id="dashboard-materiais-separacao-count">--</div>
+                    <div class="sub">Requisições Ativas</div>
+                </div>
+
+                <!-- Pronto -->
+                <div class="tv-card border-l-4 border-l-green-500">
+                    <h3><i data-lucide="check-square" class="text-green-500"></i> Prontos</h3>
+                    <div class="value text-green-600" id="dashboard-materiais-retirada-count">--</div>
+                    <div class="sub">Aguardando Retirada</div>
+                </div>
+            </div>
+
+            <!-- Linha 2: Materiais / Status (Layout Split View Moderno) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 h-full overflow-hidden pb-4">
+                
+                <!-- Coluna 1: Em Separação -->
+                <div class="tv-panel flex flex-col h-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                    <div class="tv-panel-header bg-amber-50 border-b border-amber-100 p-4 flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-amber-800 flex items-center gap-2">
+                            <i data-lucide="package" class="w-6 h-6"></i> Em Preparação
+                        </h2>
+                        <span class="bg-amber-100 text-amber-800 text-sm font-bold px-3 py-1 rounded-full border border-amber-200" id="count-separacao-header">0</span>
+                    </div>
+                    <div id="tv-list-separacao" class="tv-list-content p-4 overflow-y-auto flex-1 space-y-3 relative">
+                        <!-- Itens serão injetados aqui via JS -->
+                        <div class="flex flex-col items-center justify-center h-full text-gray-400">
+                            <i data-lucide="loader-2" class="w-8 h-8 animate-spin mb-2"></i>
+                            <p>Carregando...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coluna 2: Pronto para Retirada -->
+                <div class="tv-panel flex flex-col h-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                    <div class="tv-panel-header bg-green-50 border-b border-green-100 p-4 flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-green-800 flex items-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-6 h-6"></i> Pronto para Retirada
+                        </h2>
+                        <span class="bg-green-100 text-green-800 text-sm font-bold px-3 py-1 rounded-full border border-green-200" id="count-pronto-header">0</span>
+                    </div>
+                    <div id="tv-list-pronto" class="tv-list-content p-4 overflow-y-auto flex-1 space-y-3 relative">
+                        <!-- Itens serão injetados aqui via JS -->
+                        <div class="flex flex-col items-center justify-center h-full text-gray-400">
+                            <i data-lucide="loader-2" class="w-8 h-8 animate-spin mb-2"></i>
+                            <p>Carregando...</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Elementos ocultos necessários para os scripts não quebrarem -->
+    <div class="hidden">
+        <div id="auth-modal"></div>
+        <div id="app-content-wrapper"></div>
+        <div id="alert-login"></div>
+        <button id="btn-login-anonimo"></button>
+        <form id="form-login"></form>
+        <!-- Elementos de gráficos que o dashboard.js tenta renderizar -->
+        <canvas id="dashboardAguaChart"></canvas>
+        <canvas id="dashboardGasChart"></canvas>
+        <div id="dashboard-materiais-list"></div>
+        <div id="dashboard-materiais-prontos"></div>
+    </div>
+
+    <!-- Scripts do Sistema -->
+    <!-- Carregamos como módulos para isolar o escopo, mas precisamos expor funções globais se necessário -->
+    <!-- Console Debug -->
+    <div id="tv-debug-console"></div>
+
+    <script>
+        // Sistema de Log para TV (Captura erros globais)
+        const debugConsole = document.getElementById('tv-debug-console');
+        
+        function logToTV(msg, type = 'info') {
+            console.log(`[TV-LOG] ${msg}`);
+            if (debugConsole) {
+                const p = document.createElement('p');
+                p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+                p.style.color = type === 'error' ? '#ff5555' : (type === 'warn' ? '#ffaa00' : '#00ff00');
+                debugConsole.appendChild(p);
+                debugConsole.scrollTop = debugConsole.scrollHeight;
+                // Mostrar console se houver erro
+                if (type === 'error') debugConsole.style.display = 'block';
+            }
+        }
+
+        window.onerror = function(msg, url, line, col, error) {
+            logToTV(`Erro Global: ${msg} (${url}:${line})`, 'error');
+            return false;
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+            logToTV(`Promise Rejeitada: ${event.reason}`, 'error');
+        });
+    </script>
+
+    <script type="module">
+        import { initializeFirebaseServices } from './js/services/firestore-service.js';
+        import { initAuthAndListeners, signInAnonUser, isReady } from './js/modules/auth.js';
+        import { findDOMElements, DOM_ELEMENTS } from './js/utils/dom-helpers.js';
+        import { renderDashboard, startDashboardRefresh } from './js/modules/dashboard.js';
+        
+        logToTV("Módulos carregados. Iniciando Dashboard TV...");
+
+        // Relógio
+        function updateClock() {
+            try {
+                const now = new Date();
+                const timeEl = document.getElementById('tv-clock');
+                const dateEl = document.getElementById('tv-date');
+                if (timeEl) timeEl.textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                if (dateEl) dateEl.textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+            } catch (e) {
+                logToTV("Erro no relógio: " + e.message, 'warn');
+            }
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Inicializar Dashboard
+        async function initTVDashboard() {
+            logToTV("Iniciando initTVDashboard...");
+            
+            try {
+                // 1. Inicializar Firebase
+                initializeFirebaseServices();
+                logToTV("Firebase Services inicializado.");
+
+                // 2. Encontrar Elementos DOM
+                findDOMElements();
+                logToTV("Elementos DOM mapeados.");
+
+                // Verificação de Sanidade dos Elementos Críticos
+                const criticalEls = [
+                    'dashboardEstoqueAguaEl', 'dashboardEstoqueGasEl', 
+                    'dashboardMateriaisProntosContainer'
+                ];
+                const missing = criticalEls.filter(k => !DOM_ELEMENTS[k]);
+                
+                if (missing.length > 0) {
+                    logToTV(`ALERTA: Elementos críticos não encontrados: ${missing.join(', ')}`, 'error');
+                    // Tenta encontrar manualmente para recuperar
+                    if (!DOM_ELEMENTS.dashboardMateriaisProntosContainer) {
+                        DOM_ELEMENTS.dashboardMateriaisProntosContainer = document.getElementById('dashboard-materiais-prontos');
+                        if (DOM_ELEMENTS.dashboardMateriaisProntosContainer) logToTV("Recuperado dashboardMateriaisProntosContainer manualmente.");
+                    }
+                }
+
+                // 3. Inicializar Auth e Listeners
+                logToTV("Configurando Auth e Listeners...");
+                
+                // Callback de renderização seguro
+                const safeRender = () => {
+                    logToTV("Renderizando Dashboard...");
+                    try {
+                        renderDashboard();
+                        logToTV("Dashboard renderizado com sucesso.");
+                    } catch (e) {
+                        logToTV(`Erro ao renderizar dashboard: ${e.message}`, 'error');
+                        console.error(e);
+                    }
+                    
+                    try {
+                        if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { 
+                            lucide.createIcons(); 
+                        }
+                    } catch (e) { logToTV("Erro ao criar ícones: " + e.message, 'warn'); }
+                };
+
+                await initAuthAndListeners(
+                    safeRender, 
+                    null, // renderControls
+                    null  // renderModules
+                );
+
+                // 4. Auto-login se necessário
+                setTimeout(() => {
+                    if (!isReady()) {
+                        logToTV("Nenhuma sessão ativa. Tentando login anônimo...", 'warn');
+                        signInAnonUser().then(() => {
+                            logToTV("Login anônimo concluído.");
+                        }).catch(err => {
+                            logToTV(`Falha no login anônimo: ${err.message}`, 'error');
+                        });
+                    } else {
+                        logToTV("Sessão já ativa.");
+                    }
+                }, 1500);
+
+                // 5. Iniciar auto-refresh
+            startDashboardRefresh();
+
+            // 6. Forçar renderização inicial após um tempo (caso listeners demorem)
+            setTimeout(() => {
+                logToTV("Forçando renderização de segurança...");
+                safeRender();
+            }, 3000);
+            
+            // 7. Configuração de recuperação de falha de conexão (Network)
+            setInterval(() => {
+                if (navigator.onLine === false) {
+                     logToTV("Sem conexão de rede. Aguardando...", 'warn');
+                } else {
+                    // Se estiver online mas os dados estiverem vazios, tenta recarregar
+                    const elCheck = document.getElementById('dashboard-estoque-agua');
+                    if (elCheck && (elCheck.textContent === '--' || elCheck.textContent === '')) {
+                         logToTV("Dados vazios detectados online. Tentando re-renderizar...", 'warn');
+                         safeRender();
+                    }
+                }
+            }, 10000);
+
+        } catch (error) {
+                logToTV(`Erro fatal na inicialização: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // Aguardar DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initTVDashboard);
+        } else {
+            initTVDashboard();
+        }
+    </script>
+
+</body>
+</html>
