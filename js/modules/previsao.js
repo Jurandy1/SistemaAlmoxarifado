@@ -12,7 +12,7 @@ import {
     setGraficoPrevisao 
 } from "../utils/cache.js";
 import { showAlert, DOM_ELEMENTS } from "../utils/dom-helpers.js";
-import { formatTimestamp, formatTimestampComTempo } from "../utils/formatters.js";
+import { formatTimestamp, formatTimestampComTempo, dateToTimestamp } from "../utils/formatters.js";
 
 let graficoAnaliseConsumo = { agua: null, gas: null };
 
@@ -31,6 +31,8 @@ const FERIADOS_FIXOS = [
     '20/11', // Dia da Consciência Negra
     '25/12'  // Natal
 ];
+
+const SEDE_INICIO_CONTABILIZACAO = new Date(2026, 0, 1, 0, 0, 0, 0);
 
 function isFeriado(date) {
     const dia = String(date.getDate()).padStart(2, '0');
@@ -72,6 +74,34 @@ function normalizeUnidadeNome(nome) {
 
 function isFuroDeEstoqueNome(nome) {
     return normalizeUnidadeNome(nome) === 'furo de estoque';
+}
+
+function toIntegerUnits(value, mode = 'round') {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return 0;
+    if (mode === 'ceil') return Math.ceil(n);
+    if (mode === 'floor') return Math.floor(n);
+    return Math.round(n);
+}
+
+function filterSedeBaselineIfNeeded(movs, unidades, includesSedeScope) {
+    if (!includesSedeScope) return movs;
+    if (!Array.isArray(movs) || movs.length === 0) return movs;
+    const last = movs[movs.length - 1];
+    if (!last?.data || typeof last.data.toDate !== 'function') return movs;
+    const endDate = last.data.toDate();
+    if (endDate < SEDE_INICIO_CONTABILIZACAO) return movs;
+    return movs.filter(m => {
+        if (!m?.data || typeof m.data.toDate !== 'function') return false;
+        return m.data.toDate() >= SEDE_INICIO_CONTABILIZACAO;
+    });
+}
+
+function parseDateInputToDate(dateVal) {
+    if (!dateVal) return null;
+    const ts = dateToTimestamp(dateVal);
+    if (!ts) return null;
+    return ts.toDate();
 }
 
 /**
@@ -177,7 +207,7 @@ function gerarConsumoSemanalGasHistorico() {
     const unidades = getUnidades();
     const movimentacoes = getGasMovimentacoes() || [];
 
-    const baseMovs = movimentacoes
+    let baseMovs = movimentacoes
         .filter(m => m && m.tipo === 'entrega' && m.data && typeof m.data.toDate === 'function');
 
     if (baseMovs.length === 0) {
@@ -198,6 +228,18 @@ function gerarConsumoSemanalGasHistorico() {
         unidadesById.set(u.id, entry);
         unidadesByNome.set(normalizeUnidadeNome(u.nome), entry);
     });
+
+    const includesSedeScope = baseMovs.some(m => {
+        const info = m.unidadeId ? unidadesById.get(m.unidadeId) : null;
+        return normalizeUnidadeType(info?.tipo) === 'SEDE';
+    });
+    baseMovs = filterSedeBaselineIfNeeded(baseMovs.sort((a, b) => a.data.toMillis() - b.data.toMillis()), unidades, includesSedeScope);
+
+    if (baseMovs.length === 0) {
+        tabelaSemanal.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-500 text-sm">Nenhuma unidade com consumo registrado no histórico.</td></tr>`;
+        if (resumoEl) resumoEl.textContent = 'Nenhum consumo registrado no histórico para calcular o resumo.';
+        return;
+    }
 
     const consumoMap = new Map();
     let totalConsumoGlobal = 0;
@@ -235,9 +277,7 @@ function gerarConsumoSemanalGasHistorico() {
                 .sort((a, b) => a.getTime() - b.getTime());
             const first = datasOrdenadasRaw[0];
             const last = datasOrdenadasRaw[datasOrdenadasRaw.length - 1] || first;
-            const diffMs = last.getTime() - first.getTime();
-            const diasUnidade = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-            const diasRef = diasUnidade > 0 ? diasUnidade : 1;
+            const diasRef = Math.max(1, countDiasUteis(first, last));
 
             const mediaDiaria = entry.consumo / diasRef;
             const semanalFloat = mediaDiaria * 7;
@@ -280,9 +320,9 @@ function gerarConsumoSemanalGasHistorico() {
 
     if (resumoEl) {
         const mediaDiariaGlobal = diasBase > 0 ? (totalConsumoGlobal / diasBase) : 0;
-        const semanalGlobal = Math.round(mediaDiariaGlobal * 7);
-        const mensalGlobal = Math.round(mediaDiariaGlobal * 30);
-        const anualGlobal = Math.round(mediaDiariaGlobal * 365);
+        const semanalGlobal = Math.round(mediaDiariaGlobal * 5);
+        const mensalGlobal = Math.round(mediaDiariaGlobal * 22);
+        const anualGlobal = Math.round(mediaDiariaGlobal * 252);
         const inicioStr = periodo.dataInicial ? formatTimestamp(periodo.dataInicial) : '-';
         const fimStr = periodo.dataFinal ? formatTimestamp(periodo.dataFinal) : '-';
         resumoEl.innerHTML = `
@@ -293,9 +333,9 @@ function gerarConsumoSemanalGasHistorico() {
             <div class="mb-3">
                 Para abastecer todas as unidades nesse ritmo seriam necessários, em média:<br>
                 <span class="text-lg">
-                    <strong>${semanalGlobal}</strong> botijões por semana, 
-                    <strong>${mensalGlobal}</strong> por mês e 
-                    <strong>${anualGlobal}</strong> por ano.
+                    <strong>${semanalGlobal}</strong> botijões por semana (dias úteis), 
+                    <strong>${mensalGlobal}</strong> por mês (dias úteis) e 
+                    <strong>${anualGlobal}</strong> por ano (dias úteis).
                 </span>
             </div>
             <div class="text-xs text-gray-500 bg-gray-50 p-3 rounded border border-gray-200">
@@ -362,8 +402,9 @@ function analisarConsumoPorPeriodo(itemType) {
             return d >= inicio && d <= fim;
         });
     } else if (dataInicioVal || dataFimVal) {
-        const inicio = dataInicioVal ? new Date(`${dataInicioVal}T00:00:00`) : null;
-        const fim = dataFimVal ? new Date(`${dataFimVal}T23:59:59`) : null;
+        const inicio = dataInicioVal ? parseDateInputToDate(dataInicioVal) : null;
+        const fimBase = dataFimVal ? parseDateInputToDate(dataFimVal) : null;
+        const fim = fimBase ? new Date(fimBase.getFullYear(), fimBase.getMonth(), fimBase.getDate(), 23, 59, 59, 999) : null;
         movsEntrega = movsEntrega.filter(m => {
             const d = m.data.toDate();
             const okIni = inicio ? d >= inicio : true;
@@ -614,15 +655,22 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
     }
     const mediaDiariaPeriodoSemFuro = totalDias > 0 ? (totalConsumoSemFuro / totalDias) : totalConsumoSemFuro;
     const mediaDiariaPeriodoComFuro = totalDias > 0 ? (totalConsumoComFuro / totalDias) : totalConsumoComFuro;
+    const mediaDiariaPeriodoSemFuroInt = toIntegerUnits(mediaDiariaPeriodoSemFuro, 'round');
+    const mediaDiariaPeriodoComFuroInt = toIntegerUnits(mediaDiariaPeriodoComFuro, 'round');
+
+    const includesSedeScope = movsEntrega.some(m => {
+        const u = unidades.find(x => x.id === m.unidadeId);
+        return normalizeUnidadeType(u?.tipo) === 'SEDE';
+    });
     let blocoEquivalencia = '';
     if (itemType === 'agua') {
-        const semanalSemFuro = mediaDiariaPeriodoSemFuro * 5;
-        const mensalSemFuro = mediaDiariaPeriodoSemFuro * 22;
-        const anualSemFuro = mediaDiariaPeriodoSemFuro * 252;
+        const semanalSemFuro = toIntegerUnits(mediaDiariaPeriodoSemFuro * 5, 'round');
+        const mensalSemFuro = toIntegerUnits(mediaDiariaPeriodoSemFuro * 22, 'round');
+        const anualSemFuro = toIntegerUnits(mediaDiariaPeriodoSemFuro * 252, 'round');
 
-        const semanalComFuro = mediaDiariaPeriodoComFuro * 5;
-        const mensalComFuro = mediaDiariaPeriodoComFuro * 22;
-        const anualComFuro = mediaDiariaPeriodoComFuro * 252;
+        const semanalComFuro = toIntegerUnits(mediaDiariaPeriodoComFuro * 5, 'round');
+        const mensalComFuro = toIntegerUnits(mediaDiariaPeriodoComFuro * 22, 'round');
+        const anualComFuro = toIntegerUnits(mediaDiariaPeriodoComFuro * 252, 'round');
 
         blocoEquivalencia = `
         <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 mt-4">
@@ -632,17 +680,17 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
                 <div class="bg-white/60 rounded-lg border border-blue-100 p-3">
                     <div class="font-semibold text-blue-900 mb-2">Sem Furo De Estoque</div>
                     <ul class="list-none space-y-1 text-sm text-blue-800">
-                        <li class="flex items-center"><span class="font-bold w-24">Semanal:</span> <span>~${semanalSemFuro.toFixed(1)} un.</span></li>
-                        <li class="flex items-center"><span class="font-bold w-24">Mensal:</span> <span>~${mensalSemFuro.toFixed(1)} un.</span></li>
-                        <li class="flex items-center"><span class="font-bold w-24">Anual:</span> <span>~${anualSemFuro.toFixed(1)} un.</span></li>
+                        <li class="flex items-center"><span class="font-bold w-24">Semanal:</span> <span>~${semanalSemFuro} un.</span></li>
+                        <li class="flex items-center"><span class="font-bold w-24">Mensal:</span> <span>~${mensalSemFuro} un.</span></li>
+                        <li class="flex items-center"><span class="font-bold w-24">Anual:</span> <span>~${anualSemFuro} un.</span></li>
                     </ul>
                 </div>
                 <div class="bg-white/60 rounded-lg border border-blue-100 p-3">
                     <div class="font-semibold text-blue-900 mb-2">Incluindo Furo De Estoque</div>
                     <ul class="list-none space-y-1 text-sm text-blue-800">
-                        <li class="flex items-center"><span class="font-bold w-24">Semanal:</span> <span>~${semanalComFuro.toFixed(1)} un.</span></li>
-                        <li class="flex items-center"><span class="font-bold w-24">Mensal:</span> <span>~${mensalComFuro.toFixed(1)} un.</span></li>
-                        <li class="flex items-center"><span class="font-bold w-24">Anual:</span> <span>~${anualComFuro.toFixed(1)} un.</span></li>
+                        <li class="flex items-center"><span class="font-bold w-24">Semanal:</span> <span>~${semanalComFuro} un.</span></li>
+                        <li class="flex items-center"><span class="font-bold w-24">Mensal:</span> <span>~${mensalComFuro} un.</span></li>
+                        <li class="flex items-center"><span class="font-bold w-24">Anual:</span> <span>~${anualComFuro} un.</span></li>
                     </ul>
                 </div>
             </div>
@@ -661,19 +709,17 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
         if (tabelaSemanal) {
             tabelaSemanal.innerHTML = '';
 
-            const baseMovs = (Array.isArray(allMovs) && allMovs.length > 0
+            let baseMovs = (Array.isArray(allMovs) && allMovs.length > 0
                 ? allMovs
                 : Array.isArray(movsGroupFull) && movsGroupFull.length > 0
                     ? movsGroupFull
                     : movsEntrega
             ).filter(m => m && m.tipo === 'entrega' && m.data && typeof m.data.toDate === 'function');
+            baseMovs = filterSedeBaselineIfNeeded(baseMovs.sort((a, b) => a.data.toMillis() - b.data.toMillis()), unidades, includesSedeScope);
 
             if (baseMovs.length === 0) {
                 tabelaSemanal.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-500 text-sm">Nenhuma unidade com consumo registrado no histórico.</td></tr>`;
             } else {
-                const periodoHist = getPeriodoAnalise(baseMovs);
-                const diasBase = periodoHist.totalDias > 0 ? periodoHist.totalDias : 1;
-
                 const unidadeInfoMap = new Map(unidades.map(u => [u.id, {
                     nome: u.nome,
                     tipo: (
@@ -686,25 +732,36 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
                     )
                 }]));
 
-                const consumoPorUnidadeId = baseMovs.reduce((acc, mov) => {
+                const movsPorUnidadeId = baseMovs.reduce((acc, mov) => {
                     const info = unidadeInfoMap.get(mov.unidadeId);
                     if (!info) return acc;
-                    const atual = acc.get(mov.unidadeId) || { nome: info.nome, tipo: info.tipo, consumo: 0 };
-                    atual.consumo += mov.quantidade || 0;
-                    acc.set(mov.unidadeId, atual);
+                    const arr = acc.get(mov.unidadeId) || [];
+                    arr.push(mov);
+                    acc.set(mov.unidadeId, arr);
                     return acc;
                 }, new Map());
 
-                const linhas = Array.from(consumoPorUnidadeId.values())
-                    .map(entry => {
-                        const mediaDiaria = entry.consumo / diasBase;
-                        const semanal = Math.round(mediaDiaria * 7);
+                const linhas = Array.from(movsPorUnidadeId.entries())
+                    .map(([unidadeId, movs]) => {
+                        const info = unidadeInfoMap.get(unidadeId);
+                        if (!info) return null;
+                        const movsOrdenadas = [...movs].sort((a, b) => a.data.toMillis() - b.data.toMillis());
+                        const primeira = movsOrdenadas[0].data.toDate();
+                        const ultima = movsOrdenadas[movsOrdenadas.length - 1].data.toDate();
+                        const totalHistorico = movsOrdenadas.reduce((sum, m) => sum + (m.quantidade || 0), 0);
+                        const qtdeUltima = movsOrdenadas[movsOrdenadas.length - 1].quantidade || 0;
+                        const totalParaMedia = Math.max(0, totalHistorico - qtdeUltima);
+                        const diasIntervalo = Math.max(1, countDiasUteis(primeira, ultima));
+                        const mediaDiaria = totalParaMedia > 0 ? (totalParaMedia / diasIntervalo) : (movsOrdenadas[0].quantidade || 0);
+                        const semanalFloat = mediaDiaria * 7;
+                        const semanal = totalHistorico > 0 && semanalFloat < 1 ? 1 : toIntegerUnits(semanalFloat, 'round');
                         return {
-                            tipo: entry.tipo,
-                            nome: entry.nome,
+                            tipo: info.tipo,
+                            nome: info.nome,
                             semanal
                         };
                     })
+                    .filter(Boolean)
                     .filter(l => l.semanal > 0)
                     .sort((a, b) => {
                         if (a.tipo === b.tipo) {
@@ -731,21 +788,24 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
     }
 
     let mediaDiariaHistorica = 0;
-    if (Array.isArray(movsGroupFull) && movsGroupFull.length > 0) {
+    const movsGroupFullBase = Array.isArray(movsGroupFull) ? movsGroupFull.filter(m => m && m.tipo === 'entrega' && m.data && typeof m.data.toDate === 'function').sort((a, b) => a.data.toMillis() - b.data.toMillis()) : [];
+    const movsGroupFullAdj = filterSedeBaselineIfNeeded(movsGroupFullBase, unidades, includesSedeScope);
+    if (Array.isArray(movsGroupFullAdj) && movsGroupFullAdj.length > 0) {
         const movsHistSemFuro = itemType === 'agua'
-            ? movsGroupFull.filter(m => {
+            ? movsGroupFullAdj.filter(m => {
                 const u = unidades.find(x => x.id === m.unidadeId);
                 const nome = u?.nome || m.unidadeNome || '';
                 return !isFuroDeEstoqueNome(nome);
             })
-            : movsGroupFull;
+            : movsGroupFullAdj;
         const { totalDias: diasHist } = getPeriodoAnalise(movsHistSemFuro);
         const totalHist = movsHistSemFuro.reduce((sum, m) => sum + (m.quantidade || 0), 0);
         mediaDiariaHistorica = diasHist > 0 ? (totalHist / diasHist) : totalHist;
     }
     const esperadoPeriodo = mediaDiariaHistorica * totalDias;
-    const desvioAbs = totalConsumoSemFuro - esperadoPeriodo;
-    const desvioPerc = esperadoPeriodo > 0 ? ((desvioAbs / esperadoPeriodo) * 100) : 0;
+    const esperadoPeriodoInt = toIntegerUnits(esperadoPeriodo, 'round');
+    const desvioAbs = totalConsumoSemFuro - esperadoPeriodoInt;
+    const desvioPerc = esperadoPeriodoInt > 0 ? ((desvioAbs / esperadoPeriodoInt) * 100) : 0;
     const picoEntrega = movsEntrega.reduce((max, m) => Math.max(max, m.quantidade || 0), 0);
 
     let relatorioText = `
@@ -753,9 +813,9 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
         <p><i data-lucide="package" class="w-3.5 h-3.5 inline-block mr-1"></i> Consumo total (sem Furo De Estoque): <strong>${totalConsumoSemFuro} un.</strong></p>
         ${itemType === 'agua' && furoQuantidade > 0 ? `<p><i data-lucide="alert-triangle" class="w-3.5 h-3.5 inline-block mr-1 text-yellow-600"></i> Furo De Estoque (destino desconhecido): <strong>${furoQuantidade} un.</strong></p>` : ``}
         ${itemType === 'agua' ? `<p><i data-lucide="package" class="w-3.5 h-3.5 inline-block mr-1"></i> Total incluindo Furo De Estoque: <strong>${totalConsumoComFuro} un.</strong></p>` : ``}
-        <p><i data-lucide="scale" class="w-3.5 h-3.5 inline-block mr-1"></i> Média por dia útil (sem Furo): <strong>${mediaDiariaPeriodoSemFuro.toFixed(2)} un.</strong> (histórico: <strong>${mediaDiariaHistorica.toFixed(2)} un.</strong>).</p>
-        ${itemType === 'agua' ? `<p><i data-lucide="scale" class="w-3.5 h-3.5 inline-block mr-1"></i> Média por dia útil (incluindo Furo): <strong>${mediaDiariaPeriodoComFuro.toFixed(2)} un.</strong></p>` : ``}
-        <p><i data-lucide="trending-up" class="w-3.5 h-3.5 inline-block mr-1"></i> Desvio vs previsão histórica: <strong>${desvioAbs.toFixed(1)} un.</strong> (${desvioPerc.toFixed(1)}%).</p>
+        <p><i data-lucide="scale" class="w-3.5 h-3.5 inline-block mr-1"></i> Média por dia útil (sem Furo): <strong>${mediaDiariaPeriodoSemFuroInt} un.</strong> (histórico: <strong>${toIntegerUnits(mediaDiariaHistorica, 'round')} un.</strong>).</p>
+        ${itemType === 'agua' ? `<p><i data-lucide="scale" class="w-3.5 h-3.5 inline-block mr-1"></i> Média por dia útil (incluindo Furo): <strong>${mediaDiariaPeriodoComFuroInt} un.</strong></p>` : ``}
+        <p><i data-lucide="trending-up" class="w-3.5 h-3.5 inline-block mr-1"></i> Desvio vs previsão histórica: <strong>${desvioAbs} un.</strong> (${desvioPerc.toFixed(1)}%).</p>
         ${blocoEquivalencia}
     `;
     if (ranking.length > 0) {
@@ -763,30 +823,47 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
         const menorConsumo = ranking[ranking.length - 1];
         relatorioText += `<p><i data-lucide="chevron-down" class="w-3.5 h-3.5 inline-block mr-1 text-blue-500"></i> Menor consumo: <strong>${menorConsumo.nome}</strong> com <strong>${menorConsumo.consumo} un.</strong>.</p>`;
     }
-    const diasHistFull = Array.isArray(movsGroupFull) ? getPeriodoAnalise(movsGroupFull).totalDias : 0;
-    const consumoHistPorUnidade = Array.isArray(movsGroupFull) ? movsGroupFull.reduce((acc, m) => {
-        acc[m.unidadeId] = (acc[m.unidadeId] || 0) + (m.quantidade || 0);
-        return acc;
-    }, {}) : {};
     const consumoAtualPorUnidadeId = movsEntrega.reduce((acc, m) => {
         acc[m.unidadeId] = (acc[m.unidadeId] || 0) + (m.quantidade || 0);
         return acc;
     }, {});
-    const esperadoPorUnidade = {};
-    Object.keys(consumoHistPorUnidade).forEach(uid => {
-        const mediaHistDia = diasHistFull > 0 ? (consumoHistPorUnidade[uid] / diasHistFull) : 0;
-        esperadoPorUnidade[uid] = mediaHistDia * totalDias;
+    const movsHistBaseParaUnidades = (itemType === 'agua'
+        ? movsGroupFullAdj.filter(m => {
+            const u = unidades.find(x => x.id === m.unidadeId);
+            const nome = u?.nome || m.unidadeNome || '';
+            return !isFuroDeEstoqueNome(nome);
+        })
+        : movsGroupFullAdj
+    ).filter(m => m && m.tipo === 'entrega' && m.data && typeof m.data.toDate === 'function');
+    const movsHistPorUnidade = movsHistBaseParaUnidades.reduce((acc, m) => {
+        const arr = acc.get(m.unidadeId) || [];
+        arr.push(m);
+        acc.set(m.unidadeId, arr);
+        return acc;
+    }, new Map());
+    const esperadoPorUnidade = new Map();
+    movsHistPorUnidade.forEach((arr, uid) => {
+        const movsOrdenadas = [...arr].sort((a, b) => a.data.toMillis() - b.data.toMillis());
+        const primeira = movsOrdenadas[0].data.toDate();
+        const ultima = movsOrdenadas[movsOrdenadas.length - 1].data.toDate();
+        const totalHistorico = movsOrdenadas.reduce((sum, m) => sum + (m.quantidade || 0), 0);
+        const qtdeUltima = movsOrdenadas[movsOrdenadas.length - 1].quantidade || 0;
+        const totalParaMedia = Math.max(0, totalHistorico - qtdeUltima);
+        const diasHist = Math.max(1, countDiasUteis(primeira, ultima));
+        const mediaHistDia = totalParaMedia > 0 ? (totalParaMedia / diasHist) : (movsOrdenadas[0].quantidade || 0);
+        esperadoPorUnidade.set(uid, mediaHistDia * totalDias);
     });
     const anomaliasAlta = [];
     const anomaliasBaixa = [];
     Object.keys(consumoAtualPorUnidadeId).forEach(uid => {
         const atual = consumoAtualPorUnidadeId[uid];
-        const esperado = esperadoPorUnidade[uid] || 0;
+        const esperadoFloat = esperadoPorUnidade.get(uid) || 0;
+        const esperado = Math.max(0, toIntegerUnits(esperadoFloat, 'round'));
         const diff = atual - esperado;
         const perc = esperado > 0 ? ((diff / esperado) * 100) : (atual > 0 ? 100 : 0);
         const unidade = unidades.find(u => u.id === uid);
         const nome = unidade ? unidade.nome : uid;
-        const registro = { uid, nome, atual, esperado: Math.max(0, esperado), diff, perc };
+        const registro = { uid, nome, atual, esperado, diff, perc };
         if (diff >= 0) anomaliasAlta.push(registro); else anomaliasBaixa.push(registro);
     });
     anomaliasAlta.sort((a, b) => b.diff - a.diff);
@@ -801,7 +878,7 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
             relatorioText += `<ul class="list-disc ml-5 text-sm text-gray-700">`;
             destaqueAlta.forEach(a => {
                 const maisMenos = a.diff >= 0 ? 'a mais' : 'a menos';
-                relatorioText += `<li><strong>${a.nome}</strong>: consumiu ${a.atual} un. no período. Normalmente consome cerca de ${a.esperado.toFixed(1)} un. nesse intervalo. Diferença: ${Math.abs(a.diff).toFixed(1)} un. ${maisMenos} (${a.perc.toFixed(1)}%).</li>`;
+                relatorioText += `<li><strong>${a.nome}</strong>: consumiu ${a.atual} un. no período. Normalmente consome cerca de ${a.esperado} un. nesse intervalo. Diferença: ${Math.abs(a.diff)} un. ${maisMenos} (${a.perc.toFixed(1)}%).</li>`;
             });
             relatorioText += `</ul>`;
         }
@@ -809,7 +886,7 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
             relatorioText += `<ul class="list-disc ml-5 text-sm text-gray-700 mt-2">`;
             destaqueBaixa.forEach(a => {
                 const maisMenos = a.diff >= 0 ? 'a mais' : 'a menos';
-                relatorioText += `<li><strong>${a.nome}</strong>: consumiu ${a.atual} un. no período. Normalmente consome cerca de ${a.esperado.toFixed(1)} un. nesse intervalo. Diferença: ${Math.abs(a.diff).toFixed(1)} un. ${maisMenos} (${a.perc.toFixed(1)}%).</li>`;
+                relatorioText += `<li><strong>${a.nome}</strong>: consumiu ${a.atual} un. no período. Normalmente consome cerca de ${a.esperado} un. nesse intervalo. Diferença: ${Math.abs(a.diff)} un. ${maisMenos} (${a.perc.toFixed(1)}%).</li>`;
             });
             relatorioText += `</ul>`;
         }
@@ -826,25 +903,47 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
             consumoPorMesUnidade[k] ||= {};
             consumoPorMesUnidade[k][u] = (consumoPorMesUnidade[k][u] || 0) + (m.quantidade || 0);
         });
-        const mediaDiaHistPorUnidade = {};
-        const diasHistFull = Array.isArray(movsGroupFull) ? getPeriodoAnalise(movsGroupFull).totalDias : 0;
-        movsGroupFull.forEach(m => {
-            const u = m.unidadeId;
-            mediaDiaHistPorUnidade[u] = (mediaDiaHistPorUnidade[u] || 0) + (m.quantidade || 0);
-        });
-        Object.keys(mediaDiaHistPorUnidade).forEach(u => {
-            mediaDiaHistPorUnidade[u] = diasHistFull > 0 ? (mediaDiaHistPorUnidade[u] / diasHistFull) : 0;
+        const movsHistAnoBase = (itemType === 'agua'
+            ? movsGroupFullAdj.filter(m => {
+                const u = unidades.find(x => x.id === m.unidadeId);
+                const nome = u?.nome || m.unidadeNome || '';
+                return !isFuroDeEstoqueNome(nome);
+            })
+            : movsGroupFullAdj
+        ).filter(m => m && m.tipo === 'entrega' && m.data && typeof m.data.toDate === 'function');
+        const movsHistAnoPorUnidade = movsHistAnoBase.reduce((acc, m) => {
+            const arr = acc.get(m.unidadeId) || [];
+            arr.push(m);
+            acc.set(m.unidadeId, arr);
+            return acc;
+        }, new Map());
+        const mediaDiaHistPorUnidade = new Map();
+        movsHistAnoPorUnidade.forEach((arr, uid) => {
+            const movsOrdenadas = [...arr].sort((a, b) => a.data.toMillis() - b.data.toMillis());
+            const primeira = movsOrdenadas[0].data.toDate();
+            const ultima = movsOrdenadas[movsOrdenadas.length - 1].data.toDate();
+            const totalHistorico = movsOrdenadas.reduce((sum, m) => sum + (m.quantidade || 0), 0);
+            const qtdeUltima = movsOrdenadas[movsOrdenadas.length - 1].quantidade || 0;
+            const totalParaMedia = Math.max(0, totalHistorico - qtdeUltima);
+            const diasHist = Math.max(1, countDiasUteis(primeira, ultima));
+            const mediaHistDia = totalParaMedia > 0 ? (totalParaMedia / diasHist) : (movsOrdenadas[0].quantidade || 0);
+            mediaDiaHistPorUnidade.set(uid, mediaHistDia);
         });
         const extremos = [];
         Object.keys(consumoPorMesUnidade).sort().forEach(k => {
             const [y, m] = k.split('-');
-            const diasNoMes = new Date(parseInt(y,10), parseInt(m,10), 0).getDate();
+            const ano = parseInt(y, 10);
+            const mes = parseInt(m, 10);
+            const inicioMes = new Date(ano, mes - 1, 1, 0, 0, 0, 0);
+            const fimMes = new Date(ano, mes, 0, 23, 59, 59, 999);
+            const diasNoMes = Math.max(1, countDiasUteis(inicioMes, fimMes));
             const etiquetaMes = `${monthNames[parseInt(m,10)-1]}/${y}`;
             const porUnid = consumoPorMesUnidade[k];
             Object.keys(porUnid).forEach(uid => {
                 const atual = porUnid[uid];
-                const mediaDia = mediaDiaHistPorUnidade[uid] || 0;
-                const esperado = mediaDia * diasNoMes;
+                const mediaDia = mediaDiaHistPorUnidade.get(uid) || 0;
+                const esperadoFloat = mediaDia * diasNoMes;
+                const esperado = Math.max(0, toIntegerUnits(esperadoFloat, 'round'));
                 const diff = atual - esperado;
                 const peso = Math.abs(diff);
                 if (peso >= 1) {
@@ -860,7 +959,7 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
             relatorioText += `<div class="mt-3"><p><strong>Meses com maior variação no ano:</strong></p>${top.map(e => {
                 const maisMenos = e.diff >= 0 ? 'bem acima' : 'bem abaixo';
                 const iconStr = e.diff >= 0 ? '<i data-lucide="flame" class="w-3.5 h-3.5 inline-block mr-1 text-orange-500"></i>' : '<i data-lucide="arrow-down" class="w-3.5 h-3.5 inline-block mr-1 text-blue-500"></i>';
-                return `<p>${iconStr} ${e.etiquetaMes}: <strong>${e.nome}</strong> consumiu ${Math.abs(e.diff).toFixed(0)} un. ${maisMenos} do normal (atual ${e.atual} • esperado ${e.esperado.toFixed(1)}).</p>`;
+                return `<p>${iconStr} ${e.etiquetaMes}: <strong>${e.nome}</strong> consumiu ${Math.abs(e.diff)} un. ${maisMenos} do normal (atual ${e.atual} • esperado ${e.esperado}).</p>`;
             }).join('')}</div>`;
         }
     }
@@ -1015,7 +1114,7 @@ function renderGraficoPrevisao(itemType, data) {
                                     label += ': ';
                                 }
                                 if (context.parsed.y !== null) {
-                                    label += parseFloat(context.parsed.y.toFixed(2));
+                                    label += toIntegerUnits(context.parsed.y, 'round');
                                 }
                                 return label;
                             }
@@ -1085,6 +1184,7 @@ function calcularPrevisaoInteligente(itemType) {
             let movsFiltradas = [];
             let tituloPrevisao = "";
             let unidadesConsideradas = [];
+            let includesSedeScope = false;
 
             const exclusoes = listaExclusoes[itemType]; 
 
@@ -1102,6 +1202,7 @@ function calcularPrevisaoInteligente(itemType) {
                 tituloPrevisao = `Previsão para: ${unidade.nome}`;
                 movsFiltradas = movsEntrega.filter(m => m.unidadeId === unidadeId);
                 unidadesConsideradas.push(unidade.nome);
+                includesSedeScope = normalizeUnidadeType(unidade.tipo) === 'SEDE';
 
             } else if (modo === 'por-tipo') {
                 const tipo = document.getElementById(`select-previsao-tipo-${itemType}`)?.value;
@@ -1118,6 +1219,7 @@ function calcularPrevisaoInteligente(itemType) {
                 const idsUnidadesDoTipo = unidadesDoTipo.map(u => u.id);
                 unidadesConsideradas = unidadesDoTipo.map(u => u.nome).sort();
                 movsFiltradas = movsEntrega.filter(m => idsUnidadesDoTipo.includes(m.unidadeId));
+                includesSedeScope = String(tipo).toUpperCase() === 'SEDE';
 
             } else if (modo === 'completo') {
                 tituloPrevisao = `Previsão Geral (Todas Unidades)`;
@@ -1125,7 +1227,10 @@ function calcularPrevisaoInteligente(itemType) {
                 unidadesConsideradas = unidadesConsideradasObjs.map(u => u.nome).sort();
                 const idsUnidadesConsideradas = unidadesConsideradasObjs.map(u => u.id);
                 movsFiltradas = movsEntrega.filter(m => idsUnidadesConsideradas.includes(m.unidadeId));
+                includesSedeScope = unidadesConsideradasObjs.some(u => normalizeUnidadeType(u.tipo) === 'SEDE');
             }
+
+            movsFiltradas = filterSedeBaselineIfNeeded(movsFiltradas, unidades, includesSedeScope);
 
             if (movsFiltradas.length < 2) {
                  showAlert(alertId, `Dados insuficientes para calcular a previsão (${tituloPrevisao}). É necessário pelo menos 2 registros de entrega válidos no período.`, 'info');
@@ -1164,7 +1269,7 @@ function calcularPrevisaoInteligente(itemType) {
             if (diasIntervalo < 30) {
                  const warningEl = document.createElement('div');
                  warningEl.className = 'alert alert-info mt-2';
-                 warningEl.textContent = `Aviso: O histórico de dados considerado é curto (${diasIntervalo.toFixed(0)} dias entre a primeira e última entrega). A previsão pode ser menos precisa.`;
+                 warningEl.textContent = `Aviso: O histórico de dados considerado é curto (${diasIntervalo} dias entre a primeira e última entrega). A previsão pode ser menos precisa.`;
                  if (alertEl) {
                      alertEl.appendChild(warningEl);
                      alertEl.style.display = 'block';
@@ -1174,6 +1279,11 @@ function calcularPrevisaoInteligente(itemType) {
             const previsaoBase = mediaDiaria * diasPrevisao;
             const valorMargem = previsaoBase * (margemSeguranca / 100);
             const previsaoFinal = previsaoBase + valorMargem;
+            const previsaoFinalInt = toIntegerUnits(previsaoFinal, 'ceil');
+            const previsaoBaseInt = toIntegerUnits(previsaoBase, 'ceil');
+            const valorMargemInt = Math.max(0, previsaoFinalInt - previsaoBaseInt);
+            const mediaDiariaInt = Math.max(0, toIntegerUnits(mediaDiaria, 'round'));
+            const previsaoDiariaInt = Math.max(0, toIntegerUnits(previsaoFinalInt / diasPrevisao, 'round'));
 
             const unidadesExcluidasNomes = exclusoes
                 .map(id => unidades.find(u => u.id === id)?.nome || `ID:${id.substring(0,4)}...`)
@@ -1185,7 +1295,7 @@ function calcularPrevisaoInteligente(itemType) {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
                     <div class="bg-white/10 p-4 rounded-lg">
                         <span class="block text-sm text-white/80 uppercase">Período Analisado</span>
-                        <span class="block text-2xl font-bold">${diasIntervalo.toFixed(0)} dias úteis</span>
+                        <span class="block text-2xl font-bold">${diasIntervalo} dias úteis</span>
                         <span class="block text-xs text-white/60">(${movsFiltradas.length} entregas)</span>
                     </div>
                     <div class="bg-white/10 p-4 rounded-lg">
@@ -1195,22 +1305,22 @@ function calcularPrevisaoInteligente(itemType) {
                 </div>
                 <div class="bg-white/20 p-4 rounded-lg mt-4">
                     <span class="block text-center text-sm text-white/80 uppercase">Consumo Médio por Dia Útil</span>
-                    <span class="block text-center text-4xl font-bold">${mediaDiaria.toFixed(2)} un./dia</span>
+                    <span class="block text-center text-4xl font-bold">${mediaDiariaInt} un./dia</span>
                 </div>
                 <hr class="border-white/20 my-4">
                 <h4 class="text-lg font-bold text-white mb-2">Previsão para ${diasPrevisao} dias úteis:</h4>
                 <div class="grid grid-cols-3 gap-2 text-center text-sm">
                     <div class="bg-white/10 p-3 rounded-lg">
                         <span class="block text-white/80">Base</span>
-                        <span class="block font-bold text-lg">${previsaoBase.toFixed(1)} un.</span>
+                        <span class="block font-bold text-lg">${previsaoBaseInt} un.</span>
                     </div>
                     <div class="bg-white/10 p-3 rounded-lg">
                         <span class="block text-white/80">+ Margem (${margemSeguranca}%)</span>
-                        <span class="block font-bold text-lg">${valorMargem.toFixed(1)} un.</span>
+                        <span class="block font-bold text-lg">${valorMargemInt} un.</span>
                     </div>
                     <div class="bg-white/90 text-blue-900 p-3 rounded-lg">
                         <span class="block font-bold">Total Recomendado</span>
-                        <span class="block font-bold text-xl">${Math.ceil(previsaoFinal)} un.</span>
+                        <span class="block font-bold text-xl">${previsaoFinalInt} un.</span>
                     </div>
                 </div>
                 ${ (modo === 'por-tipo' || modo === 'completo') ? `
@@ -1232,7 +1342,7 @@ function calcularPrevisaoInteligente(itemType) {
                 labels: ['Média Diária (Histórico)', `Previsão Diária (Próximos ${diasPrevisao} dias)`],
                 datasets: [{
                     label: `Consumo Diário (${itemType === 'agua' ? 'Água' : 'Gás'})`,
-                    data: [mediaDiaria, Math.ceil(previsaoFinal) / diasPrevisao],
+                    data: [mediaDiariaInt, previsaoDiariaInt],
                     backgroundColor: [
                         'rgba(255, 255, 255, 0.6)',
                         'rgba(191, 219, 254, 0.8)'
