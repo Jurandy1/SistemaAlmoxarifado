@@ -1238,7 +1238,7 @@ export async function handleSocialImportSubmit() {
     } else {
         showAlert('alert-social-import', `Formato de colunas inválido (${numCols} colunas). Esperado 9 (Cesta) ou 7 (Enxoval).`, 'error');
         DOM_ELEMENTS.btnSocialImportData.disabled = false;
-        DOM_ELEMENTS.btnSocialImportData.innerHTML = '<i data-lucide="upload"></i> 📤 Importar Dados';
+        DOM_ELEMENTS.btnSocialImportData.innerHTML = '<i data-lucide="upload"></i><span>Importar Dados</span>';
         if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
         return;
     }
@@ -1359,7 +1359,7 @@ export async function handleSocialImportSubmit() {
         showAlert('alert-social-import', `Erro ao salvar no banco de dados: ${error.message}`, 'error');
     } finally {
         DOM_ELEMENTS.btnSocialImportData.disabled = false;
-        DOM_ELEMENTS.btnSocialImportData.innerHTML = '<i data-lucide="upload"></i> 📤 Importar Dados';
+        DOM_ELEMENTS.btnSocialImportData.innerHTML = '<i data-lucide="upload"></i><span>Importar Dados</span>';
         if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
     }
 }
@@ -1455,4 +1455,8 @@ export function onSocialTabChange() {
     // Limpa os gráficos ao mudar de aba principal
     if (graficoCestaRelatorio) { graficoCestaRelatorio.destroy(); graficoCestaRelatorio = null; }
     if (graficoEnxovalRelatorio) { graficoEnxovalRelatorio.destroy(); graficoEnxovalRelatorio = null; }
+
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+        setTimeout(() => lucide.createIcons(), 50);
+    }
 }

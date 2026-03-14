@@ -133,8 +133,9 @@ export async function handleInicialEstoqueSubmit(e) {
     } catch (error) {
         console.error("Erro ao salvar estoque inicial:", error);
         showAlert('alert-inicial-agua', `Erro ao salvar: ${error.message}`, 'error');
-        DOM_ELEMENTS.btnSubmitInicialAgua.disabled = false; 
-        DOM_ELEMENTS.btnSubmitInicialAgua.textContent = 'Salvar Inicial'; 
+        DOM_ELEMENTS.btnSubmitInicialAgua.disabled = false;
+        DOM_ELEMENTS.btnSubmitInicialAgua.innerHTML = '<i data-lucide="save"></i><span>Salvar Inicial</span>';
+        if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
     }
 }
 
@@ -185,7 +186,7 @@ export async function handleEntradaEstoqueSubmit(e) {
         showAlert('alert-agua', `Erro: ${error.message}`, 'error');
     } finally { 
         DOM_ELEMENTS.btnSubmitEntradaAgua.disabled = false; 
-        DOM_ELEMENTS.btnSubmitEntradaAgua.textContent = 'Salvar Entrada'; 
+        DOM_ELEMENTS.btnSubmitEntradaAgua.innerHTML = '<i data-lucide="save"></i> <span>Salvar Entrada</span>'; 
     }
 }
 

@@ -87,8 +87,9 @@ export async function handleInicialEstoqueSubmit(e) {
     } catch (error) {
         console.error("Erro ao salvar estoque inicial:", error);
         showAlert('alert-inicial-gas', `Erro ao salvar: ${error.message}`, 'error');
-        DOM_ELEMENTS.btnSubmitInicialGas.disabled = false; 
-        DOM_ELEMENTS.btnSubmitInicialGas.textContent = 'Salvar Inicial'; 
+        DOM_ELEMENTS.btnSubmitInicialGas.disabled = false;
+        DOM_ELEMENTS.btnSubmitInicialGas.innerHTML = '<i data-lucide="save"></i><span>Salvar Inicial</span>';
+        if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
     }
 }
 
@@ -138,7 +139,7 @@ export async function handleEntradaEstoqueSubmit(e) {
         showAlert('alert-gas', `Erro: ${error.message}`, 'error');
     } finally { 
         DOM_ELEMENTS.btnSubmitEntradaGas.disabled = false; 
-        DOM_ELEMENTS.btnSubmitEntradaGas.textContent = 'Salvar Entrada'; 
+        DOM_ELEMENTS.btnSubmitEntradaGas.innerHTML = '<i data-lucide="save"></i> <span>Salvar Entrada</span>'; 
     }
 }
 
@@ -492,7 +493,7 @@ export function getDebitosGasResumoList() {
         let detalhe = '';
         if (ultimoTipo === 'entrega') detalhe = `última movimentação ${ultimoData}: levou ${ultimoQtd} botijão cheio`;
         else if (ultimoTipo === 'retorno' || ultimoTipo === 'retirada') detalhe = `última movimentação ${ultimoData}: deixou ${ultimoQtd} botijão vazio`;
-        return `⚠️ CRAS ${s.nome}: devendo ${s.pendentes} botijão vazio de gás • ${detalhe}`;
+        return `CRAS ${s.nome}: devendo ${s.pendentes} botijão vazio de gás • ${detalhe}`;
     });
 
     return mensagens;

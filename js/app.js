@@ -1,5 +1,6 @@
 // Este é o arquivo principal que orquestra a inicialização e os módulos.
 
+import "./vendor/lucide-fallback.js";
 import { initializeFirebaseServices } from "./services/firestore-service.js";
 // Adicionado signInAnonUser e signInEmailPassword para o formulário de login no DOM
 import { initAuthAndListeners, signOutUser, signInAnonUser, signInEmailPassword, sendResetPassword } from "./modules/auth.js"; 
@@ -23,6 +24,27 @@ import { getUserRole } from "./utils/cache.js";
 // Variável de estado da UI local (para manter o dashboard na tela)
 let visaoAtiva = 'inicio'; 
 
+function initHeaderDate() {
+    const dateEl = document.getElementById('header-date');
+    if (!dateEl) return;
+    const update = () => {
+        const now = new Date();
+        const opts = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
+        dateEl.textContent = now.toLocaleDateString('pt-BR', opts);
+    };
+    update();
+    setInterval(update, 60000);
+}
+
+function ensureLucideIcons() {
+    // Tenta usar a função global do fallback se existir
+    if (typeof window.ensureLucideIcons === 'function') {
+        window.ensureLucideIcons();
+    } else if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+        try { lucide.createIcons(); } catch (_) {}
+    }
+}
+
 /**
  * Função que configura o app: encontra elementos DOM e adiciona listeners.
  */
@@ -41,6 +63,9 @@ function setupApp() {
 
     // 3. Adicionar listeners globais e específicos de módulo
     initAllListeners();
+
+    initHeaderDate();
+    ensureLucideIcons();
     
     // 4. Configurar listener de exclusão no modal
     if (DOM_ELEMENTS.btnConfirmDelete) DOM_ELEMENTS.btnConfirmDelete.addEventListener('click', executeDelete);

@@ -421,7 +421,7 @@ export function renderDashboardMateriaisProntos(filterStatus = null) {
                 const item = m.tipoMaterial || 'Item';
                 const status = m.status;
                 const borderCls = status === 'retirada' ? 'border-green-500' : status === 'separacao' ? 'border-yellow-400' : 'border-purple-500';
-                const statusText = status === 'retirada' ? '✅ Pronto' : status === 'separacao' ? '⚙️ Em separação' : '📝 Pendente';
+                const statusText = status === 'retirada' ? 'Pronto' : status === 'separacao' ? 'Em separação' : 'Pendente';
                 const statusCls = status === 'retirada' ? 'status-green' : status === 'separacao' ? 'status-yellow' : 'status-purple';
                 const separadorInfo = m.responsavelSeparador ? `<p class=\"text-[11px] text-yellow-700 mt-1\">Separador: ${m.responsavelSeparador}</p>` : '';
                 return `
@@ -437,7 +437,7 @@ export function renderDashboardMateriaisProntos(filterStatus = null) {
             <section class=\"accordion-section\">
               <button class=\"accordion-header\" data-grupo=\"${tipo}\"> 
                 <span>${tipo} <span class=\"text-gray-500\">(${total})</span></span>
-                <span class=\"accordion-counts\">🟢 Prontos: ${prontos} | ⚙️ Em separação: ${separacao} | ⏳ Pendentes: ${pendente}</span>
+                <span class=\"accordion-counts\"><span class=\"text-green-600 font-semibold\">${prontos} prontos</span> · <span class=\"text-yellow-700 font-semibold\">${separacao} separação</span> · <span class=\"text-purple-700 font-semibold\">${pendente} pendentes</span></span>
               </button>
               <div id=\"grupo-${tipo}\" class=\"accordion-content\">
                 <div class=\"grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3\">${cardsHtml || '<p class=\"text-sm text-slate-500\">Sem registros.</p>'}</div>
@@ -546,44 +546,71 @@ function createTVCard(m, type) {
     `;
 }
 
-// Controle de Auto-Scroll independente para cada coluna
-const tvScrollTimers = new Map();
+const tvAutoScrollState = new WeakMap();
+
+function stopTVAutoScroll(element) {
+    if (!element) return;
+    const state = tvAutoScrollState.get(element);
+    if (!state) return;
+    if (state.intervalId) clearInterval(state.intervalId);
+    if (state.startTimeoutId) clearTimeout(state.startTimeoutId);
+    if (state.resetTimeoutId) clearTimeout(state.resetTimeoutId);
+    tvAutoScrollState.delete(element);
+}
 
 function handleTVAutoScroll(element) {
     if (!element) return;
-    
-    // Limpa timer anterior se existir para este elemento
-    if (tvScrollTimers.has(element)) {
-        clearInterval(tvScrollTimers.get(element));
-        tvScrollTimers.delete(element);
+    stopTVAutoScroll(element);
+
+    if (!element.isConnected) return;
+
+    const shouldScroll = () => element.isConnected && element.scrollHeight > (element.clientHeight + 2);
+    if (!shouldScroll()) {
+        element.scrollTop = 0;
+        return;
     }
 
-    // Só rola se o conteúdo for maior que o container
-    if (element.scrollHeight <= element.clientHeight) return;
+    const state = { intervalId: null, startTimeoutId: null, resetTimeoutId: null };
+    tvAutoScrollState.set(element, state);
 
-    let scrollTop = 0;
-    const scrollSpeed = 1; // pixels por tick
-    const scrollDelay = 50; // ms
-    
-    // Aguarda um pouco antes de começar
-    setTimeout(() => {
-        const timer = setInterval(() => {
-            if (scrollTop < (element.scrollHeight - element.clientHeight)) {
-                scrollTop += scrollSpeed;
-                element.scrollTop = scrollTop;
-            } else {
-                // Chegou no fim. Espera e reseta.
-                clearInterval(timer);
-                setTimeout(() => {
-                    element.scrollTo({ top: 0, behavior: 'smooth' });
-                    // Reinicia o scroll depois de subir
-                    handleTVAutoScroll(element);
-                }, 3000);
+    const scrollSpeed = 1;
+    const tickMs = 50;
+    const startDelayMs = 1800;
+    const endPauseMs = 2500;
+
+    const start = () => {
+        if (!shouldScroll()) return;
+        if (state.intervalId) clearInterval(state.intervalId);
+        state.intervalId = setInterval(tick, tickMs);
+    };
+
+    const tick = () => {
+        if (!shouldScroll()) {
+            stopTVAutoScroll(element);
+            return;
+        }
+        if (document.hidden) return;
+
+        const maxScroll = element.scrollHeight - element.clientHeight;
+        if (element.scrollTop < (maxScroll - 1)) {
+            element.scrollTop = Math.min(maxScroll, element.scrollTop + scrollSpeed);
+            return;
+        }
+
+        if (state.intervalId) clearInterval(state.intervalId);
+        state.intervalId = null;
+        if (state.resetTimeoutId) clearTimeout(state.resetTimeoutId);
+        state.resetTimeoutId = setTimeout(() => {
+            if (!shouldScroll()) {
+                stopTVAutoScroll(element);
+                return;
             }
-        }, scrollDelay);
-        
-        tvScrollTimers.set(element, timer);
-    }, 2000);
+            element.scrollTop = 0;
+            start();
+        }, endPauseMs);
+    };
+
+    state.startTimeoutId = setTimeout(start, startDelayMs);
 }
 
 export function filterDashboardMateriais(status) {

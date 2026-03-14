@@ -6,6 +6,8 @@ import {
     signOut,
     signInWithEmailAndPassword,
     setPersistence,
+    browserLocalPersistence,
+    indexedDBLocalPersistence,
     browserSessionPersistence,
     sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -50,6 +52,9 @@ let isAuthReady = false;
 let userId = null;
 let unsubscribeListeners = [];
 let transitioning = false;
+let __persistenceWarned = false;
+let __renderQueueTimer = null;
+let __renderFlags = { dash: false, controls: false, modules: false, permissions: false };
 
 // Callbacks globais para re-uso na reconexão
 let _globalRenderDash = null;
@@ -61,6 +66,55 @@ let _globalRenderModules = null;
 // =======================================================================
 function getUserId() { return userId; }
 function isReady() { return isAuthReady; }
+
+function shouldRenderDashboardNow() {
+    try {
+        if (document.body?.classList?.contains('tv-mode')) return true;
+        const pane = document.getElementById('content-dashboard');
+        if (!pane) return false;
+        return !pane.classList.contains('hidden');
+    } catch (_) {
+        return false;
+    }
+}
+
+function scheduleRenders({ dash = false, controls = false, modules = false, permissions = false }, renderDash, renderControls, renderModules) {
+    __renderFlags.dash ||= dash;
+    __renderFlags.controls ||= controls;
+    __renderFlags.modules ||= modules;
+    __renderFlags.permissions ||= permissions;
+
+    if (__renderQueueTimer) return;
+    __renderQueueTimer = setTimeout(() => {
+        const flags = __renderFlags;
+        __renderFlags = { dash: false, controls: false, modules: false, permissions: false };
+        __renderQueueTimer = null;
+
+        try { if (flags.controls && typeof renderControls === 'function') renderControls(); } catch (e) { console.error(e); }
+        try { if (flags.permissions) renderPermissionsUI(); } catch (e) { console.error(e); }
+        try { if (flags.modules && typeof renderModules === 'function') renderModules(); } catch (e) { console.error(e); }
+        try {
+            if (flags.dash && typeof renderDash === 'function' && shouldRenderDashboardNow()) {
+                renderDash();
+            }
+        } catch (e) { console.error(e); }
+    }, 80);
+}
+
+async function ensureBestAuthPersistence() {
+    const candidates = [
+        indexedDBLocalPersistence,
+        browserLocalPersistence,
+        browserSessionPersistence
+    ];
+    for (const persistence of candidates) {
+        try {
+            await setPersistence(auth, persistence);
+            return true;
+        } catch (_) {}
+    }
+    return false;
+}
 
 async function getUserRoleFromFirestore(user) {
     if (!user) return 'unauthenticated';
@@ -91,6 +145,7 @@ async function getUserRoleFromFirestore(user) {
 // =======================================================================
 async function signInEmailPassword(email, password) {
     try {
+        await ensureBestAuthPersistence();
         const credential = await signInWithEmailAndPassword(auth, email, password);
         showAlert('alert-login', `Bem-vindo(a), ${credential.user.email}!`, 'success');
         if (DOM_ELEMENTS.authModal) DOM_ELEMENTS.authModal.style.display = 'none';
@@ -129,6 +184,7 @@ async function sendResetPassword(email) {
 
 async function signInAnonUser() {
     try {
+        await ensureBestAuthPersistence();
         await signInAnonymously(auth);
         showAlert('alert-login', `Acesso Anônimo concedido.`, 'success');
         if (DOM_ELEMENTS.authModal) DOM_ELEMENTS.authModal.style.display = 'none';
@@ -190,33 +246,28 @@ function initFirestoreListeners(renderDash, renderControls, renderModules) {
     addListener(query(COLLECTIONS.unidades), snap => {
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setUnidades(data);
-        if(renderControls) renderControls();
-        if(renderModules) renderModules();
-        renderPermissionsUI();
+        scheduleRenders({ controls: true, modules: true, permissions: true }, renderDash, renderControls, renderModules);
     });
 
     // Água
     addListener(query(COLLECTIONS.aguaMov), snap => {
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setAguaMovimentacoes(data);
-        if(renderDash) renderDash();
-        if(renderModules) renderModules();
+        scheduleRenders({ dash: true, modules: true }, renderDash, renderControls, renderModules);
     });
 
     // Gás
     addListener(query(COLLECTIONS.gasMov), snap => {
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setGasMovimentacoes(data);
-        if(renderDash) renderDash();
-        if(renderModules) renderModules();
+        scheduleRenders({ dash: true, modules: true }, renderDash, renderControls, renderModules);
     });
 
     // Materiais
     addListener(query(COLLECTIONS.materiais), snap => {
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setMateriais(data);
-        if(renderDash) renderDash();
-        if(renderModules) renderModules();
+        scheduleRenders({ dash: true, modules: true }, renderDash, renderControls, renderModules);
     });
 
     // Estoques
@@ -225,8 +276,7 @@ function initFirestoreListeners(renderDash, renderControls, renderModules) {
         setEstoqueAgua(data);
         const inicial = data.some(e => e.tipo === 'inicial');
         setEstoqueInicialDefinido('agua', inicial);
-        if(renderDash) renderDash();
-        if(renderModules) renderModules();
+        scheduleRenders({ dash: true, modules: true }, renderDash, renderControls, renderModules);
     });
 
     addListener(query(COLLECTIONS.estoqueGas), snap => {
@@ -234,33 +284,32 @@ function initFirestoreListeners(renderDash, renderControls, renderModules) {
         setEstoqueGas(data);
         const inicial = data.some(e => e.tipo === 'inicial');
         setEstoqueInicialDefinido('gas', inicial);
-        if(renderDash) renderDash();
-        if(renderModules) renderModules();
+        scheduleRenders({ dash: true, modules: true }, renderDash, renderControls, renderModules);
     });
 
     // Assistência Social
     addListener(query(COLLECTIONS.cestaMov), snap => {
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setCestaMovimentacoes(data);
-        if(renderModules) renderModules();
+        scheduleRenders({ modules: true }, renderDash, renderControls, renderModules);
     });
 
     addListener(query(COLLECTIONS.cestaEstoque), snap => {
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setCestaEstoque(data);
-        if(renderModules) renderModules();
+        scheduleRenders({ modules: true }, renderDash, renderControls, renderModules);
     });
 
     addListener(query(COLLECTIONS.enxovalMov), snap => {
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setEnxovalMovimentacoes(data);
-        if(renderModules) renderModules();
+        scheduleRenders({ modules: true }, renderDash, renderControls, renderModules);
     });
 
     addListener(query(COLLECTIONS.enxovalEstoque), snap => {
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setEnxovalEstoque(data);
-        if(renderModules) renderModules();
+        scheduleRenders({ modules: true }, renderDash, renderControls, renderModules);
     });
 }
 
@@ -279,8 +328,8 @@ window.addEventListener('online', () => {
 // AUTH STATE HANDLER
 // =======================================================================
 async function initAuthAndListeners(renderDash, renderControls, renderModules) {
-    await setPersistence(auth, browserSessionPersistence);
-    console.log("Persistência de NAVEGADOR (session) ativada.");
+    await ensureBestAuthPersistence();
+    if (DOM_ELEMENTS.authModal) DOM_ELEMENTS.authModal.style.display = 'none';
 
     if (window.authInitialized) return;
     window.authInitialized = true;
@@ -309,7 +358,7 @@ async function initAuthAndListeners(renderDash, renderControls, renderModules) {
             initFirestoreListeners(renderDash, renderControls, renderModules);
 
             renderPermissionsUI();
-            renderDash();
+            if (typeof renderDash === 'function' && shouldRenderDashboardNow()) renderDash();
             updateLastUpdateTime();
 
             setTimeout(() => transitioning = false, 400);
@@ -328,6 +377,14 @@ async function initAuthAndListeners(renderDash, renderControls, renderModules) {
                 DOM_ELEMENTS.authModal.style.display = 'flex';
 
             renderPermissionsUI();
+
+            if (!__persistenceWarned) {
+                __persistenceWarned = true;
+                const ok = await ensureBestAuthPersistence();
+                if (!ok) {
+                    showAlert('alert-login', 'Seu navegador está bloqueando o armazenamento do login no preview. Use uma aba normal (não incorporada) para manter logado após atualizar.', 'warning', 10000);
+                }
+            }
         }
     });
 

@@ -11,6 +11,7 @@ let __gasMovimentacoes = [];
 let __materiais = [];
 let __estoqueAgua = [];
 let __estoqueGas = [];
+let __unidadesVersion = 0;
 
 // VARIÁVEIS PARA ASSISTÊNCIA SOCIAL
 let __cestaMovimentacoes = [];
@@ -44,6 +45,7 @@ let graficoPrevisao = { agua: null, gas: null };
 // ======================================================================
 
 function getUnidades() { return __unidades; }
+function getUnidadesVersion() { return __unidadesVersion; }
 function getAguaMovimentacoes() { return __aguaMovimentacoes; }
 function getGasMovimentacoes() { return __gasMovimentacoes; }
 function getMateriais() { return __materiais; }
@@ -70,7 +72,7 @@ function getGraficoPrevisao(tipo) { return graficoPrevisao[tipo]; }
 // SETTERS
 // ======================================================================
 
-function setUnidades(data) { __unidades = data; }
+function setUnidades(data) { __unidades = data; __unidadesVersion += 1; }
 function setAguaMovimentacoes(data) { __aguaMovimentacoes = data; }
 function setGasMovimentacoes(data) { __gasMovimentacoes = data; }
 function setMateriais(data) { __materiais = data; }
@@ -107,7 +109,7 @@ function initialMaterialFilter() {
 
 export { 
     // Getters e Setters principais
-    getUnidades, setUnidades,
+    getUnidades, getUnidadesVersion, setUnidades,
     getAguaMovimentacoes, setAguaMovimentacoes,
     getGasMovimentacoes, setGasMovimentacoes,
     getMateriais, setMateriais,

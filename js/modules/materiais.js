@@ -268,13 +268,13 @@ function renderMaterialSubTable(tableBody, data, status) {
         const dataRetiradaFormatada = formatTimestamp(m.dataRetirada); // Data que ficou pronto
         const hasFile = m.fileURL;
         const downloadBtn = hasFile 
-            ? `<button class="btn-icon btn-download-pedido text-blue-600 hover:text-blue-800" data-id="${m.id}" data-url="${m.fileURL}" title="Baixar Pedido" aria-label="Baixar Pedido">📥</button>`
-            : '<span class="btn-icon text-gray-400" title="Sem anexo" aria-hidden="true">🚫</span>';
+            ? `<button class="btn-icon btn-download-pedido text-blue-600 hover:text-blue-800" data-id="${m.id}" data-url="${m.fileURL}" title="Baixar Pedido" aria-label="Baixar Pedido"><i data-lucide="download" class="w-4 h-4"></i></button>`
+            : '<span class="btn-icon text-gray-300" title="Sem anexo" aria-hidden="true"><i data-lucide="paperclip" class="w-4 h-4"></i></span>';
         
         // Botão de remoção é Admin-Only
         // Botão de remoção é Admin-Only; para não-admin, não renderizamos nada para evitar poluir a UI
         const removeBtn = isAdmin
-            ? `<button class="btn-icon btn-remove text-red-600 hover:text-red-800" data-id="${m.id}" data-type="materiais" data-details="${m.unidadeNome} - ${status}" title="Remover Requisição" aria-label="Remover">🗑️</button>`
+            ? `<button class="btn-icon btn-remove text-red-600 hover:text-red-800" data-id="${m.id}" data-type="materiais" data-details="${m.unidadeNome} - ${status}" title="Remover Requisição" aria-label="Remover"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`
             : '';
         
         // Determina se os botões de ação do fluxo devem ser visíveis/ativos
@@ -282,8 +282,8 @@ function renderMaterialSubTable(tableBody, data, status) {
         
         if (status === 'requisitado') {
             const startSeparacaoBtn = canEditFlow
-                ? `<button class="btn-icon btn-start-separacao text-green-600 hover:text-green-800" data-id="${m.id}" title="Informar Separador e Iniciar" aria-label="Iniciar separação">▶️</button>`
-                : `<span class="btn-icon text-gray-400" title="Apenas Admin/Editor pode iniciar" aria-hidden="true">⛔</span>`;
+                ? `<button class="btn-icon btn-start-separacao text-green-600 hover:text-green-800" data-id="${m.id}" title="Informar Separador e Iniciar" aria-label="Iniciar separação"><i data-lucide="play-circle" class="w-4 h-4"></i></button>`
+                : `<span class="btn-icon text-gray-300" title="Apenas Admin/Editor pode iniciar" aria-hidden="true"><i data-lucide="lock" class="w-4 h-4"></i></span>`;
 
             // Badge de Downloads e Bloqueio
             const dlInfo = m.downloadInfo || { count: 0, blockedUntil: null };
@@ -302,8 +302,8 @@ function renderMaterialSubTable(tableBody, data, status) {
         } else if (status === 'separacao') {
              // Editor PODE marcar como pronto para entrega
             const prontaRetiradaBtn = canEditFlow
-                ? `<button class="btn-icon btn-retirada text-teal-600 hover:text-teal-800" data-id="${m.id}" title="Marcar como pronto para entrega" aria-label="Pronto para entrega">📦</button>`
-                : `<span class="btn-icon text-gray-400" title="Apenas Admin/Editor pode marcar como pronto" aria-hidden="true">⛔</span>`;
+                ? `<button class="btn-icon btn-retirada text-teal-600 hover:text-teal-800" data-id="${m.id}" title="Marcar como pronto para entrega" aria-label="Pronto para entrega"><i data-lucide="package-check" class="w-4 h-4"></i></button>`
+                : `<span class="btn-icon text-gray-300" title="Apenas Admin/Editor pode marcar como pronto" aria-hidden="true"><i data-lucide="lock" class="w-4 h-4"></i></span>`;
 
             acoesHtml = prontaRetiradaBtn + removeBtn;
                 
@@ -330,8 +330,8 @@ function renderMaterialSubTable(tableBody, data, status) {
              // FINALIZAÇÃO DE ENTREGA: Agora Admin/Editor
             const canFinalize = isAdmin || isEditor;
             const finalizarEntregaBtn = canFinalize
-                ? `<button class="btn-icon btn-entregue text-blue-600 hover:text-blue-800" data-id="${m.id}" title="Finalizar entrega e registrar responsáveis" aria-label="Finalizar entrega">✅</button>`
-                : `<span class="btn-icon text-gray-400" title="Apenas Admin/Editor pode finalizar a entrega" aria-hidden="true">⛔</span>`;
+                ? `<button class="btn-icon btn-entregue text-blue-600 hover:text-blue-800" data-id="${m.id}" title="Finalizar entrega e registrar responsáveis" aria-label="Finalizar entrega"><i data-lucide="check-circle" class="w-4 h-4"></i></button>`
+                : `<span class="btn-icon text-gray-300" title="Apenas Admin/Editor pode finalizar a entrega" aria-hidden="true"><i data-lucide="lock" class="w-4 h-4"></i></span>`;
             
             acoesHtml = finalizarEntregaBtn + removeBtn;
             
@@ -570,7 +570,7 @@ async function handleBatchFinalizarHoje() {
 
     // Desabilita botão enquanto processa
     const btn = document.getElementById('btn-batch-finalizar-hoje');
-    if (btn) { btn.disabled = true; btn.textContent = 'Finalizando...'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Finalizando...</span>'; if (typeof lucide !== 'undefined') lucide.createIcons(); }
 
     try {
         for (const m of toFinalize) {
@@ -595,7 +595,7 @@ async function handleBatchFinalizarHoje() {
         console.error('Erro na finalização em lote:', error);
         showAlert('alert-pronto-entrega', `Erro na finalização em lote: ${error.message}`, 'error');
     } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'Finalizar em lote (Hoje)'; }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check-check"></i><span>Finalizar em lote (Hoje)</span>'; if (typeof lucide !== 'undefined') lucide.createIcons(); }
     }
 }
 

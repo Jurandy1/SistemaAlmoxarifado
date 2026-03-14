@@ -102,7 +102,7 @@ async function executeDelete() {
     showAlert(alertId, `Erro ao remover: ${err.message}`, "error");
   } finally {
     DOM_ELEMENTS.btnConfirmDelete.disabled = false;
-    DOM_ELEMENTS.btnConfirmDelete.textContent = "Confirmar Exclusão";
+    DOM_ELEMENTS.btnConfirmDelete.innerHTML = '<i data-lucide="trash-2"></i><span>Confirmar Exclusão</span>';
     DOM_ELEMENTS.confirmDeleteModal.style.display = "none";
     setDeleteInfo({});
     if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); }

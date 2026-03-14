@@ -11,6 +11,7 @@
     <!-- Bibliotecas JS -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
     <script src="https://unpkg.com/lucide@0.258.0/dist/umd/lucide.js" defer></script>
+    <script type="module" src="./js/vendor/lucide-fallback.js"></script>
 
     <!-- Fontes -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -227,6 +228,7 @@
     </script>
 
     <script type="module">
+        import './js/vendor/lucide-fallback.js';
         import { initializeFirebaseServices } from './js/services/firestore-service.js';
         import { initAuthAndListeners, signInAnonUser, isReady } from './js/modules/auth.js';
         import { findDOMElements, DOM_ELEMENTS } from './js/utils/dom-helpers.js';

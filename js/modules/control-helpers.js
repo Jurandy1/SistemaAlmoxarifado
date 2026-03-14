@@ -1,5 +1,5 @@
 // js/modules/control-helpers.js
-import { getUnidades } from "../utils/cache.js";
+import { getUnidades, getUnidadesVersion } from "../utils/cache.js";
 // CORREÇÃO: DOM_ELEMENTOS -> DOM_ELEMENTS
 import {
     DOM_ELEMENTS,
@@ -35,6 +35,7 @@ import { getTodayDateString } from "../utils/formatters.js";
 
 // Variável para controlar o debounce (atraso na renderização)
 let renderTimeout = null;
+let lastRenderedUnidadesVersion = -1;
 
 /**
  * Renderiza todos os módulos da UI que estão ativos.
@@ -60,11 +61,13 @@ function executeRenderUIModules() {
     console.log("Executando atualização da UI (Debounced)...");
     
     // Otimização: Renderizar controles de unidade é pesado.
-    renderUnidadeControls();
-    
-    // Configura o filtro de análise de consumo
-    setupAnaliseUnidadeControls('agua');
-    setupAnaliseUnidadeControls('gas');
+    const unidadesVersion = getUnidadesVersion();
+    if (unidadesVersion !== lastRenderedUnidadesVersion) {
+        lastRenderedUnidadesVersion = unidadesVersion;
+        renderUnidadeControls();
+        setupAnaliseUnidadeControls('agua');
+        setupAnaliseUnidadeControls('gas');
+    }
 
     if (DOM_ELEMENTS.contentPanes) {
         DOM_ELEMENTS.contentPanes.forEach(pane => {

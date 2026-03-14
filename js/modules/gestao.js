@@ -312,7 +312,8 @@ export async function handleBulkAddUnidades() {
          showAlert('alert-gestao', `Erro ao adicionar unidades: ${error.message}. ${adicionadasCount} foram adicionadas antes do erro.`, 'error');
      } finally {
          DOM_ELEMENTS.btnBulkAddUnidades.disabled = false; 
-         DOM_ELEMENTS.btnBulkAddUnidades.textContent = 'Adicionar Unidades';
+         DOM_ELEMENTS.btnBulkAddUnidades.innerHTML = '<i data-lucide="plus-circle"></i><span>Adicionar Unidades</span>';
+         if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
      }
 }
 

@@ -588,7 +588,7 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
         let rankingHtml = '';
         const top = ranking.slice(0, 5);
         const bottom = ranking.slice(-5).reverse();
-        rankingHtml += `<h4 class="font-semibold mb-2">🏆 Maiores consumidores</h4>`;
+        rankingHtml += `<h4 class="font-semibold mb-2 flex items-center gap-1"><i data-lucide="trophy" class="w-4 h-4 text-yellow-500"></i> Maiores consumidores</h4>`;
         top.forEach((item, index) => {
             rankingHtml += `
                 <div class="ranking-item">
@@ -598,7 +598,7 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
                 </div>
             `;
         });
-        rankingHtml += `<h4 class="font-semibold mt-4 mb-2">🌱 Menores consumidores</h4>`;
+        rankingHtml += `<h4 class="font-semibold mt-4 mb-2 flex items-center gap-1"><i data-lucide="leaf" class="w-4 h-4 text-green-500"></i> Menores consumidores</h4>`;
         bottom.forEach((item, index) => {
             rankingHtml += `
                 <div class="ranking-item">
@@ -749,19 +749,19 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
     const picoEntrega = movsEntrega.reduce((max, m) => Math.max(max, m.quantidade || 0), 0);
 
     let relatorioText = `
-        <p>📅 Período: <strong>${formatTimestamp(dataInicial)}</strong> a <strong>${formatTimestamp(dataFinal)}</strong> (<strong>${totalDias} dias úteis</strong>).</p>
-        <p>📦 Consumo total (sem Furo De Estoque): <strong>${totalConsumoSemFuro} un.</strong></p>
-        ${itemType === 'agua' && furoQuantidade > 0 ? `<p>🟨 Furo De Estoque (destino desconhecido): <strong>${furoQuantidade} un.</strong></p>` : ``}
-        ${itemType === 'agua' ? `<p>📦 Total incluindo Furo De Estoque: <strong>${totalConsumoComFuro} un.</strong></p>` : ``}
-        <p>⚖️ Média por dia útil (sem Furo): <strong>${mediaDiariaPeriodoSemFuro.toFixed(2)} un.</strong> (histórico: <strong>${mediaDiariaHistorica.toFixed(2)} un.</strong>).</p>
-        ${itemType === 'agua' ? `<p>⚖️ Média por dia útil (incluindo Furo): <strong>${mediaDiariaPeriodoComFuro.toFixed(2)} un.</strong></p>` : ``}
-        <p>📈 Desvio vs previsão histórica: <strong>${desvioAbs.toFixed(1)} un.</strong> (${desvioPerc.toFixed(1)}%).</p>
+        <p><i data-lucide="calendar" class="w-3.5 h-3.5 inline-block mr-1"></i> Período: <strong>${formatTimestamp(dataInicial)}</strong> a <strong>${formatTimestamp(dataFinal)}</strong> (<strong>${totalDias} dias úteis</strong>).</p>
+        <p><i data-lucide="package" class="w-3.5 h-3.5 inline-block mr-1"></i> Consumo total (sem Furo De Estoque): <strong>${totalConsumoSemFuro} un.</strong></p>
+        ${itemType === 'agua' && furoQuantidade > 0 ? `<p><i data-lucide="alert-triangle" class="w-3.5 h-3.5 inline-block mr-1 text-yellow-600"></i> Furo De Estoque (destino desconhecido): <strong>${furoQuantidade} un.</strong></p>` : ``}
+        ${itemType === 'agua' ? `<p><i data-lucide="package" class="w-3.5 h-3.5 inline-block mr-1"></i> Total incluindo Furo De Estoque: <strong>${totalConsumoComFuro} un.</strong></p>` : ``}
+        <p><i data-lucide="scale" class="w-3.5 h-3.5 inline-block mr-1"></i> Média por dia útil (sem Furo): <strong>${mediaDiariaPeriodoSemFuro.toFixed(2)} un.</strong> (histórico: <strong>${mediaDiariaHistorica.toFixed(2)} un.</strong>).</p>
+        ${itemType === 'agua' ? `<p><i data-lucide="scale" class="w-3.5 h-3.5 inline-block mr-1"></i> Média por dia útil (incluindo Furo): <strong>${mediaDiariaPeriodoComFuro.toFixed(2)} un.</strong></p>` : ``}
+        <p><i data-lucide="trending-up" class="w-3.5 h-3.5 inline-block mr-1"></i> Desvio vs previsão histórica: <strong>${desvioAbs.toFixed(1)} un.</strong> (${desvioPerc.toFixed(1)}%).</p>
         ${blocoEquivalencia}
     `;
     if (ranking.length > 0) {
-        relatorioText += `<p>🏅 Destaque: <strong>${ranking[0].nome}</strong> consumiu <strong>${ranking[0].consumo} un.</strong> (${totalConsumoSemFuro > 0 ? ((ranking[0].consumo / totalConsumoSemFuro) * 100).toFixed(1) : '0.0'}% do total).</p>`;
+        relatorioText += `<p><i data-lucide="award" class="w-3.5 h-3.5 inline-block mr-1 text-yellow-500"></i> Destaque: <strong>${ranking[0].nome}</strong> consumiu <strong>${ranking[0].consumo} un.</strong> (${totalConsumoSemFuro > 0 ? ((ranking[0].consumo / totalConsumoSemFuro) * 100).toFixed(1) : '0.0'}% do total).</p>`;
         const menorConsumo = ranking[ranking.length - 1];
-        relatorioText += `<p>🔻 Menor consumo: <strong>${menorConsumo.nome}</strong> com <strong>${menorConsumo.consumo} un.</strong>.</p>`;
+        relatorioText += `<p><i data-lucide="chevron-down" class="w-3.5 h-3.5 inline-block mr-1 text-blue-500"></i> Menor consumo: <strong>${menorConsumo.nome}</strong> com <strong>${menorConsumo.consumo} un.</strong>.</p>`;
     }
     const diasHistFull = Array.isArray(movsGroupFull) ? getPeriodoAnalise(movsGroupFull).totalDias : 0;
     const consumoHistPorUnidade = Array.isArray(movsGroupFull) ? movsGroupFull.reduce((acc, m) => {
@@ -796,7 +796,7 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
     const destaqueBaixa = anomaliasBaixa.filter(a => a.esperado > 0 && Math.abs(a.perc) >= limiarPerc).slice(0, 5);
 
     if (destaqueAlta.length > 0 || destaqueBaixa.length > 0) {
-        relatorioText += `<p class="mt-3">🚨 <strong>Unidades fora do padrão (variação relevante):</strong></p>`;
+        relatorioText += `<p class="mt-3"><i data-lucide="alert-circle" class="w-3.5 h-3.5 inline-block mr-1 text-red-500"></i> <strong>Unidades fora do padrão (variação relevante):</strong></p>`;
         if (destaqueAlta.length > 0) {
             relatorioText += `<ul class="list-disc ml-5 text-sm text-gray-700">`;
             destaqueAlta.forEach(a => {
@@ -859,8 +859,8 @@ function renderAnaliseTextual(itemType, movsEntrega, unidades, dataInicial, data
         if (top.length > 0) {
             relatorioText += `<div class="mt-3"><p><strong>Meses com maior variação no ano:</strong></p>${top.map(e => {
                 const maisMenos = e.diff >= 0 ? 'bem acima' : 'bem abaixo';
-                const emoji = e.diff >= 0 ? '🔥' : '⬇️';
-                return `<p>${emoji} ${e.etiquetaMes}: <strong>${e.nome}</strong> consumiu ${Math.abs(e.diff).toFixed(0)} un. ${maisMenos} do normal (atual ${e.atual} • esperado ${e.esperado.toFixed(1)}).</p>`;
+                const iconStr = e.diff >= 0 ? '<i data-lucide="flame" class="w-3.5 h-3.5 inline-block mr-1 text-orange-500"></i>' : '<i data-lucide="arrow-down" class="w-3.5 h-3.5 inline-block mr-1 text-blue-500"></i>';
+                return `<p>${iconStr} ${e.etiquetaMes}: <strong>${e.nome}</strong> consumiu ${Math.abs(e.diff).toFixed(0)} un. ${maisMenos} do normal (atual ${e.atual} • esperado ${e.esperado.toFixed(1)}).</p>`;
             }).join('')}</div>`;
         }
     }

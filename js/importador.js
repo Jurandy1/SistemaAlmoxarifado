@@ -1,3 +1,4 @@
+import "./vendor/lucide-fallback.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, getDocs, getDoc, doc, updateDoc, arrayUnion, addDoc, serverTimestamp, Timestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";

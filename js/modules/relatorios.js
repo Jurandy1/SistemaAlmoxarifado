@@ -455,7 +455,7 @@ export async function handleGerarPdf() {
     } finally { 
         // CORREÇÃO: DOM_ELEMENTOS -> DOM_ELEMENTS
         DOM_ELEMENTS.btnGerarPdf.disabled = false; 
-        DOM_ELEMENTS.btnGerarPdf.textContent = 'Gerar Relatório PDF'; 
+        DOM_ELEMENTS.btnGerarPdf.innerHTML = '<i data-lucide="file-down"></i> Gerar Relatório PDF'; 
         if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
     }
 }
